@@ -1232,3 +1232,23 @@ See `docs/space-nova-release.md` for the distribution procedure.
 - [ ] Validate production OTP release packaging and an actual SMTP delivery test.
 - [ ] Verify SMTP sending identity, install private credentials, deliver an email to a real inbox.
 - [ ] Open public registration only after real delivery succeeds and abuse controls are reviewed.
+
+
+### SOL location-dependent space environments — Stage 1 (2026-11-20)
+
+- [x] Define a single, server-owned visual-region catalog in compressed SOL game km:
+  a broad asteroid belt (3D annular band), one fictional ion storm and
+  a small Earth orbital-debris region. Deep space remains sparse.
+- [x] Select the current environmental profile from the authoritative SOL
+  ship position; belt intensity ramps in from its boundaries.
+- [x] Replicate read-only region geometry and the selected profile through
+  existing authenticated Navigation snapshots; the Atlas renders overlays
+  without inventing destinations or changing navigation geometry.
+- [x] Add pure classification boundary tests and Atlas rendering regressions.
+- [ ] Run ExUnit and Node suites on the developer workstation (not run in
+  this GitHub-only edit environment); manually inspect chart zoom and labels.
+- [ ] Stage 2: stable, deterministic nearby procedural rendering for ordinary
+  and paired-phone 3D cockpit; no fake collision/damage claims.
+- [ ] Stage 3: server-owned persistent physical hazards, legitimate collision
+  geometry, salvage and damage; only after separate safety and persistence
+  contracts have been tested.

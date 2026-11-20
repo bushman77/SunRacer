@@ -42,13 +42,6 @@ function renderOrbits(svg,layout,focus){
       opacity:body.id==="earth"?0.75:0.57,
     })
   }
-  // This zone is a contextual reference, not an additional selectable
-  // destination. The asteroid belt lies between Mars and Jupiter.
-  if(focus==="system"){
-    const belt=120
-    add(svg,"circle",{cx:500,cy:300,r:belt,fill:"none",
-      stroke:"#ad956d","stroke-width":9,"stroke-dasharray":"1 6",opacity:0.20})
-  }
   add(svg,"text",{x:24,y:32,fill:"#88c4d7","font-size":15,
     "font-family":"monospace","letter-spacing":"2"},focus==="inner"?
     "SOL / INNER PLANETS":"SOL / FULL SYSTEM")
@@ -171,6 +164,48 @@ function renderBody(svg,body,selectedId){
   return group
 }
 
+
+// Observational regions come from Navigation, not schematic client guesses.
+// Drawing these has no targeting, docking, collision or damage authority.
+export function renderSpaceEnvironmentRegions(svg,regions,focus){
+  if(focus!=="system")return
+  for(const region of regions||[]){
+    if(region?.visual_only!==true)continue
+    if(region.kind==="asteroid_belt"){
+      const inner=solarPositionToChart({x:region.inner_radius_km,y:0,z:0},focus)
+      const outer=solarPositionToChart({x:region.outer_radius_km,y:0,z:0},focus)
+      if(!inner||!outer||outer.x<=inner.x)continue
+      const radius=(outer.x+inner.x)/2-500
+      const width=outer.x-inner.x
+      const group=add(svg,"g",{"data-environment-id":region.id,
+        "aria-label":"Asteroid belt · charted region"})
+      add(group,"circle",{cx:500,cy:300,r:radius,fill:"none",
+        stroke:"#ad956d","stroke-width":width,opacity:0.14})
+      add(group,"circle",{cx:500,cy:300,r:radius,fill:"none",
+        stroke:"#c7b083","stroke-width":1,
+        "stroke-dasharray":"2 7",opacity:0.65})
+    }else if(["ion_storm","orbital_debris"].includes(region.kind)){
+      const p=solarPositionToChart(region.center_km,focus)
+      if(!p||!Number.isFinite(region.radius_km))continue
+      const distance=Math.hypot(region.center_km.x,region.center_km.y)
+      const outward=distance===0?{x:region.radius_km,y:0,z:0}:{
+        x:region.center_km.x*(1+region.radius_km/distance),
+        y:region.center_km.y*(1+region.radius_km/distance),z:0}
+      const edge=solarPositionToChart(outward,focus)
+      if(!edge)continue
+      const radius=Math.max(2,Math.hypot(edge.x-p.x,edge.y-p.y))
+      const isStorm=region.kind==="ion_storm"
+      const group=add(svg,"g",{"data-environment-id":region.id,
+        "aria-label":(isStorm?"Ion storm":"Orbital debris")+" · charted region"})
+      add(group,"circle",{cx:p.x,cy:p.y,r:radius,fill:"none",
+        stroke:isStorm?"#f6a5ff":"#a3b3bd","stroke-width":2,
+        "stroke-dasharray":isStorm?"5 4":"2 5",opacity:0.82})
+      add(group,"circle",{cx:p.x,cy:p.y,r:3,
+        fill:isStorm?"#d49ce9":"#a4abb2",opacity:0.85})
+    }
+  }
+}
+
 export function drawSolarAtlas(svg,{focus="system",selectedId="earth",navigation=null,
   waypoint=null,selectedStarbaseId=null}={}){
   if(!svg)return
@@ -179,6 +214,7 @@ export function drawSolarAtlas(svg,{focus="system",selectedId="earth",navigation
   layer.replaceChildren()
   const layout=solarLayout(focus)
   renderOrbits(layer,layout,focus)
+  renderSpaceEnvironmentRegions(layer,navigation?.environment_regions,focus)
   renderVoyage(layer,layout,navigation,focus)
   if(waypoint && !selectedStarbaseId)renderWaypoint(layer,waypoint,focus)
   renderStarbases(layer,navigation?.starbases,focus,selectedStarbaseId)

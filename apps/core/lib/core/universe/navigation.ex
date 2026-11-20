@@ -26,6 +26,7 @@ defmodule Core.Universe.Navigation do
   alias Core.Universe.Navigation.Checkpoint
   alias Core.Universe.Sol
   alias Core.Universe.PlanetaryView
+  alias Core.Universe.SpaceEnvironment
   alias Core.Universe.EncounterDirector
   alias Core.Universe.Traffic
   alias Core.Universe.SpaceBases
@@ -858,6 +859,10 @@ defmodule Core.Universe.Navigation do
       # routes use the existing, validated free-waypoint format.
       starbases: GreenStarbase.catalog(),
       green_starbase_nearby: GreenStarbase.nearby?(voyage),
+      # Static geometry and a compact region profile are observational only.
+      # Never derive collisions, damage, or ownership from these fields.
+      environment_regions: SpaceEnvironment.catalog(),
+      space_environment: SpaceEnvironment.at(voyage.position_km),
       # Only the local base is included, avoiding nine facility records on
       # every tick and keeping remote refinery inventories server-private.
       space_base: if(voyage.status == :idle and is_binary(voyage.location_id),

@@ -110,3 +110,40 @@ test("independent Green Starbase renders as a selected twin-pyramid Atlas marker
     assert.equal(layer.children.filter(n=>n.attrs["data-body-id"]).length,10)
   })
 })
+
+test("Atlas paints server-owned environmental regions without adding destinations",()=>{
+  withDocument(()=>{
+    const layer=fakeNode("g")
+    const svg={querySelector:q=>q==="#nav-solar-content"?layer:null}
+    const belt={id:"sol:asteroid_belt",kind:"asteroid_belt",
+      inner_radius_km:17_963_991,outer_radius_km:23_704_662,
+      half_thickness_km:2_400_000,visual_only:true}
+    const storm={id:"sol:ion_storm:alpha",kind:"ion_storm",
+      center_km:{x:12_000_000,y:-17_000_000,z:0},
+      radius_km:1_350_000,visual_only:true}
+    drawSolarAtlas(svg,{navigation:{system_id:"sol",status:"idle",
+      environment_regions:[belt,storm],
+      space_environment:{region_id:storm.id,kind:storm.kind,intensity:0.8,
+        visual_only:true}}})
+    const band=layer.children.find(n=>n.attrs["data-environment-id"]===belt.id)
+    const bubble=layer.children.find(n=>n.attrs["data-environment-id"]===storm.id)
+    assert.ok(band)
+    assert.ok(bubble)
+    assert.equal(band.getAttribute("aria-label"),"Asteroid belt · charted region")
+    assert.equal(bubble.getAttribute("aria-label"),"Ion storm · charted region")
+    assert.equal(bubble.children.some(n=>n.attrs["stroke"]==="#f6a5ff"),true)
+    assert.equal(layer.children.filter(n=>n.attrs["data-body-id"]).length,10)
+  })
+})
+
+test("inner Atlas excludes out-of-focus belt overlays",()=>{
+  withDocument(()=>{
+    const layer=fakeNode("g")
+    drawSolarAtlas({querySelector:q=>q==="#nav-solar-content"?layer:null},
+      {focus:"inner",navigation:{system_id:"sol",status:"idle",
+        environment_regions:[{id:"sol:asteroid_belt",kind:"asteroid_belt",
+        inner_radius_km:18_000_000,outer_radius_km:24_000_000,
+        visual_only:true}]}})
+    assert.equal(layer.children.filter(n=>n.attrs["data-environment-id"]).length,0)
+  })
+})

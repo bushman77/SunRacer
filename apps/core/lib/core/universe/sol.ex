@@ -48,6 +48,13 @@ defmodule Core.Universe.Sol do
   @spec light_speed_km_s() :: float()
   def light_speed_km_s, do: @light_speed_km_s
 
+  @doc "Compressed game-kilometre radius for a nonnegative reference AU."
+  @spec game_radius_km(number()) :: float()
+  def game_radius_km(au) when is_number(au) and au >= 0 do
+    @game_km_per_log_au * :math.log(1.0 + au) +
+      @outer_compression_km_per_au * max(0.0, au - @outer_threshold_au)
+  end
+
   @spec fetch(term()) :: {:ok, body()} | :error
   def fetch(id) when is_binary(id), do: Map.fetch(@bodies, id)
   def fetch(_), do: :error
@@ -82,8 +89,7 @@ defmodule Core.Universe.Sol do
   def game_position_km(id) do
     case fetch(id) do
       {:ok, body} ->
-        radius = @game_km_per_log_au * :math.log(1.0 + body.au) +
-          @outer_compression_km_per_au * max(0.0, body.au - @outer_threshold_au)
+        radius = game_radius_km(body.au)
         phase = body.phase_deg * :math.pi() / 180.0
         {:ok, %{x: radius * :math.cos(phase),
                 y: radius * :math.sin(phase), z: 0.0}}

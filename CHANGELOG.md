@@ -826,3 +826,13 @@
 - Retained Resend API delivery as an alternative; missing or incomplete provider credentials fail closed.
 - Added independent SPACE_NOVA_REGISTRATION_OPEN flag to keep public signup disabled while testing delivery.
 - Added operator-only Darkorbit.Email.Probe.send_test/1 and tests; no email admin HTTP route or automatic production deployment.
+
+
+### 2026-11-20 — SOL environment regions (Stage 1)
+- Added read-only, server-position-derived environment profiles for sparse
+  open space, asteroid belt, Earth orbital debris, and a fictional ion storm.
+- Atlas overlays are anchored to the same server-provided compressed-game-km
+  geometry as Navigation. No new navigable targets, combat authority,
+  collisions, environmental damage, economy changes, or dependencies.
+- Added Core region classification and Node Atlas overlay regression tests.
+- Tests have not been executed locally in this GitHub editing environment.
