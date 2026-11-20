@@ -1247,8 +1247,11 @@ See `docs/space-nova-release.md` for the distribution procedure.
 - [x] Add pure classification boundary tests and Atlas rendering regressions.
 - [ ] Run ExUnit and Node suites on the developer workstation (not run in
   this GitHub-only edit environment); manually inspect chart zoom and labels.
-- [ ] Stage 2: stable, deterministic nearby procedural rendering for ordinary
-  and paired-phone 3D cockpit; no fake collision/damage claims.
+- [x] Stage 2: stable, deterministic nearby procedural scenery for ordinary
+  and paired-phone 3D cockpit. Instanced meshes are visual-only, have no hitboxes,
+  and use local-map/region-seeded cells so Atlas toggles cannot reshuffle them.
+- [ ] Run the new Node field tests and visually verify desktop and SBS asteroid
+  density, scale, sparse space and plasma colors on real devices.
 - [ ] Stage 3: server-owned persistent physical hazards, legitimate collision
   geometry, salvage and damage; only after separate safety and persistence
   contracts have been tested.

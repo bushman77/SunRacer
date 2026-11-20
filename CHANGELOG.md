@@ -836,3 +836,11 @@
   collisions, environmental damage, economy changes, or dependencies.
 - Added Core region classification and Node Atlas overlay regression tests.
 - Tests have not been executed locally in this GitHub editing environment.
+
+### 2026-11-20 — SOL environment scenery (Stage 2)
+- Added deterministic instanced local rocks, orbital debris and plasma scenery
+  to the shared desktop/SBS Three.js scene; no collision or damage logic.
+- Sparse open space and denser belt regions are driven by the server-provided
+  profile; spatial-cell coordinates remain stable across Atlas toggles.
+- Added Node tests for density, stability, locality and invalid input.
+- Laptop/phone visual verification and full test suites remain outstanding.

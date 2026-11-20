@@ -16,6 +16,7 @@ import {AmbientRefineryTraffic} from "./ambient_refinery_traffic.mjs"
 import {GreenStarbaseVisual} from "./green_starbase_visual.js"
 import {GreenStarbaseInterior, greenStarbaseInteriorVisible} from "./green_starbase_interior.js"
 import {EncounterShipVisual} from "./encounter_ship.js"
+import {SpaceEnvironmentVisual} from "./space_environment_visual.js"
 
 // Rendering only: no Phoenix socket, no movement authority, no combat calculations.
 const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
@@ -134,6 +135,7 @@ export class StereoSpaceView {
     this.stationViewPose = null
     this.stationLastFrameAt = null
     this.encounterShip = new EncounterShipVisual(THREE, this.scene)
+    this.spaceEnvironment = new SpaceEnvironmentVisual(THREE, this.scene)
     // These must be initialized BEFORE addCockpit builds the VR meshes:
     // Three.js treats visible=undefined as visible, not hidden.
     this.helmetGazeEnabled = false
@@ -720,6 +722,7 @@ export class StereoSpaceView {
       // Real outer-space rendering is retained unchanged after launch.
       this.stars?.position.copy(this.camera.position)
       const navigation = client.navComputer?.solarNavigation
+      this.spaceEnvironment.update(navigation?.space_environment, this.camera, client.mapId)
       this.planetaryBody.update(navigation, this.camera, time, ownShip)
       this.spaceBase.update(client.orbitalBase, this.camera)
       this.greenStarbase.update(navigation, client.mapId)
