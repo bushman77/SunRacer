@@ -64,7 +64,7 @@ form?.addEventListener("submit", async event => {
   }
   try {
     await invoke("save_network_settings", {settings})
-    message("Saved. Restarting Space Nova to apply your connection preferences…")
+    message("Saved. Restarting SunRacer to apply your connection preferences…")
     await invoke("restart_client")
   } catch (cause) {
     message("Unable to save networking settings: " + String(cause), true)

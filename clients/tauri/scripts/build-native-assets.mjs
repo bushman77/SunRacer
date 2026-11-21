@@ -11,7 +11,7 @@ const tasks = [
 ]
 
 for (const args of tasks) {
-  console.log("Space Nova native assets: mix " + args.join(" "))
+  console.log("SunRacer native assets: mix " + args.join(" "))
   // Windows ships Mix as mix.bat; Node spawnSync cannot launch .bat files
   // directly without cmd.exe. Arguments are static build task names.
   const executable = process.platform === "win32" ? "cmd.exe" : "mix"

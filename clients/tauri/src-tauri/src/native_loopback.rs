@@ -39,7 +39,7 @@ pub async fn native_loopback_post(
     // rejects the local game.html document on some WebKitGTK installations.
     // Still restrict this bridge to the application's single main webview.
     if !main_window_allowed(window.label()) {
-        return Err("Native loopback requests require the Space Nova main window.".into());
+        return Err("Native loopback requests require the SunRacer main window.".into());
     }
     if !route_allowed(&route) {
         return Err("Native request route is not permitted.".into());

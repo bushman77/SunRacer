@@ -29,12 +29,12 @@ const MAX_RELAY_ENTITIES: usize = 256;
 
 const PROOF_PAGE: &str = r##"<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Space Nova - LAN Relay Proof</title>
+<title>SunRacer - LAN Relay Proof</title>
 <style>
 body{margin:0;min-height:100vh;display:grid;place-items:center;background:#030b16;color:#d9fff5;font:16px system-ui,sans-serif}
 main{max-width:26rem;border:1px solid #56d3c2;border-radius:12px;padding:1.5rem;margin:1rem;background:#0b2530}
 h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
-</style></head><body><main><h1>SPACE NOVA - LOCAL LINK</h1>
+</style></head><body><main><h1>SUNRACER - LOCAL LINK</h1>
 <p id="status" role="status">Checking secure laptop connection...</p>
 <small>Encrypted LAN world-state relay. Flight and combat remain laptop-only.</small>
 </main><script>

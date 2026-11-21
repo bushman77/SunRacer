@@ -95,7 +95,7 @@ fn require_main_window_label(label: &str) -> Result<(), String> {
     if label == "main" {
         Ok(())
     } else {
-        Err("Native launcher commands are restricted to the Space Nova main window.".into())
+        Err("Native launcher commands are restricted to the SunRacer main window.".into())
     }
 }
 
@@ -114,7 +114,7 @@ pub fn startup_proxy(app: &AppHandle) -> Option<String> {
         }
         Ok(_) => None,
         Err(error) => {
-            eprintln!("Space Nova: invalid local network preferences ({error}); using system proxy");
+            eprintln!("SunRacer: invalid local network preferences ({error}); using system proxy");
             None
         }
     }

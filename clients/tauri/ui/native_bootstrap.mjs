@@ -97,7 +97,7 @@ document.querySelector("#pilot-logout-form").addEventListener("submit", async ev
   try {
     if (oldToken) await postJson("/api/native/logout", {}, oldToken)
   } catch (cause) {
-    console.warn("Space Nova logout could not notify the server:", cause)
+    console.warn("SunRacer logout could not notify the server:", cause)
   } finally {
     window.location.replace("./index.html")
   }

@@ -3339,7 +3339,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "space-nova-client"
+name = "sunracer-client"
 version = "0.3.1"
 dependencies = [
  "reqwest",

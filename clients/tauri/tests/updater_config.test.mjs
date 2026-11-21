@@ -56,3 +56,16 @@ test("production window creates with optional native SOCKS5 proxy only on opt-in
   assert.match(rustSource, /window\.build\(\)\?/)
   assert.doesNotMatch(rustSource, /danger_accept_invalid_certs|ignore_certificate_errors/)
 })
+
+test("SunRacer desktop branding is consistent across the native package and launcher", () => {
+  assert.equal(config.productName, "SunRacer")
+  assert.equal(config.app.windows[0].title, "SunRacer")
+  assert.equal(packageConfig.name, "sunracer-client")
+  assert.match(cargoSource, /^name = "sunracer-client"$/m)
+  assert.match(readText("../src-tauri/Cargo.lock"), /name = "sunracer-client"/)
+  const npmLock = JSON.parse(readText("../package-lock.json"))
+  assert.equal(npmLock.name, "sunracer-client")
+  assert.equal(npmLock.packages[""].name, "sunracer-client")
+  assert.match(readText("../ui/index.html"), /<title>SunRacer/)
+  assert.match(readText("../ui/index.html"), /SUNRACER<\/span>/)
+})

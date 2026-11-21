@@ -110,7 +110,7 @@ export async function stageClient({
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   stageClient().then(
     ({destination, modules}) =>
-      console.log("Space Nova: staged " + modules + " game modules and graphics in " + destination),
+      console.log("SunRacer: staged " + modules + " game modules and graphics in " + destination),
     error => { console.error(error); process.exitCode = 1 },
   )
 }

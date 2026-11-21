@@ -33,7 +33,7 @@ fn main() {
 
             if let Some(proxy_url) = network::startup_proxy(app.handle()) {
                 window = window.proxy_url(proxy_url.parse()?);
-                eprintln!("Space Nova: native webview proxy enabled ({proxy_url})");
+                eprintln!("SunRacer: native webview proxy enabled ({proxy_url})");
             }
 
             window.build()?;
@@ -43,13 +43,13 @@ fn main() {
                 if let Err(error) = check_for_updates(handle).await {
                     // Never block game access when GitHub Releases is unreachable
                     // (for example, on a restricted institutional network).
-                    eprintln!("Space Nova update check unavailable: {error}");
+                    eprintln!("SunRacer update check unavailable: {error}");
                 }
             });
             Ok(())
         })
         .run(tauri::generate_context!())
-        .expect("failed to launch the Space Nova desktop client");
+        .expect("failed to launch the SunRacer desktop client");
 }
 
 async fn check_for_updates(app: tauri::AppHandle) -> tauri_plugin_updater::Result<()> {
@@ -71,9 +71,9 @@ async fn check_for_updates(app: tauri::AppHandle) -> tauri_plugin_updater::Resul
 
         app.dialog()
             .message(format!(
-                "Space Nova {version} is available. Download and install the signed update now?"
+                "SunRacer {version} is available. Download and install the signed update now?"
             ))
-            .title("Space Nova update available")
+            .title("SunRacer update available")
             .buttons(MessageDialogButtons::OkCancel)
             .show(move |accepted| {
                 if !accepted {
@@ -91,14 +91,14 @@ async fn check_for_updates(app: tauri::AppHandle) -> tauri_plugin_updater::Resul
                             handle.restart();
                         }
                         Err(error) => {
-                            eprintln!("Space Nova update installation failed: {error}");
+                            eprintln!("SunRacer update installation failed: {error}");
                             handle
                                 .dialog()
                                 .message(
                                     "The signed update could not be installed. The current client has not been replaced.",
                                 )
                                 .kind(MessageDialogKind::Error)
-                                .title("Space Nova update failed")
+                                .title("SunRacer update failed")
                                 .show(|_| {});
                         }
                     }
