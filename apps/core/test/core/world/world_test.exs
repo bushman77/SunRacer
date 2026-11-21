@@ -534,7 +534,11 @@ defmodule Core.WorldTest do
     [{pid, _}] = Registry.lookup(@registry, {:world_map, "1-1"})
     :sys.replace_state(pid, fn state ->
       npc = Map.fetch!(state.npcs, npc_id)
-      at_distance = %{npc | position: %Core.World.Position{x: 1_000.0, y: 4_200.0}}
+      # On the pilot's sight line: the cockpit eye sits 2.75 scene units
+      # (45.8 world units) above ship centre, and the wing lasers converge
+      # on what lies under the sight (LineOfFire.trace_pair/4).
+      at_distance = %{npc | position: %Core.World.Position{x: 1_000.0, y: 4_200.0,
+                                                            z: 2.75 / 0.06}}
       pilot = Map.fetch!(state.entities, :long_range_pilot)
       pilot = %{pilot | orientation: Orientation.from_angles(%{
         yaw: :math.pi(), pitch: 0.0, roll: 0.0
