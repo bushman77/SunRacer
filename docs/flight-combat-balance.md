@@ -82,25 +82,31 @@ On the Sunracer an installed beam replaces the Garnet rather than stacking
 `ship.id == 1`). Beam damage is therefore a direct DPS multiplier with no
 ceiling:
 
-| beam | damage | DPS | time to kill a Dart |
-| --- | --- | --- | --- |
-| Garnet (built in) | 10 | 14.3 | 17.5 s |
-| Beryl | 15 | 21.4 | 11.9 s |
-| Sapphire | 20 | 28.6 | 9.1 s |
-| lf1 | 40 | 57.1 | 4.9 s |
-| lf2 | 60 | 85.7 | 3.5 s |
-| lf3 | 150 | 214.3 | 1.4 s |
-| lf4 | 200 | 285.7 | 1.4 s |
+**Corrected 2026-11-21.** The first version of this table computed time to
+kill against the Dart's 245 hull alone and ignored its 120 shields at 0.6
+absorption. Two conclusions drawn from it were wrong. Real figures, computed
+through `Core.Combat.apply_damage/2`:
+
+| beam | damage | hits | time to kill a Dart | first draft said |
+| --- | --- | --- | --- | --- |
+| Garnet (built in) | 10 | 37 | 25.9 s | 17.5 s |
+| Beryl | 15 | 25 | 17.5 s | 11.9 s |
+| Sapphire | 20 | 19 | 13.3 s | 9.1 s |
+| lf1 | 40 | 10 | 7.0 s | 4.9 s |
+| lf2 | 60 | 7 | 4.9 s | 3.5 s |
+| lf3 | 150 | 3 | 2.1 s | 1.4 s |
+| lf4 | 200 | 2 | 1.4 s | 1.4 s |
 
 Shields cap at 4.8x; lasers run to 20x. The LF line is legacy
 DarkOrbit-scale equipment sitting in the same catalog as the original
 Sunracer-scale items, and it cannot be sold to a 300-hull courier at any
-price.
+price. That conclusion survives the correction.
 
-Incidental good news from the same table: Sapphire at 9.1 s against the
-player's own 10.8 s survival is the exact crossover where a pilot can win a
-stand-up fight with a Dart. Garnet and Beryl cannot, so both force range
-discipline. That is a well-shaped curve and should be preserved.
+The claim that Sapphire is "the crossover where a pilot can win a stand-up
+fight with a Dart" does **not** survive it. A Dart kills the player in 10.8 s.
+Sapphire needs 13.3 s and the stock Garnet needs 25.9 s, which is 2.4x longer
+than the Dart needs. **Nothing sold at Sunracer scale wins a toe-to-toe fight
+with a Dart**, and that is the correct and intended shape (see F12).
 
 ### F3. Reverse equals forward in both flight modes
 
@@ -231,7 +237,50 @@ off, extend, turn, re-engage — as AI states layered on `advance_entity`. That
 reads as a fighter rather than a homing missile, mirrors the lesson step 6
 should teach, and costs a fraction of a momentum model.
 
+### F12. The courier outruns the fighter and can barely kill it
+
+Design intent (Brad, 2026-11-21, from the original): a Sunracer **can** get
+away from a Dart, but killing one is very touchy. The corrected F2 figures say
+exactly that — 25.9 s of accurate fire to kill, against 10.8 s to die — so the
+numbers already describe the intended ship. They were only ever misread.
+
+This settles two things that earlier drafts of this document got wrong.
+
+**The Dart's speed must stay below the player's.** D6, which called for raising
+it above 320, is cancelled: a faster Dart removes the escape that is supposed
+to exist. F11 below described the speed differential as a problem to fix in the
+stats. It is not a problem; it is the design. 210 against 320 stays.
+
+**The 420-540 range band is the technique, not an exploit.** It is the only way
+a courier kills a fighter: hold the gap where your beam reaches and its does
+not, and grind 26 seconds of fire into it. What was wrong was never the band —
+it was that full reverse at 320 made holding the band free. The cost was
+missing, not the tactic.
+
+The implemented flight model happens to price it correctly:
+
+- **In cruise the band-hold is now impossible.** Receding at 105.6 against a
+  Dart closing at 210 loses the 120-unit band in 1.15 s. The cheap version is
+  gone.
+- **In Newtonian flip-and-coast it still works, and now costs something.**
+  About 9.1 s to set up (5 s building the vector, 4.1 s to rotate), no way to
+  re-accelerate out of trouble quickly, and 26 s of continuous aim at a target
+  spanning roughly 8.5 degrees in the sight, with death 120 units inward.
+
+What is still missing is that the Dart bee-lines and therefore stays in the
+band once the player establishes it, which makes a touchy fight merely slow.
+That is Q8, now the main outstanding work rather than an optional extra.
+
+There is also no conflict with the canon figures, contrary to F11 below. The
+recognition guide's Dart 0.30 g against the Sunracer's 0.20 g is
+**acceleration**, not top speed. A courier with a higher flat-out speed that
+loses every close fight because the fighter changes vector half again as fast
+is coherent, and is the ship being described.
+
 ### F11. The player is simply faster than the opposition
+
+**Superseded in part by F12.** The measurements here stand; the conclusion that
+the differential must be fixed in the stats does not.
 
 320 cruise and 480 Newtonian against the Dart's 210. In any correct physics
 model a faster ship can always disengage from a slower one; that is a true
@@ -245,7 +294,8 @@ pirate fighter out-accelerates the courier by 50%. `movement_speed: 210`
 against the player's 320 inverts that.
 
 The consequence is intended, not a problem: **a Sunracer should lose a fair
-fight with a Dart.** The story already assumes it — step 7 of the prologue is
+fight with a Dart** — though per F12 it should still be able to run from one,
+so the fix is not raising the Dart's speed. The story already assumes it — step 7 of the prologue is
 diverting to the Green Starbase with a chewed-up hull. The prologue is
 winnable because Corsair-17 is a staged, private, deliberately beatable
 encounter, not because a courier beats a fighter. Escape becomes reaching a
@@ -279,8 +329,10 @@ Settled (Brad, 2026-11-21). D1, D2, D3 and D5 are **implemented** in
   scalar is not sufficient state. The mode switch should also then *feel* like
   something: a second or two of sideways slide while the assist settles the
   ship onto its nose.
-- **D6. The Dart must be faster than the Sunracer**, per F11 and the project's
-  own source data. Exact figure **OPEN** (see Q2).
+- **D6. Cancelled (2026-11-21).** Previously "the Dart must be faster than the
+  Sunracer". Per F12 the courier has to be able to escape, so the Dart stays at
+  210 against the player's 320. Its advantage belongs in tactics (Q8), not top
+  speed. Q2 is closed with it.
 - **D7. The LF and SG lines are relocated, not retired.** Gate them on hull
   class rather than rescaling or deleting them. `sg1`'s 1,000 shields is
   sensible on a Yamato's 8,000 hull and absurd on a 300-hull courier. They
@@ -343,10 +395,11 @@ Measured against the stock Sunracer (0.20 g, 320 top speed):
 The nose now leads the velocity vector 3.9x, so momentum lags behind pointing
 and the two flight modes are distinguishable for the first time.
 
-**Still to do from the build order:** D6 (the Dart's speed) is blocked on Q2,
-and prologue step 6 has not been re-tuned, so the tutorial fight still teaches
-the old static band hold. The band is now much harder to hold than the step's
-prompt implies. That is a known inconsistency, not a fixed design.
+**Still to do from the build order:** prologue step 6 has not been re-tuned.
+Its prompt teaches holding the 420-540 band, which is now impossible in cruise
+and only achievable in Newtonian flight, so the lesson needs rewriting around
+the mode it actually requires. D6 is cancelled (see F12), so nothing here is
+blocked on a speed figure any more.
 
 ## Balance as a test, not a judgement
 
@@ -369,8 +422,6 @@ Status: **not built** — see Q6.
 - **Q1. Time to top speed** — 4 s (80 u/s^2, nose leads 3.1x) or 6 s
   (53 u/s^2, nose leads 4.6x), or heavier. This sets the feel of the whole
   game more than any other single number.
-- **Q2. Dart movement speed** — must exceed 320. At 340 a coasting player
-  holds the band 6.0 s; at 360, 3.0 s; at 420, 1.2 s.
 - **Q3. Credits per delivery run at the long-run rate.** 500 is the
   prologue's first pay, which may not be the steady-state rate. The entire
   price curve scales off this number.
@@ -413,10 +464,11 @@ a combat model that is about to be replaced would mean pricing it twice.
 1. Envelope parity and acceleration (D1, D2), honouring `acceleration_g`.
 2. The handbrake fix (D5).
 3. `reverse_factor`, cruise only (D3).
-4. Dart speed (D6), then re-tune the prologue's step 6 around a firing pass
-   rather than a static band hold. Corsair-17 is already staged and private,
-   so lowering its hull for the tutorial fight is in keeping with the existing
-   design.
+4. Re-tune prologue step 6: the band-hold it teaches now requires Newtonian
+   flight, so the prompt has to teach the mode as well as the range.
+   Corsair-17 is already staged and private, so lowering its hull for the
+   tutorial fight is in keeping with the existing design — worth considering
+   given 25.9 s of accurate fire for a full-health Dart with the stock beam.
 5. The CI balance band (Q7).
 6. Hull-class gating for the LF and SG lines (D7).
 7. Unlock tokens and the outfitter transaction (D8, D9), which also lets
