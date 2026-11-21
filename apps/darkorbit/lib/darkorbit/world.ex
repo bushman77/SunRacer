@@ -22,6 +22,7 @@ defmodule Darkorbit.World do
   alias Darkorbit.ShipCondition
   alias Darkorbit.Piracy
   alias Darkorbit.PilotLocation
+  alias Darkorbit.Story
   alias Darkorbit.World.PubSub
 
   @legacy_test_earth_sector Application.compile_env(:darkorbit, :legacy_test_earth_sector, false)
@@ -170,10 +171,96 @@ defmodule Darkorbit.World do
   def station_look(session_id, input) when is_map(input),
     do: Simulation.station_look(session_id, input)
 
-  @doc "Talk to a nearby station attendant; no client-supplied location."
+  @doc """
+  Talk to a nearby station attendant; no client-supplied location.
+
+  Story topics (`"story"`) are validated twice: MapServer checks the room
+  and distance through a greeting, then the story engine checks the topic
+  is offered at this pilot's step before it records the dialogue.
+  """
+  def station_talk(session_id, attendant_id, "story")
+      when is_binary(attendant_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, reply} <- Simulation.station_talk(session_id, attendant_id, "greeting"),
+         {:ok, message} <- Story.talk(session.player_id, attendant_id,
+           session_id: session_id) do
+      {:ok, with_story_topics(%{reply | message: message}, session.player_id)}
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+
   def station_talk(session_id, attendant_id, topic)
-      when is_binary(attendant_id) and is_binary(topic),
-      do: Simulation.station_talk(session_id, attendant_id, topic)
+      when is_binary(attendant_id) and is_binary(topic) do
+    with {:ok, reply} <- Simulation.station_talk(session_id, attendant_id, topic) do
+      case SessionManager.fetch(SessionManager, session_id) do
+        {:ok, session} -> {:ok, with_story_topics(reply, session.player_id)}
+        _ -> {:ok, reply}
+      end
+    end
+  end
+
+  defp with_story_topics(%{attendant_id: id, topics: topics} = reply, player_id),
+    do: %{reply | topics: topics ++ Story.topics(player_id, id)}
+
+  @doc "Pilot story state for the HUD (join payload and reconnects)."
+  def story_snapshot(player_id), do: Story.snapshot(player_id)
+
+  @doc """
+  A pilot's explicit story choice: accept the consignment, skip or resume
+  the tutorial. The engine only accepts a choice the current step offers.
+  """
+  def story_action(session_id, action) when action in ["accept_consignment", "skip", "resume"] do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
+      event = case action do
+        "accept_consignment" -> :accept_consignment
+        "skip" -> :skip
+        "resume" -> :resume
+      end
+
+      case Story.record(session.player_id, event, session_id: session_id) do
+        {:ok, %{story: story}} -> {:ok, story}
+        :ignored -> {:error, :story_action_unavailable}
+        {:error, _} = error -> error
+      end
+    else
+      :error -> {:error, :session_not_found}
+    end
+  end
+
+  def story_action(_session_id, _action), do: {:error, :invalid_story_action}
+
+  @doc """
+  Report a server-confirmed event to the story engine on behalf of the
+  authenticated session. Story failures never fail the underlying action.
+  """
+  def story_event(session_id, event) do
+    case SessionManager.fetch(SessionManager, session_id) do
+      {:ok, session} -> story_record(session.player_id, event, session_id)
+      _ -> :ignored
+    end
+  end
+
+  defp story_record(player_id, event, session_id) do
+    case Story.record(player_id, event, session_id: session_id) do
+      {:error, reason} ->
+        require Logger
+        Logger.warning("story event #{inspect(elem_or(event))} not recorded: #{inspect(reason)}")
+        {:error, reason}
+
+      other ->
+        other
+    end
+  rescue
+    error ->
+      require Logger
+      Logger.error("story event failed: " <> Exception.message(error))
+      {:error, :story_unavailable}
+  end
+
+  defp elem_or(event) when is_tuple(event), do: elem(event, 0)
+  defp elem_or(event), do: event
 
   @doc "Settle any live combat and persist map-owned damage before disconnecting."
   def disconnect(session_id) do
@@ -323,14 +410,42 @@ defmodule Darkorbit.World do
   defdelegate solar_cancel_course(session_id), to: Simulation
   defdelegate solar_enter_free_flight(session_id), to: Simulation
   defdelegate solar_resume_cruise(session_id), to: Simulation
-  defdelegate solar_hail(session_id, contact_id), to: Simulation
-  defdelegate solar_resolve_encounter(session_id, encounter_id, choice), to: Simulation
-  defdelegate solar_enter_tactical(session_id, encounter_id), to: Simulation
+  def solar_hail(session_id, contact_id) do
+    with {:ok, _communication} = result <- Simulation.solar_hail(session_id, contact_id) do
+      _ = story_event(session_id, {:hail, contact_id})
+      result
+    end
+  end
+
+  def solar_resolve_encounter(session_id, encounter_id, choice) do
+    with {:ok, navigation} = result <-
+           Simulation.solar_resolve_encounter(session_id, encounter_id, choice) do
+      _ = story_event(session_id,
+        {:encounter_resolved, encounter_id, navigation.voyage_number})
+      result
+    end
+  end
+
+  def solar_enter_tactical(session_id, encounter_id) do
+    with {:ok, _started} = result <- Simulation.solar_enter_tactical(session_id, encounter_id) do
+      _ = story_event(session_id, {:tactical_started, encounter_id})
+      result
+    end
+  end
   @doc """
   Settle the map-verified encounter and optionally seize cargo. Cargo cannot
   be claimed from a browser-supplied manifest. The DB receipt is idempotent.
   """
   def solar_finish_tactical(session_id, encounter_id, outcome, opts \\ []) do
+    with {:ok, navigation} = result <-
+           settle_tactical(session_id, encounter_id, outcome, opts) do
+      _ = story_event(session_id,
+        {:tactical_finished, encounter_id, outcome, navigation.voyage_number})
+      result
+    end
+  end
+
+  defp settle_tactical(session_id, encounter_id, outcome, opts) do
     server = Module.concat(SessionManager, SolarNavigation)
     claim_cargo? = Keyword.get(opts, :claim_cargo, false) == true
 

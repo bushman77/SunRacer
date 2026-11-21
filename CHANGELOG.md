@@ -2,6 +2,75 @@
 
 ## Unreleased
 
+### Story prologue "First Run": playable prologue (2026-11-21, branch `story_line`)
+
+#### Added
+
+- `Darkorbit.Story` and the pure engine `Darkorbit.Story.Prologue`: the
+  nine-step prologue from `docs/story-first-run.md`. Steps advance only from
+  server-confirmed events (flight commands the map accepted, Navigation
+  snapshots, hails, encounter resolution, tactical start and settlement,
+  MapServer docking, validated station dialogue) under a `story_progress`
+  row lock; replays and reconnects never double-count.
+- Migration `create_story_progress`: `story_progress` (per pilot and
+  chapter) and `story_rewards` (once-only payout receipts).
+- Consignment of 3 medical-supply crates (accepted from the comms card),
+  removed on delivery at Mars; 500 credits, the Helios courier license flag
+  and +5 Helios Courier Cooperative standing paid exactly once.
+- `Core.Universe.StoryTraffic` and `Navigation.stage_story_contact/3`,
+  `clear_story_contacts/2`: private per-pilot story vessels. Vesper-02
+  (hailable, protected from attack) and Corsair-17 (hostile, surrenders at
+  50% hull through a new `surrender_at` NPC doctrine). They never enter
+  shared traffic; other pilots cannot see, hail or attack them, and their
+  tactical map actor carries `private_to`, which the world and helmet
+  channels use to strip it from every other pilot's stream.
+- `ShipCondition.story_patch/2` and `MapServer.station_patch_hull/4`: the
+  scripted field patch at Mara Venn's bench (step 8).
+- Story topics for Mara Venn, Juno Rook and Eno Kade, added to the normal
+  station dialogue list; MapServer still validates room and distance first.
+- Cockpit comms card (`#story-comms`, `story_hud.mjs`) with step, speaker,
+  objective, checklist, the offered action, skip and resume; the objective
+  is drawn in the stereo HUD on the laptop SBS view and the phone headset.
+- Channel API: `story` in the world join reply, `story_updated` pushes,
+  `story_action` (`accept_consignment`, `skip`, `resume`), `helmet_story`.
+
+#### Changed
+
+- Design change: the consignment is 3 crates, not 6. The Sunracer's hold is
+  4 t, so six 1 t crates could never be loaded; three leave room for one
+  seized crate from Corsair-17.
+
+#### Failure rules as built
+
+- Death: normal respawn at Earth; the step is kept.
+- Rescue lost (resume past the distress call, retreat, defeat, escape, or
+  destroying Corsair-17 instead of accepting its surrender): back to step 5;
+  the distress call returns on a later voyage past the Green Starbase.
+- Crates missing at Mars: step 9 waits; Helios at Earth reissues the
+  consignment once (provisional, prevents a soft lock; awaiting Brad).
+
+#### Verification
+
+- Automated, run in this session from the umbrella root with the full
+  dependency set: `mix test` core 297 / darkorbit 82 / darkorbit_web 96,
+  0 failures; `npm test` 400 pass; `mix compile --warnings-as-errors` clean;
+  esbuild bundle of `app.js` and `native_game.js` builds.
+- Tests added: `story_traffic_navigation_test.exs` (6), staged Corsair
+  surrender in `world_test.exs`, hull patch in
+  `green_starbase_docking_integration_test.exs`, `prologue_test.exs` (13),
+  `story_test.exs` (5, full prologue with payout and replay),
+  a channel play-through of steps 1 to 6 plus a lost rescue in
+  `world_channel_test.exs`, private-actor stripping in
+  `world_stream_policy_test.exs`, `story_hud_test.mjs` (7).
+- `mix format --check-formatted` still fails on 118 files that were
+  unformatted before this work; the new files are formatted, existing files
+  were not reformatted, so `mix precommit` stops at that step.
+- Known flaky test, present before this work (3 of 15 baseline runs):
+  "authenticated pilot freely switches from AI cruise to deep-space cockpit
+  and back" asserts on the Registry right after the map process exits.
+- Manual verification: none. The prologue has not been played in the
+  laptop cockpit or headset yet.
+
 ### Story prologue design: "First Run" (2026-11-21)
 
 #### Added

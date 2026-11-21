@@ -1254,6 +1254,43 @@ defmodule Core.WorldTest do
   end
 
   @tag no_initial_encounter: true, no_auto_respawn: true
+  test "the prologue's staged Corsair-17 is private to its pilot and surrenders at half hull",
+       context do
+    opts = context.world_options
+    stats = %{context.stats | damage: 10}
+    {:ok, session} = World.connect(9_741, stats, opts)
+    assert {:ok, _} = World.solar_set_course(session.id, "mars", opts)
+    for _ <- 1..5, do: assert(:ok = SolarNavigation.tick(@solar_navigation_server))
+
+    assert {:ok, %{pending_encounter: encounter}} =
+      World.solar_stage_story_contact(9_741, :corsair_raid, opts)
+    assert encounter.classification == :hostile_contact
+
+    assert {:ok, %{enemy: enemy}} = World.solar_enter_tactical(session.id, encounter.id, opts)
+    assert enemy.ship_class == "dart"
+    assert enemy.private_to == 9_741
+    assert enemy.display_name == "Corsair-17"
+
+    [{pid, _}] = Registry.lookup(@registry, {:world_map, "1-1"})
+    npc = :sys.get_state(pid).npcs[enemy.id]
+    assert npc.surrender_at == 0.5
+
+    assert {:ok, _} = World.select_target(session.id, enemy.id, opts)
+    threshold = div(npc.max_hull, 2) + 5
+    :sys.replace_state(pid, fn map ->
+      current = Map.fetch!(map.npcs, enemy.id)
+      %{map | npcs: Map.put(map.npcs, enemy.id, %{current | hull: threshold, shields: 0})}
+    end)
+
+    assert {:ok, %{destroyed: false}} = World.attack(session.id, opts)
+    assert :sys.get_state(pid).npcs[enemy.id].state == :surrendered
+
+    assert {:ok, resumed} =
+      World.solar_finish_tactical(session.id, encounter.id, :surrender, opts)
+    assert resumed.tactical_encounter == nil
+  end
+
+  @tag no_initial_encounter: true, no_auto_respawn: true
   test "a merchant evades injury, then offers surrender rather than fighting to destruction",
        context do
     opts = context.world_options

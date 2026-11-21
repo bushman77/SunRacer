@@ -108,4 +108,18 @@ defmodule DarkorbitWeb.WorldStreamPolicyTest do
     projected = WorldStreamPolicy.project(current, old, 3)
     assert Enum.find(projected.entities, &(&1.id == "far")).position_3d.x == 12_100
   end
+
+  test "private story actors are stripped for every pilot but their owner" do
+    map = %{tick: 3, entities: [
+      %{id: "npc-public", kind: :npc},
+      %{id: "npc-story", kind: :npc, private_to: 7},
+      %{id: 9, kind: :player, private_to: nil}
+    ]}
+
+    assert Enum.map(WorldStreamPolicy.strip_private(map, 7).entities, & &1.id) ==
+             ["npc-public", "npc-story", 9]
+    assert Enum.map(WorldStreamPolicy.strip_private(map, 9).entities, & &1.id) ==
+             ["npc-public", 9]
+    assert WorldStreamPolicy.strip_private(%{tick: 1}, 9) == %{tick: 1}
+  end
 end

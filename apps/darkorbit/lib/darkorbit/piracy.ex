@@ -249,6 +249,17 @@ defmodule Darkorbit.Piracy do
     |> then(fn {loaded, debit, _} -> {loaded, debit} end)
   end
 
+  @doc """
+  One keyed standing change awarded by a server-verified story step
+  (Darkorbit.Story). Must run inside the caller's transaction; the unique
+  event key makes a retry a no-op.
+  """
+  def record_story_standing!(user_id, faction, key, kind, delta)
+      when is_integer(user_id) and user_id > 0 and is_binary(faction) and
+           is_binary(key) and is_integer(delta) do
+    apply_faction_event!(user_id, faction, key, kind, delta)
+  end
+
   defp apply_faction_event!(user_id, faction, key, kind, delta) do
     changeset = Ecto.Changeset.change(%FactionEvent{},
       user_id: user_id, faction_id: faction, event_key: key,

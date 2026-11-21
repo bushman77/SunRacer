@@ -137,7 +137,8 @@ defmodule DarkorbitWeb.HelmetChannel do
         case World.snapshot(socket.assigns.helmet_map_id) do
           {:ok, map} ->
             push(socket, "helmet_snapshot",
-              %{map: map, player_id: socket.assigns.helmet_player_id})
+              %{map: WorldStreamPolicy.strip_private(map, socket.assigns.helmet_player_id),
+        player_id: socket.assigns.helmet_player_id})
             assign(socket, :helmet_baseline, map)
 
           {:error, _} ->
@@ -215,11 +216,15 @@ defmodule DarkorbitWeb.HelmetChannel do
         push(socket, "helmet_navigation",
           visual_navigation_for_player(socket.assigns.helmet_player_id))
 
+        push(socket, "helmet_story",
+          helmet_story(safe_story(socket.assigns.helmet_player_id)))
+
         socket =
           case World.snapshot(map_id) do
             {:ok, map} ->
               push(socket, "helmet_snapshot",
-                %{map: map, player_id: socket.assigns.helmet_player_id})
+                %{map: WorldStreamPolicy.strip_private(map, socket.assigns.helmet_player_id),
+        player_id: socket.assigns.helmet_player_id})
               socket
               |> assign(:helmet_baseline, map)
               |> push_surrender_if_changed(map, true)
@@ -275,6 +280,7 @@ defmodule DarkorbitWeb.HelmetChannel do
     socket = push_surrender_if_changed(socket, map)
 
     if tick > base do
+      map = WorldStreamPolicy.strip_private(map, socket.assigns.helmet_player_id)
       projected = WorldStreamPolicy.project(map, old, socket.assigns.helmet_player_id)
       delta = WorldStreamDelta.between(old, projected)
 
@@ -295,7 +301,8 @@ defmodule DarkorbitWeb.HelmetChannel do
                   %{assigns: %{helmet_active: true, helmet_map_id: subscribed_map_id}} = socket)
       when map_id == subscribed_map_id do
     push(socket, "helmet_snapshot",
-      %{map: map, player_id: socket.assigns.helmet_player_id})
+      %{map: WorldStreamPolicy.strip_private(map, socket.assigns.helmet_player_id),
+        player_id: socket.assigns.helmet_player_id})
 
     {:noreply, socket
       |> assign(:helmet_baseline, map)
@@ -338,7 +345,18 @@ defmodule DarkorbitWeb.HelmetChannel do
 
   def handle_info({event, payload}, %{assigns: %{helmet_active: true}} = socket)
       when event in [:laser_fired, :npc_spawned, :entity_destroyed] do
-    push(socket, Atom.to_string(event), payload)
+    if event != :npc_spawned or
+         WorldStreamPolicy.visible?(payload, socket.assigns.helmet_player_id) do
+      push(socket, Atom.to_string(event), payload)
+    end
+
+    {:noreply, socket}
+  end
+
+  # The paired pilot's story prompt, for the headset's stereo HUD. Text only.
+  def handle_info({:story_updated, %{player_id: player_id, story: story}},
+                  %{assigns: %{helmet_active: true, helmet_player_id: player_id}} = socket) do
+    push(socket, "helmet_story", helmet_story(story))
     {:noreply, socket}
   end
 
@@ -379,6 +397,20 @@ defmodule DarkorbitWeb.HelmetChannel do
   # subscribe before dropping the previous map, and do not accept a map ID
   # from the phone. When a map is still starting, its later world_state event
   # is delivered through the already-subscribed topic.
+  defp safe_story(player_id) do
+    World.story_snapshot(player_id)
+  rescue
+    _error -> nil
+  end
+
+  # Only the prompt the pilot already sees; never rewards or flags.
+  defp helmet_story(%{prompt: %{} = prompt, step: step, complete: complete}) do
+    %{step: step, complete: complete,
+      prompt: Map.take(prompt, [:speaker, :text, :objective, :checks])}
+  end
+
+  defp helmet_story(_story), do: %{step: nil, complete: false, prompt: nil}
+
   defp follow_pilot_region(socket) do
     player_id = socket.assigns.helmet_player_id
     previous = socket.assigns[:helmet_map_id]
@@ -398,7 +430,8 @@ defmodule DarkorbitWeb.HelmetChannel do
           else
             case World.snapshot(map_id) do
               {:ok, map} ->
-                push(socket, "helmet_snapshot", %{map: map, player_id: player_id})
+                push(socket, "helmet_snapshot",
+                  %{map: WorldStreamPolicy.strip_private(map, player_id), player_id: player_id})
                 socket
                 |> assign(:helmet_baseline, map)
                 |> push_surrender_if_changed(map, true)

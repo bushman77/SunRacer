@@ -153,6 +153,10 @@ defmodule DarkorbitWeb.WorldChannelTest do
     })
     assert_reply ref, :error, %{reason: "not_docked"}
 
+    # A story topic is validated by MapServer first, like any other topic.
+    story = push(joined, "station_talk", %{"attendant_id" => "repair", "topic" => "story"})
+    assert_reply story, :error, %{reason: "not_docked"}
+
     invalid = push(joined, "station_talk", %{
       "attendant_id" => ["trade"], "topic" => "greeting"
     })
@@ -1322,6 +1326,90 @@ defmodule DarkorbitWeb.WorldChannelTest do
       %{state | npcs: Map.put(state.npcs, npc_id, primed)}
     end)
     :ok
+  end
+
+  test "the First Run prologue advances from server-confirmed channel events" do
+    account = verified_player_account_fixture()
+    other = verified_player_account_fixture()
+    {:ok, auth} = authenticated_socket(account)
+    {:ok, response, cockpit} = subscribe_and_join(auth, WorldChannel, "world:1-1")
+    assert %{step: 1, prompt: %{speaker: "Dispatcher Halden Ross"}} = response.story
+    {:ok, other_auth} = authenticated_socket(other)
+    {:ok, _other_response, _spectator} = subscribe_and_join(other_auth, WorldChannel, "world:1-1")
+
+    # Step 1: the flight server confirms throttle and steering.
+    ref = push(cockpit, "flight_controls", %{"throttle" => 0.6, "yaw" => 0.5})
+    assert_reply ref, :ok, _
+    assert_push "story_updated", %{step: 2, prompt: %{action: %{id: "accept_consignment"}}}
+
+    # A choice the step does not offer is refused; the offered one loads crates.
+    ref = push(cockpit, "story_action", %{"action" => "launch_missiles"})
+    assert_reply ref, :error, %{reason: "invalid_story_action"}
+    ref = push(cockpit, "story_action", %{"action" => "accept_consignment"})
+    assert_reply ref, :ok, %{story: %{step: 3}}
+    assert Map.get(Darkorbit.Inventory.cargo_manifest(account.id), "medical_supplies") == 3
+
+    ref = push(cockpit, "solar_set_course", %{"body_id" => "mars"})
+    assert_reply ref, :ok, %{navigation: %{status: :traveling}}
+    assert_push "story_updated", %{step: 4}
+
+    solar = Module.concat(SessionManager, Core.Universe.Navigation)
+    vesper = Core.Universe.StoryTraffic.contact_id(account.id, :vesper_pass)
+    held = tick_until_story_hold(solar, account.id, vesper)
+
+    ref = push(cockpit, "solar_hail", %{"contact_id" => vesper})
+    assert_reply ref, :ok, %{communication: %{call_sign: "Vesper-02"}}
+    assert_push "story_updated", %{step: 5}
+    ref = push(cockpit, "solar_resolve_encounter",
+      %{"encounter_id" => held.id, "choice" => "continue"})
+    assert_reply ref, :ok, _
+
+    corsair = Core.Universe.StoryTraffic.contact_id(account.id, :corsair_raid)
+    raid = tick_until_story_hold(solar, account.id, corsair)
+    assert raid.classification == :hostile_contact
+
+    ref = push(cockpit, "solar_enter_encounter", %{"encounter_id" => raid.id})
+    assert_reply ref, :ok, %{enemy: %{private_to: private_to, display_name: "Corsair-17"}}
+    assert private_to == account.id
+    assert_push "story_updated", %{step: 6}
+
+    # The staged raider exists only for its pilot.
+    assert {:ok, snapshot} = World.snapshot("1-1")
+    raider = Enum.find(snapshot.entities, &(Map.get(&1, :private_to) == account.id))
+    assert raider
+    refute DarkorbitWeb.WorldStreamPolicy.visible?(raider, other.id)
+    assert DarkorbitWeb.WorldStreamPolicy.visible?(raider, account.id)
+
+    # Retreating loses Vesper-02: back to the distress call.
+    ref = push(cockpit, "solar_retreat_encounter", %{"encounter_id" => raid.id})
+    assert_reply ref, :ok, _
+    assert_push "story_updated", %{step: 5,
+      prompt: %{objective: "Cruise past the Green Starbase to retry the rescue"}}
+    assert %{step: 5} = Darkorbit.Story.snapshot(account.id)
+  end
+
+  defp tick_until_story_hold(solar, player_id, contact_id, remaining \\ 400)
+
+  defp tick_until_story_hold(_solar, _player_id, contact_id, 0),
+    do: flunk("story vessel #{contact_id} was never staged")
+
+  defp tick_until_story_hold(solar, player_id, contact_id, remaining) do
+    assert :ok = Core.Universe.Navigation.tick(solar)
+    {:ok, navigation} = Core.Universe.Navigation.snapshot(solar, player_id)
+
+    case navigation.pending_encounter do
+      %{contact_id: ^contact_id} = held ->
+        held
+
+      %{id: id} ->
+        # Real shared traffic may cross the lane first; let it pass.
+        assert {:ok, _} = Core.Universe.Navigation.resolve_encounter(solar, player_id, id, :continue)
+        tick_until_story_hold(solar, player_id, contact_id, remaining - 1)
+
+      nil ->
+        # The channel consumes the navigation broadcast; sync with it.
+        tick_until_story_hold(solar, player_id, contact_id, remaining - 1)
+    end
   end
 
   defp authenticated_socket(account) do

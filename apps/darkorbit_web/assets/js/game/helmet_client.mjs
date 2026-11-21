@@ -1,5 +1,6 @@
 import {Socket} from "phoenix"
 import {StereoSpaceView} from "./stereo_view.js"
+import {storyHudModel} from "./story_hud.mjs"
 import {BandwidthProbe, instrumentPhoenixSocket} from "./bandwidth_probe.mjs"
 import {WorldStreamDelta} from "./world_stream_delta.mjs"
 import {attachBandwidthPanel} from "./bandwidth_panel.mjs"
@@ -72,6 +73,8 @@ export class HelmetClient {
     this.planetaryWarningDisplay = null
     // Encounter hold drawn inside the stereo HUD, not a flat DOM card.
     this.encounterHold = null
+    // Prologue objective line, same field shape the laptop's StoryHud exposes.
+    this.storyHud = {stereoLine: null}
     this.selectedTargetId = null
     this.helmetSurrender = null
     this.beams = []
@@ -195,6 +198,10 @@ export class HelmetClient {
       // card split 50/50 ignores lens calibration and sits at screen depth.
       this.encounterHold = payload?.paused === true && payload.encounter
         ? {call_sign: String(payload.encounter.call_sign || "CONTACT")} : null
+    })
+    this.channel.on("helmet_story", payload => {
+      // Read-only: the phone never sends story choices.
+      this.storyHud = {stereoLine: storyHudModel(payload).stereoLine}
     })
     this.channel.on("helmet_navigation", payload => {
       this.navComputer.solarNavigation = helmetPlanetaryNavigation(payload)

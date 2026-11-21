@@ -115,6 +115,25 @@ defmodule Core.World.GreenStarbaseDockingIntegrationTest do
     assert :ok = World.disconnect(session.id, ctx.opts)
   end
 
+  test "the story hull patch restores a parked ship only", ctx do
+    at_starbase!()
+    session = connect!(ctx, at(0, 0, -10))
+    assert {:error, :not_docked} = World.station_patch_hull(session.id, ctx.opts)
+    assert {:ok, %{docked: true}} = World.dock(session.id, ctx.opts)
+
+    [{pid, _}] = Registry.lookup(@registry, {:world_map, ctx.opts[:map_id]})
+    :sys.replace_state(pid, fn state ->
+      ship = Map.fetch!(state.docked_ships, @pilot)
+      %{state | docked_ships: Map.put(state.docked_ships, @pilot,
+        %{ship | hull: 3, shields: 0})}
+    end)
+
+    assert {:ok, %{combat: combat}} = World.station_patch_hull(session.id, ctx.opts)
+    assert combat.hull == combat.max_hull
+    assert combat.shields == combat.max_shields
+    assert :ok = World.disconnect(session.id, ctx.opts)
+  end
+
   test "room transition is server-owned and included in the parked ship report", ctx do
     at_starbase!()
     session = connect!(ctx, at(0, 0, -10))

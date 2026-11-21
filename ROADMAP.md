@@ -1301,27 +1301,33 @@ See `docs/space-nova-release.md` for the distribution procedure.
 - [ ] Consider per-ship-class hit radii (Scow and freighters are larger
   than the 40-unit sphere).
 
-### Story prologue: "First Run" (story-driven tutorial) — design only (2026-11-21)
+### Story prologue: "First Run" (story-driven tutorial) — prologue playable server-side, not manually play-tested (2026-11-21)
 
 Design: `docs/story-first-run.md`. An original SOL story whose prologue (a
 first Helios courier run, Earth to Mars, interrupted by a raider attack on
 Vesper-02) teaches flight, cargo, navigation, encounters, combat, surrender,
-docking, station walking and mission completion. Nothing implemented yet.
+docking, station walking and mission completion. Branch `story_line`.
 
 - [x] Story premise, cast, nine-step prologue with server triggers, failure
   rules and the Chapter 1 hook written down; Brad's decisions recorded.
-- [ ] Story progress store: per-pilot chapter/step in PostgreSQL, advanced
-  only by server events, idempotent.
-- [ ] Tutorial prompts and in-character comms lines in the cockpit HUD and
-  the headset stereo HUD; skip option.
-- [ ] Credits payout with a once-only receipt (first credit income in the
-  game), courier license flag and Helios standing gain.
-- [ ] Staged encounters for one pilot: forced Vesper-02 close pass (step 4)
-  and one beatable surrendering raider, Corsair-17 (step 5), without
-  enabling raiders in the live game.
-- [ ] Juno Rook Mission Office topics driven by story state.
-- [ ] Green Starbase merchant gear unlocks tied to story progress.
-- [ ] Open design questions: the leaker, first payout amount, which station
-  character sells gear and the first item, raider visibility to other
-  pilots, crate reissue rule.
+- [x] Story progress store: `story_progress` (per pilot and chapter: step,
+  flags, skipped, step timestamps) advanced only by server-confirmed events
+  under a row lock; pure step engine `Darkorbit.Story.Prologue`.
+- [x] Tutorial prompts and in-character comms lines: laptop cockpit card
+  (`#story-comms`), one-line objective in the stereo HUD (laptop SBS and the
+  paired phone headset via `helmet_story`), skip and resume.
+- [x] Credits payout with a once-only receipt (`story_rewards`, unique per
+  pilot and reward): 500 credits, Helios courier license flag, +5 Helios
+  Courier Cooperative standing through the keyed faction-event ledger.
+- [x] Staged encounters for one pilot: private Vesper-02 close pass (step 4)
+  and a private, beatable Corsair-17 that surrenders at half hull (step 5).
+  Neither enters shared traffic; live raider settings untouched.
+- [x] Mara Venn, Juno Rook and Eno Kade story topics driven by story state;
+  Mara's topic applies the scripted hull patch.
+- [ ] Manual play-through of all nine steps in the laptop cockpit and headset
+  (not yet performed).
+- [ ] Next milestone: Ilya Quill (Ship Outfitter) sells a small story-gated
+  gear selection; first item still to choose.
+- [ ] Open design questions: the leaker; confirm the one-time crate reissue
+  at Earth (implemented provisionally to prevent a soft lock).
 

@@ -51,6 +51,25 @@ defmodule Core.World do
     end
   end
 
+  @doc "Scripted story repair of the authenticated pilot's parked ship."
+  def station_patch_hull(session_id, opts \\ []) do
+    with {:ok, session} <- fetch_session(
+           Keyword.get(opts, :sessions, SessionManager), session_id) do
+      MapServer.station_patch_hull(Keyword.get(opts, :registry, Core.World.Registry),
+        session.map_id, session.id, session.entity_id)
+    end
+  end
+
+  @doc "Stage a prologue story vessel for one pilot (server story layer only)."
+  def solar_stage_story_contact(player_id, script, opts \\ []) do
+    SolarNavigation.stage_story_contact(solar_navigation_server(opts), player_id, script)
+  end
+
+  @doc "Retire a pilot's private story vessels (server story layer only)."
+  def solar_clear_story_contacts(player_id, opts \\ []) do
+    SolarNavigation.clear_story_contacts(solar_navigation_server(opts), player_id)
+  end
+
   @doc "Server-side restore of an already-verified saved docked state."
   def restore_dock(session_id, opts \\ []) do
     with {:ok, session} <- fetch_session(
@@ -253,6 +272,8 @@ defmodule Core.World do
         |> Map.put(:contact_id, tactical.contact_id)
         |> Map.put(:voyage_number, tactical.voyage_number)
         |> Map.put(:combat, tactical.combat)
+        |> Map.put(:surrender_at, Map.get(tactical, :surrender_at))
+        |> Map.put(:private_to, Map.get(tactical, :private_to))
 
       case MapServer.start_solar_tactical(registry, session.map_id, session.id,
              session.entity_id, encounter_id, tactical.call_sign,

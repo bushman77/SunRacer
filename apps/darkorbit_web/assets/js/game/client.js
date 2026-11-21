@@ -17,6 +17,7 @@ import {CockpitWindowManager} from "./cockpit_window_manager.mjs"
 import {MinimapRenderer} from "./minimap_renderer.mjs"
 import {PointerNavigation} from "./pointer_navigation.mjs"
 import {StereoSpaceView} from "./stereo_view.js"
+import {StoryHud} from "./story_hud.mjs"
 import {HelmetControl} from "./helmet_control.mjs"
 import {SbsRelayWorldPublisher} from "./sbs_relay_world.mjs"
 import {HelmetAlignmentKeyGate} from "./helmet_alignment_keys.mjs"
@@ -447,6 +448,13 @@ class SpaceClient {
       publishRelayWorld: () => this.sbsRelayWorld.publish(this.worldStream?.map, true),
     }).start()
 
+    // Prologue comms card. Steps are server-owned; this only offers the
+    // choice the current prompt lists and renders the server's reply.
+    this.storyHud = new StoryHud(this.root, action =>
+      this.channel?.state === "joined"
+        ? this.channel.push("story_action", {action}, 5000)
+        : null)
+
     this.joinSector(this.mapId)
   }
 
@@ -483,6 +491,9 @@ class SpaceClient {
       }
     })
     channel.on("world_region_changed", payload => this.switchOrbitalRegion(payload?.map_id))
+    channel.on("story_updated", story => {
+      if (this.channel === channel) this.storyHud?.apply(story)
+    })
     // Open the pilot's decision at first contact, without waiting for another
     // navigation tick. The authoritative snapshot also restores it on reconnect.
     channel.on("solar_encounter_started", payload => {
@@ -649,6 +660,7 @@ class SpaceClient {
     this.pilots = new Map(Object.entries(response.pilots || {}))
 
     if(response.solar_navigation)this.applySolarNavigation(response.solar_navigation)
+    if ("story" in response) this.storyHud?.apply(response.story)
     for (const entity of response.map.entities) this.upsertEntity(entity, true)
     this.applyPlanetaryWarning(ownPlanetaryWarning(response.map, this.selfId))
     this.applyStationWarning(ownStationWarning(response.map, this.selfId))

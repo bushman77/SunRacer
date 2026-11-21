@@ -103,6 +103,40 @@ defmodule Darkorbit.ShipCondition do
     end)
   end
 
+  @doc """
+  The prologue's scripted field patch at Mara Venn's bench (Darkorbit.Story).
+  Restores hull and shields to capacity for a living hull. This is the only
+  healing path besides respawn; it is called once per pilot by the story
+  engine and never from a client payload.
+  """
+  @spec story_patch(pos_integer(), pos_integer()) :: {:ok, Condition.t()} | {:error, term()}
+  def story_patch(player_id, ship_instance_id) do
+    Repo.transaction(fn ->
+      ensure_owned!(player_id, ship_instance_id)
+
+      case condition_row(ship_instance_id) do
+        nil ->
+          Repo.rollback(:ship_condition_missing)
+
+        %{status: :alive} = existing ->
+          {:ok, patched} = require_condition!(
+            Condition.initial_from_capacities(existing.max_hull, existing.max_shields))
+
+          if patched == as_condition(existing) do
+            patched
+          else
+            existing
+            |> Ecto.Changeset.change(Map.put(patched, :revision, existing.revision + 1))
+            |> persist!()
+            |> as_condition()
+          end
+
+        _ ->
+          Repo.rollback(:ship_not_alive)
+      end
+    end)
+  end
+
   defp ensure_owned!(player_id, ship_instance_id) do
     query =
       from(ship in PlayerShip,

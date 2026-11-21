@@ -24,6 +24,26 @@ defmodule DarkorbitWeb.WorldStreamPolicy do
     :route_waypoints_3d, :ship_instance_id
   ]
 
+  @doc """
+  Drop actors that are private to another pilot (the prologue's staged
+  Corsair-17). The flag comes from MapServer, never from a client.
+  """
+  @spec visible?(map(), term()) :: boolean()
+  def visible?(entity, player_id) when is_map(entity) do
+    case Map.get(entity, :private_to) do
+      nil -> true
+      owner -> owner == player_id
+    end
+  end
+
+  def visible?(_entity, _player_id), do: true
+
+  @spec strip_private(map(), term()) :: map()
+  def strip_private(%{entities: entities} = map, player_id) when is_list(entities),
+    do: %{map | entities: Enum.filter(entities, &visible?(&1, player_id))}
+
+  def strip_private(map, _player_id), do: map
+
   @spec project(map(), map(), term()) :: map()
   def project(%{entities: entities, tick: tick, tick_ms: tick_ms} = current,
               %{entities: old_entities}, player_id)

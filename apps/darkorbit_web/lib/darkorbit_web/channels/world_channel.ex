@@ -3,6 +3,7 @@ defmodule DarkorbitWeb.WorldChannel do
   require Logger
 
   alias Darkorbit.World
+  alias Darkorbit.Story.Prologue
 
   alias DarkorbitWeb.{WorldStreamDelta, WorldStreamPolicy}
 
@@ -246,6 +247,18 @@ defmodule DarkorbitWeb.WorldChannel do
     end
   end
 
+  # Story choices offered by the current prologue prompt (accept the
+  # consignment, skip or resume the tutorial). The server validates the step.
+  def handle_in("story_action", %{"action" => action}, socket) when is_binary(action) do
+    case World.story_action(socket.assigns.world_session_id, action) do
+      {:ok, story} -> {:reply, {:ok, %{story: story}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in("story_action", _payload, socket),
+    do: {:reply, {:error, %{reason: "invalid_story_action"}}, socket}
+
   def handle_in("stop_navigation", _payload, socket) do
     case World.stop_navigation(socket.assigns.world_session_id) do
       {:ok, entity} -> {:reply, {:ok, %{entity: entity}}, socket}
@@ -260,7 +273,7 @@ defmodule DarkorbitWeb.WorldChannel do
       {:ok, entity} ->
         payload = if socket.assigns[:world_stream] == :delta_v1,
           do: %{accepted: true}, else: %{entity: entity}
-        {:reply, {:ok, payload}, socket}
+        {:reply, {:ok, payload}, story_flight_controls(socket, entity, input)}
       {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
     end
   end
@@ -336,6 +349,7 @@ defmodule DarkorbitWeb.WorldChannel do
                 %{assigns: %{world_stream: :delta_v1, map_id: map_id}} = socket) do
     case World.snapshot(map_id) do
       {:ok, map} ->
+        map = WorldStreamPolicy.strip_private(map, socket.assigns.current_player_id)
         {:reply, {:ok, %{map: map}},
          socket |> assign(:world_baseline, map) |> assign(:movement_previews, %{})}
       {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
@@ -348,6 +362,7 @@ defmodule DarkorbitWeb.WorldChannel do
     if tick > base do
       # Apply per-pilot spatial relevance ONLY to visual motion. The owned ship,
       # nearby ships, damage and tactical state always replicate immediately.
+      map = WorldStreamPolicy.strip_private(map, socket.assigns.current_player_id)
       projected = WorldStreamPolicy.project(map, old, socket.assigns.current_player_id)
       delta = WorldStreamDelta.between(old, projected)
 
@@ -414,6 +429,7 @@ defmodule DarkorbitWeb.WorldChannel do
                   %{assigns: %{current_player_id: current_player_id}} = socket)
       when player_id == current_player_id do
     :ok = push(socket, "solar_navigation_updated", payload)
+    socket = story_navigation(socket, payload.navigation)
 
     # World transition is a server-owned consequence of completing an actual
     # SOL voyage. Client never selects map identity or spawn coordinates.
@@ -513,7 +529,7 @@ defmodule DarkorbitWeb.WorldChannel do
       {:error, reason} -> Logger.warning("Station dock checkpoint: #{inspect(reason)}")
     end
     push(socket, "station_docked", payload)
-    {:noreply, socket}
+    {:noreply, story_event_if(socket, :docked, :docked_starbase)}
   end
 
   def handle_info({event, payload}, socket)
@@ -538,9 +554,47 @@ defmodule DarkorbitWeb.WorldChannel do
              :station_launched,
              :entity_destroyed
            ] do
-    :ok = push(socket, Atom.to_string(event), payload)
+    player_id = socket.assigns.current_player_id
+
+    cond do
+      event == :world_state ->
+        :ok = push(socket, "world_state", WorldStreamPolicy.strip_private(payload, player_id))
+
+      event in [:npc_spawned, :npc_movement_started, :npc_state_changed] and
+          not WorldStreamPolicy.visible?(payload, player_id) ->
+        :ok
+
+      true ->
+        :ok = push(socket, Atom.to_string(event), payload)
+    end
+
     {:noreply, socket}
   end
+
+  def handle_info({:story_join_check, navigation}, socket) do
+    socket = story_navigation(socket, navigation)
+
+    socket =
+      if Prologue.wants?(socket.assigns[:story_progress], :docked) do
+        case World.docking_status(socket.assigns.world_session_id) do
+          {:ok, %{docked: true}} -> story_event(socket, :docked_starbase)
+          _ -> socket
+        end
+      else
+        socket
+      end
+
+    {:noreply, socket}
+  end
+
+  # Story progress is private to its pilot; forward only our own.
+  def handle_info({:story_updated, %{player_id: player_id, story: story, progress: progress}},
+                  %{assigns: %{current_player_id: player_id}} = socket) do
+    :ok = push(socket, "story_updated", story)
+    {:noreply, assign(socket, :story_progress, progress)}
+  end
+
+  def handle_info({:story_updated, _payload}, socket), do: {:noreply, socket}
 
   # A low-frequency authoritative pose checkpoint protects against killed
   # clients/VMs. MapServer's fast simulation tick never performs SQL I/O.
@@ -569,6 +623,8 @@ defmodule DarkorbitWeb.WorldChannel do
   defp finish_join(socket, map_id, session, status, payload) do
     with {:ok, snapshot} <- World.snapshot(map_id),
          {:ok, solar_navigation} <- World.solar_snapshot(session.id) do
+        snapshot = WorldStreamPolicy.strip_private(snapshot, socket.assigns.current_player_id)
+        {story, story_progress} = join_story(socket.assigns.current_player_id)
         player_ids =
           snapshot.entities
           |> Enum.filter(&(&1.kind == :player))
@@ -579,13 +635,17 @@ defmodule DarkorbitWeb.WorldChannel do
           solar_navigation: solar_navigation,
           player: status,
           hotbar: World.action_hotbar(),
-          pilots: World.player_summaries(player_ids)
+          pilots: World.player_summaries(player_ids),
+          story: story
         }
 
         delta? = Map.get(payload, "stream") == "delta_v1"
         response = if delta?, do: Map.put(response, :stream, "delta_v1"), else: response
 
         Process.send_after(self(), :pilot_location_checkpoint, 10_000)
+        # After the join reply: re-offer the current navigation and berth to
+        # the story engine, so an arrival or dock missed while offline counts.
+        send(self(), {:story_join_check, solar_navigation})
 
         {:ok, response,
          socket
@@ -593,13 +653,75 @@ defmodule DarkorbitWeb.WorldChannel do
          |> assign(:world_session_id, session.id)
          |> assign(:world_stream, if(delta?, do: :delta_v1, else: :full))
          |> assign(:world_baseline, snapshot)
-         |> assign(:movement_previews, %{})}
+         |> assign(:movement_previews, %{})
+         |> assign(:story_progress, story_progress)
+         |> assign(:story_nav_key, nil)}
     else
       {:error, reason} ->
         _result = World.disconnect(session.id)
         {:error, %{reason: error_reason(reason)}}
     end
   end
+
+  # -- Story hooks ----------------------------------------------------------
+  # The channel only pre-filters with the pure engine so high-rate events
+  # (flight heartbeats, navigation ticks) skip the database when the
+  # current step cannot use them. Darkorbit.Story decides under a row lock.
+
+  defp join_story(player_id) do
+    story = World.story_snapshot(player_id)
+    {story, Darkorbit.Story.progress(player_id)}
+  rescue
+    error ->
+      Logger.warning("story unavailable at join: " <> Exception.message(error))
+      {nil, nil}
+  end
+
+  defp story_flight_controls(socket, entity, input) do
+    if Prologue.wants?(socket.assigns[:story_progress], :flight_controls) do
+      confirmed = %{
+        throttle: abs(number(Map.get(entity, :throttle))) > 0.05,
+        rotation: Enum.any?(["yaw", "pitch", "roll"], &(abs(number(input[&1])) > 0.05))
+      }
+
+      if confirmed.throttle or confirmed.rotation,
+        do: story_event(socket, {:flight_controls, confirmed}),
+        else: socket
+    else
+      socket
+    end
+  end
+
+  defp story_navigation(socket, navigation) when is_map(navigation) do
+    progress = socket.assigns[:story_progress]
+    key = {Map.get(navigation, :status), Map.get(navigation, :location_id)}
+    arrived? = key != socket.assigns[:story_nav_key] and elem(key, 0) == :idle
+
+    socket = assign(socket, :story_nav_key, key)
+
+    if Prologue.wants?(progress, :navigation) and
+         (arrived? or Prologue.apply(progress, {:navigation, navigation}) != :ignore),
+       do: story_event(socket, {:navigation, navigation}),
+       else: socket
+  end
+
+  defp story_navigation(socket, _navigation), do: socket
+
+  defp story_event_if(socket, kind, event) do
+    if Prologue.wants?(socket.assigns[:story_progress], kind),
+      do: story_event(socket, event),
+      else: socket
+  end
+
+  defp story_event(socket, event) do
+    case World.story_event(socket.assigns.world_session_id, event) do
+      {:ok, %{progress: progress}} -> assign(socket, :story_progress, progress)
+      _ -> socket
+    end
+  end
+
+  defp number(value) when is_number(value), do: value
+  defp number(_value), do: 0.0
 
   defp error_reason(reason) when is_atom(reason), do: Atom.to_string(reason)
   defp error_reason(reason), do: inspect(reason)

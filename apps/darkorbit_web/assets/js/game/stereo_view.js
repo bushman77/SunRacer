@@ -750,6 +750,7 @@ export class StereoSpaceView {
     const flyby = nav?.tactical_encounter ? null : nav?.encounter
     const planetWarning = client.planetaryWarningDisplay
     const hold = client.encounterHold
+    const story = client.storyHud?.stereoLine
     // This canvas is a stereo-correct 3D HUD surface shared by both SBS
     // eyes. Render the hazard inside the instrument rather than a flat
     // non-stereoscopic banner that would be uncomfortable in a headset.
@@ -758,7 +759,8 @@ export class StereoSpaceView {
       : surrenderLabel ? "#81ffaf"
       : hold ? "#fcd34d"
       : flyby ? "#7eead6"
-      : range?.inRange === false ? "#ff9b96" : "#9fc7df"
+      : range?.inRange === false ? "#ff9b96"
+      : !range && story ? "#fcd889" : "#9fc7df"
     ctx.font = "bold 22px monospace"
     ctx.fillText(planetWarning
       ? planetWarning.level.toUpperCase() + " · " + planetWarning.detail
@@ -767,7 +769,8 @@ export class StereoSpaceView {
         " · HAIL OR RESUME ON LAPTOP"
       : flyby ? "CLOSE PASS · " + String(flyby.call_sign).slice(0, 24) +
         " · HAIL VIA ATLAS"
-      : range ? range.label :
+      : range ? range.label
+      : story ? story :
         "LASER " + Math.round(own?.attackRange || 0) + "u  ·  RMB FIRE  ·  T TARGET",
       30, 234)
     this.hudTexture.needsUpdate = true

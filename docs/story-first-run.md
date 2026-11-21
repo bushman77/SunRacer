@@ -2,8 +2,9 @@
 
 Design draft, decisions as of 2026-11-21 (Brad). Editable working copy:
 https://claude.ai/artifact/KcvCtJ1QRxaoBAuAiAdRRW — keep this file in sync
-when the design changes. Nothing in this document is implemented yet; see
-ROADMAP.md "Story prologue: First Run" for build status.
+when the design changes. The prologue (steps 1 to 9, payout and failure
+rules) is implemented on branch `story_line`; see "Implementation" at the end
+and ROADMAP.md "Story prologue: First Run" for status.
 
 ## Purpose and principles
 
@@ -47,14 +48,14 @@ Your first solo Helios delivery, Earth to Mars, goes wrong in a way that teaches
 | # | Story beat | Pilot does | Teaches | Trigger (server) | Exists today? |
 | --- | --- | --- | --- | --- | --- |
 | 1 | You undock your Sunracer from the Earth dock; Dispatcher Ross runs your systems check | Throttle up, steer, try mouse look | Flight, cockpit HUD | Flight controls received with throttle and rotation input | Flight yes; step tracking no |
-| 2 | Your consignment is loaded: 6 crates of medical supplies for the Mars refinery | Check the cargo hold | Cargo | Mission accepted; server adds the crates | Cargo yes; missions no |
+| 2 | Your consignment is loaded: 3 crates of medical supplies for the Mars refinery | Check the cargo hold | Cargo | Mission accepted; server adds the crates | Cargo yes; missions no |
 | 3 | Ross clears you for Mars | Open the Atlas, plot Earth to Mars, start cruise | Navigation, cruise | Voyage status becomes traveling to Mars | Yes |
 | 4 | Vesper-02 passes close and Captain Varga hails you | Hail, then Resume | Encounter hold | Hail or resume on that encounter | Hold yes; staging it for this pilot no |
 | 5 | Eno Kade relays a distress call: raiders have Vesper-02 pinned near the Green Starbase | Attack the raider, aim with the sight | Combat, aiming | Tactical encounter starts against the staged raider | Combat yes; staged raider no |
 | 6 | Corsair-17 surrenders | Accept the surrender, seize its cargo | Surrender, seizing cargo, standing | Surrender settlement recorded | Yes |
 | 7 | Your hull is damaged, so you divert to the Green Starbase | Approach the bay, hold still to dock | Docking | Station docked event | Yes |
 | 8 | Inside, Mara Venn patches you up and Juno Rook debriefs you | Walk to the repair bay and Mission Office, talk to both | Walking, dialogue, repair | Validated dialogue with each attendant | Walk and talk yes; real repair no |
-| 9 | You launch, finish the run and deliver to Mars | Launch, cruise on, arrive | Completing a mission | Arrival at Mars with the 6 crates still aboard | Arrival yes; delivery payout no |
+| 9 | You launch, finish the run and deliver to Mars | Launch, cruise on, arrive | Completing a mission | Arrival at Mars with the 3 crates still aboard | Arrival yes; delivery payout no |
 
 **Reward:** first pay in credits, your Helios courier license, and a small standing gain with the Helios Courier Cooperative. From here on, the Green Starbase merchant opens a small selection of gear that grows as the story advances.
 
@@ -62,7 +63,7 @@ Your first solo Helios delivery, Earth to Mars, goes wrong in a way that teaches
 
 **1. The Earth dock.** You've just earned your Helios wings, and the Sunracer is the cheapest ship the Cooperative would lease you. Dispatcher Ross is dry and patient: undock, bring the throttle up, swing the nose around, try the mouse look. He's done this with a hundred new pilots and sounds like it.
 
-**2. The consignment.** Six crates of medical supplies for the Mars refinery: routine, low pay, the run every new courier starts on. Ross tells you to check the hold, because the crates have to arrive with you.
+**2. The consignment.** Three crates of medical supplies for the Mars refinery: routine, low pay, the run every new courier starts on. Ross tells you to check the hold, because the crates have to arrive with you.
 
 **3. Clearance.** You open the Atlas, plot Earth to Mars, and engage cruise. Ross signs off: "Quiet lane today. Enjoy it."
 
@@ -82,7 +83,7 @@ Your first solo Helios delivery, Earth to Mars, goes wrong in a way that teaches
 
 - **The pilot dies at any step:** the normal respawn at Earth happens, and the story carries on from the same step. Nothing is reset.
 - **Vesper-02 is destroyed during the rescue:** the rescue (steps 5–6) is redone. The distress call fires again on the pilot's next cruise past the Green Starbase.
-- **The crates are lost before Mars** (sold, jettisoned, or seized by someone else): Helios reissues the consignment at Earth, and step 9 waits for the new crates. *(Proposed, not yet confirmed.)*
+- **The crates are lost before Mars** (sold, jettisoned, or seized by someone else): Helios reissues the consignment at Earth once, and step 9 waits for the new crates. *(Implemented provisionally so a pilot cannot soft-lock; not yet confirmed by Brad.)*
 
 ## The hook and Chapter 1: "Leaked Routes"
 
@@ -125,11 +126,35 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 - If the pilot dies, the normal respawn at Earth happens and the quest carries on.
 - If Vesper-02 is destroyed, that part of the quest is redone.
 - Payouts are in credits. As the quest advances, the Green Starbase merchant introduces a limited selection of gear.
+- First delivery pays 500 credits.
+- Ilya Quill (Ship Outfitter) sells the story-unlocked gear (next milestone).
+- The staged Corsair-17 is seen only by the pilot doing the prologue.
+- Build scope: the prologue first; the gear shop follows.
 
 **Still open:**
 
 - [ ] Which suspect is the real leaker? Undecided for now; Chapter 1 can be written so all three stay plausible until late.
-- [ ] How much is the first payout in credits?
-- [ ] Which station character sells the gear: Tarek Sol (Trade Broker) or Ilya Quill (Ship Outfitter)? And what's the first item unlocked?
-- [ ] Is the staged raider at step 5 seen only by the pilot doing the prologue, or by everyone on that map?
-- [ ] Proposed, not yet confirmed: if the crates are lost before Mars, Helios reissues them at Earth.
+- [ ] What is the first gear item Ilya Quill unlocks?
+- [ ] Confirm or change the one-time crate reissue at Earth (built provisionally).
+
+## Implementation (branch `story_line`, 2026-11-21)
+
+**Where it lives.**
+
+- `Darkorbit.Story.Prologue` (apps/darkorbit): pure step engine, prompts and station lines. No database, socket or clock.
+- `Darkorbit.Story`: applies the engine under a `story_progress` row lock. Crates, credits, the `story_rewards` receipt and the faction event commit with the step change; staging, the hull patch and the cached standing run after commit.
+- `Core.Universe.StoryTraffic` plus `Navigation.stage_story_contact/3` and `clear_story_contacts/2` (apps/core): the private Vesper-02 and Corsair-17. Core stays database-free.
+- Hooks: `Darkorbit.World` (hail, resolve, tactical start and finish, station talk, story actions) and `DarkorbitWeb.WorldChannel` (accepted flight commands, the pilot's own navigation snapshots, docking). The channel pre-filters with the engine so high-rate events skip the database.
+- Client: `story_hud.mjs` (cockpit card `#story-comms`), the stereo HUD objective line, and `helmet_story` for the phone headset.
+
+**Design changes made while building.**
+
+- The consignment is **3 crates**, not 6: the Sunracer's hold is 4 t. Three leave room for one seized crate from Corsair-17. If the hold is full, accepting the surrender (without seizing) still completes step 6.
+- **Vesper-02 in the story is a private copy** on the Earth–Mars run, staged for the prologue pilot only. The shared Vesper-02 keeps its Earth–Venus timetable, and other pilots never see the story copy. The story copy cannot be attacked.
+- **Story vessels hold position** where they are staged; they are props for one encounter hold and retire when the voyage ends.
+- **Corsair-17 surrenders at 50% hull.** Destroying it instead loses the data chip, so the rescue is redone like any other failure.
+- **Timing.** Vesper-02 closes in once the Earth–Mars cruise passes 12%. The distress call fires when the pilot cruises within 2.5 million game-km of the Green Starbase, in either direction. After a failed rescue it waits for a later voyage.
+- **Skip** pauses the whole prologue (no staging, no prompts); *Resume story* continues from the same step.
+
+**Not built yet.** The gear shop (Ilya Quill), Chapter 1, and a manual play-through.
+

@@ -85,6 +85,13 @@ defmodule Core.World.MapServer do
     do: call_map(registry, map_id,
       {:station_talk, session_id, entity_id, attendant_id, topic})
 
+  @doc """
+  Restore a parked ship's hull and shields (the prologue's scripted patch at
+  Mara Venn's bench). Server-only; never exposed as a socket command.
+  """
+  def station_patch_hull(registry, map_id, session_id, entity_id),
+    do: call_map(registry, map_id, {:station_patch_hull, session_id, entity_id})
+
   @doc "Server-only restore from the previously validated durable dock record."
   def restore_station_position(registry, map_id, session_id, entity_id, pose),
     do: call_map(registry, map_id,
@@ -432,6 +439,18 @@ defmodule Core.World.MapServer do
     {:reply, result, state}
   end
 
+  def handle_call({:station_patch_hull, session_id, entity_id}, _from, state) do
+    case parked_station_ship(state, session_id, entity_id) do
+      {:ok, ship} ->
+        patched = %{ship | hull: ship.max_hull, shields: ship.max_shields}
+        updated = %{state | docked_ships: Map.put(state.docked_ships, entity_id, patched)}
+        {:reply, {:ok, player_ship_report(patched, updated)}, updated}
+
+      error ->
+        {:reply, error, state}
+    end
+  end
+
   def handle_call({:restore_station_position, session_id, entity_id, pose},
                   _from, state) do
     with {:ok, _ship} <- parked_station_ship(state, session_id, entity_id),
@@ -594,7 +613,9 @@ defmodule Core.World.MapServer do
       # Use the physical vessel's carried-forward damage; do not mint a
       # fresh 210-hull Scow on every interception of the same traffic ID.
       npc = %{npc | hull: route.combat.hull, shields: route.combat.shields,
-        strategic_vessel_id: route.contact_id}
+        strategic_vessel_id: route.contact_id,
+        surrender_at: story_surrender_at(route),
+        private_to: Map.get(route, :private_to)}
       npc =
         if cruise_course do
           %{npc | state: :cruise, destination: cruise_course.destination,
@@ -1968,6 +1989,17 @@ defmodule Core.World.MapServer do
     end
   end
 
+  # Story NPCs (the prologue's Corsair-17) give up at a scripted hull
+  # fraction instead of fighting to destruction. Server data, never client.
+  defp maybe_scow_survival(%NPCEntity{status: :alive, surrender_at: at} = npc)
+       when is_float(at) and npc.state != :surrendered do
+    if npc.hull / max(npc.max_hull, 1) <= at do
+      %{npc | state: :surrendered, destination: nil, speed: 0, target_id: nil}
+    else
+      npc
+    end
+  end
+
   # Merchant survival thresholds are intentionally explicit and
   # deterministic. They are V1 tuning, NOT reverse-engineered original
   # Space Rogue odds. Scows accelerate away once they have lost 20% of
@@ -1991,6 +2023,13 @@ defmodule Core.World.MapServer do
   end
 
   defp maybe_scow_survival(npc), do: npc
+
+  defp story_surrender_at(route) do
+    case Map.get(route, :surrender_at) do
+      value when is_float(value) and value > 0.0 and value < 1.0 -> value
+      _ -> nil
+    end
+  end
 
   defp validate_tactical_condition(
          %{contact_id: id, voyage_number: voyage, combat: combat},
@@ -2393,7 +2432,9 @@ defmodule Core.World.MapServer do
       next_attack_tick: entity.next_attack_tick,
       target_id: entity.target_id,
       state: entity.state,
-      status: entity.status
+      status: entity.status,
+      # Replication hint: when set, only this pilot's channel shows the actor.
+      private_to: entity.private_to
     }
   end
 

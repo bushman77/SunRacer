@@ -33,6 +33,7 @@ defmodule Core.Universe.Navigation do
   alias Core.Universe.GreenStarbase
   alias Core.Universe.TradeLanes
   alias Core.Universe.Territory
+  alias Core.Universe.StoryTraffic
   alias Core.World.EventSink
 
   @tick_ms 1_000
@@ -163,6 +164,31 @@ defmodule Core.Universe.Navigation do
     GenServer.call(server, {:respawn_at_earth, player_id})
   end
 
+  @doc """
+  Stage a private story vessel and hold the pilot's cruise for it.
+
+  Only the server-side story layer calls this, after a server-confirmed
+  prologue step. The vessel is visible to `player_id` alone (see
+  `Core.Universe.StoryTraffic`). Staging is idempotent: a hold that already
+  belongs to the same script is returned unchanged.
+  """
+  @spec stage_story_contact(GenServer.server(), pos_integer(), StoryTraffic.script()) ::
+          {:ok, map()} | {:error, atom()}
+  def stage_story_contact(server, player_id, script)
+      when is_integer(player_id) and player_id > 0 do
+    GenServer.call(server, {:stage_story_contact, player_id, script})
+  end
+
+  @doc """
+  Remove a pilot's private story vessels (for example after a failed rescue).
+  A vessel leased to an active tactical encounter is kept until settlement.
+  """
+  @spec clear_story_contacts(GenServer.server(), pos_integer()) :: {:ok, map()}
+  def clear_story_contacts(server, player_id)
+      when is_integer(player_id) and player_id > 0 do
+    GenServer.call(server, {:clear_story_contacts, player_id})
+  end
+
   @doc "Deterministic server test hook; never exposed to client channels."
   @spec tick(GenServer.server()) :: :ok
   def tick(server), do: GenServer.call(server, :tick)
@@ -182,6 +208,9 @@ defmodule Core.Universe.Navigation do
       traffic: Keyword.get(opts, :traffic, Traffic.seed()),
       bases: Keyword.get(opts, :bases, SpaceBases.seed()),
       encountered: %{},
+      # Private story vessels, keyed by the one pilot who can see them.
+      # Never merged into the shared traffic map (see StoryTraffic).
+      story_contacts: %{},
       # At most one pilot owns a given physical vessel during a tactical
       # encounter. Leases are bound to its current traffic voyage number.
       tactical_claims: %{},
@@ -242,6 +271,7 @@ defmodule Core.Universe.Navigation do
       # acknowledging the client; never restore a pre-death coordinate.
       case persist_connection_change(state, player_id, replacement) do
         {:ok, updated} ->
+          updated = drop_story_contacts(updated, player_id)
           broadcast(updated, player_id, replacement)
           {:reply, {:ok, public(replacement, updated, player_id)}, updated}
 
@@ -264,7 +294,7 @@ defmodule Core.Universe.Navigation do
         %{id: ^encounter_id, contact_id: contact_id,
           voyage_number: voyage_number, classification: classification} ->
           claim = Map.get(state.tactical_claims, contact_id)
-          vessel = Map.get(state.traffic, contact_id)
+          vessel = Map.get(traffic_for(state, player_id), contact_id)
 
           if claim == %{player_id: player_id, encounter_id: encounter_id,
                         voyage_number: voyage_number} and is_map(vessel) and
@@ -394,7 +424,7 @@ defmodule Core.Universe.Navigation do
           else
             idle_at(voyage.position_km, voyage)
           end
-        state = put_voyage(state, player_id, updated)
+        state = put_voyage(state, player_id, updated) |> drop_story_contacts(player_id)
         broadcast(state, player_id, updated)
         {:reply, {:ok, public(updated, state, player_id)}, state}
     end
@@ -445,18 +475,23 @@ defmodule Core.Universe.Navigation do
           [:hostile_contact, :patrol_attention, :neutral_flyby] ->
         {:reply, {:error, :not_a_combat_encounter}, state}
 
-      not Map.has_key?(state.traffic, voyage.pending_encounter.contact_id) ->
+      not Map.has_key?(traffic_for(state, player_id), voyage.pending_encounter.contact_id) ->
         {:reply, {:error, :vessel_unavailable}, state}
 
       Map.has_key?(state.tactical_claims, voyage.pending_encounter.contact_id) ->
         {:reply, {:error, :vessel_engaged}, state}
 
-      not available_vessel?(state.traffic[voyage.pending_encounter.contact_id],
+      Map.get(traffic_for(state, player_id)[voyage.pending_encounter.contact_id],
+          :protected?, false) ->
+        {:reply, {:error, :story_contact_protected}, state}
+
+      not available_vessel?(traffic_for(state, player_id)[voyage.pending_encounter.contact_id],
             voyage.pending_encounter) ->
         {:reply, {:error, :vessel_unavailable}, state}
 
       true ->
-        contact = Map.fetch!(state.traffic, voyage.pending_encounter.contact_id)
+        contact = Map.fetch!(traffic_for(state, player_id),
+          voyage.pending_encounter.contact_id)
         # Retain pending_encounter as the authoritative suspended decision.
         # The UI shows the combat cockpit instead of the modal during combat.
         tactical = %{id: encounter_id, contact_id: contact.id,
@@ -475,6 +510,15 @@ defmodule Core.Universe.Navigation do
             destination_id: voyage.pending_encounter.destination_id
           },
           classification: voyage.pending_encounter.classification}
+        # Story vessels: a scripted surrender threshold, and a map actor
+        # replicated only to the pilot who staged it.
+        tactical =
+          if Map.has_key?(contact, :story_script) do
+            Map.merge(tactical, %{surrender_at: contact.surrender_at,
+              private_to: player_id})
+          else
+            tactical
+          end
         updated = %{voyage | tactical_encounter: tactical}
         state = put_voyage(state, player_id, updated)
         state = %{state | tactical_claims: Map.put(state.tactical_claims,
@@ -527,11 +571,15 @@ defmodule Core.Universe.Navigation do
                        voyage_number: tactical.voyage_number} do
           {:reply, {:error, :tactical_claim_mismatch}, state}
         else
+          story? = StoryTraffic.story_id?(tactical.contact_id)
+          ships = if story?, do: Map.get(state.story_contacts, player_id, %{}),
+            else: state.traffic
+
           settlement =
             if outcome == :rollback do
-              {:ok, state.traffic}
+              {:ok, ships}
             else
-              Traffic.settle(state.traffic,
+              Traffic.settle(ships,
                 %{contact_id: tactical.contact_id, encounter_id: encounter_id,
                   voyage_number: tactical.voyage_number},
                 report.combat, outcome, cargo_debit)
@@ -541,7 +589,14 @@ defmodule Core.Universe.Navigation do
             {:error, reason} ->
               {:reply, {:error, reason}, state}
 
-            {:ok, traffic} ->
+            {:ok, settled_ships} ->
+              {traffic, story_contacts} =
+                if story? do
+                  {state.traffic, Map.put(state.story_contacts, player_id, settled_ships)}
+                else
+                  {settled_ships, state.story_contacts}
+                end
+
               updated =
                 case outcome do
                   :rollback -> %{voyage | tactical_encounter: nil}
@@ -567,7 +622,8 @@ defmodule Core.Universe.Navigation do
                     %{outcome: outcome, report: report})
                 end
 
-              state = %{state | traffic: traffic, settled_tactical: receipts,
+              state = %{state | traffic: traffic, story_contacts: story_contacts,
+                settled_tactical: receipts,
                 tactical_claims: Map.delete(state.tactical_claims, tactical.contact_id)}
               state = put_voyage(state, player_id, updated)
               broadcast(state, player_id, updated)
@@ -584,8 +640,12 @@ defmodule Core.Universe.Navigation do
     # communications channel usable even if the real vessel flies beyond
     # sensor range. Unrelated ships still require normal physical proximity.
     response =
-      case voyage.pending_encounter do
-        %{contact_id: ^contact_id} ->
+      case {Map.get(Map.get(state.story_contacts, player_id, %{}), contact_id),
+            voyage.pending_encounter} do
+        {%{} = story_vessel, _} ->
+          {:ok, StoryTraffic.hail_response(story_vessel)}
+
+        {nil, %{contact_id: ^contact_id}} ->
           Traffic.hail_established(state.traffic, contact_id)
 
         _ ->
@@ -593,6 +653,67 @@ defmodule Core.Universe.Navigation do
       end
 
     {:reply, response, state}
+  end
+
+  def handle_call({:stage_story_contact, player_id, script}, _from, state) do
+    {voyage, state} = ensure_player(state, player_id)
+
+    cond do
+      script not in StoryTraffic.scripts() ->
+        {:reply, {:error, :invalid_story_script}, state}
+
+      match?(%{contact_id: _}, voyage.pending_encounter) and
+          voyage.pending_encounter.contact_id == StoryTraffic.contact_id(player_id, script) ->
+        {:reply, {:ok, public(voyage, state, player_id)}, state}
+
+      voyage.status != :traveling ->
+        {:reply, {:error, :no_active_course}, state}
+
+      voyage.free_flight or Map.get(voyage, :logout_paused, false) ->
+        {:reply, {:error, :cruise_suspended}, state}
+
+      voyage.pending_encounter != nil ->
+        {:reply, {:error, :encounter_pending}, state}
+
+      voyage.tactical_encounter != nil ->
+        {:reply, {:error, :tactical_encounter_active}, state}
+
+      true ->
+        vessel = StoryTraffic.build(player_id, script, voyage.position_km,
+          max(voyage.voyage_number, 1))
+        story = state.story_contacts |> Map.get(player_id, %{}) |> Map.put(vessel.id, vessel)
+        state = %{state | story_contacts: Map.put(state.story_contacts, player_id, story)}
+        encounter = story_encounter(vessel, voyage, reputations_for(state, player_id))
+        held = %{voyage | pending_encounter: encounter}
+        state = put_voyage(state, player_id, held)
+        seen = Map.get(state.encountered, player_id, MapSet.new())
+        state = %{state | encountered: Map.put(state.encountered, player_id,
+          MapSet.put(seen, encounter.id))}
+        EventSink.dispatch(state.event_sink, "sol", :solar_encounter_started, %{
+          player_id: player_id, encounter: encounter
+        })
+        broadcast(state, player_id, held)
+        {:reply, {:ok, public(held, state, player_id)}, state}
+    end
+  end
+
+  def handle_call({:clear_story_contacts, player_id}, _from, state) do
+    {voyage, state} = ensure_player(state, player_id)
+    state = drop_story_contacts(state, player_id)
+
+    voyage =
+      case voyage.pending_encounter do
+        %{contact_id: id} when is_binary(id) ->
+          if StoryTraffic.story_id?(id) and voyage.tactical_encounter == nil,
+            do: %{voyage | pending_encounter: nil}, else: voyage
+
+        _ ->
+          voyage
+      end
+
+    state = put_voyage(state, player_id, voyage)
+    broadcast(state, player_id, voyage)
+    {:reply, {:ok, public(voyage, state, player_id)}, state}
   end
 
   def handle_call(:tick, _from, state) do
@@ -811,6 +932,9 @@ defmodule Core.Universe.Navigation do
           end
 
         current = put_voyage(current, player_id, updated)
+        # Story vessels are props for one voyage's hold; arrival retires them.
+        current = if updated.status == :idle,
+          do: drop_story_contacts(current, player_id), else: current
         current = announce_encounter(current, player_id, updated)
         # announce_encounter may have added a hold to the stored voyage.
         # Broadcast THAT authoritative value, never the stale pre-hold map.
@@ -854,7 +978,7 @@ defmodule Core.Universe.Navigation do
     Map.merge(voyage, %{
       progress: progress,
       remaining_ms: remaining_ms,
-      contacts: Traffic.contacts(traffic, voyage.position_km),
+      contacts: Traffic.contacts(traffic_for(state, player_id), voyage.position_km),
       # Distinct from all planetary forward refineries. Fixed by the server;
       # routes use the existing, validated free-waypoint format.
       starbases: GreenStarbase.catalog(),
@@ -957,6 +1081,67 @@ defmodule Core.Universe.Navigation do
     else
       state
     end
+  end
+
+  # The shared SOL traffic plus this pilot's private story vessels. Used
+  # for one pilot's sensors, hails and tactical leases, never for others.
+  defp traffic_for(state, player_id) do
+    case Map.get(state.story_contacts, player_id) do
+      nil -> state.traffic
+      story -> Map.merge(state.traffic, story)
+    end
+  end
+
+  defp drop_story_contacts(state, player_id) do
+    case Map.get(state.story_contacts, player_id) do
+      nil ->
+        state
+
+      story ->
+        kept = Map.filter(story, fn {id, _vessel} ->
+          Map.has_key?(state.tactical_claims, id)
+        end)
+
+        contacts = if map_size(kept) == 0,
+          do: Map.delete(state.story_contacts, player_id),
+          else: Map.put(state.story_contacts, player_id, kept)
+
+        %{state | story_contacts: contacts}
+    end
+  end
+
+  defp story_encounter(vessel, voyage, reputations) do
+    relative = %{
+      x: vessel.position_km.x - voyage.position_km.x,
+      y: vessel.position_km.y - voyage.position_km.y,
+      z: vessel.position_km.z - voyage.position_km.z
+    }
+
+    distance = :math.sqrt(relative.x * relative.x + relative.y * relative.y +
+      relative.z * relative.z)
+
+    encounter = %{
+      id: "flyby:" <> vessel.id <> ":" <> Integer.to_string(vessel.voyage_number),
+      contact_id: vessel.id,
+      call_sign: vessel.call_sign,
+      kind: vessel.kind,
+      ship_class: vessel.ship_class,
+      faction_id: vessel.faction_id,
+      faction_name: Core.Factions.name(vessel.faction_id) || "Unregistered Organization",
+      disposition: vessel.disposition,
+      purpose: vessel.purpose,
+      origin_id: vessel.origin_id,
+      destination_id: vessel.destination_id,
+      distance_km: distance,
+      relative_position_km: relative,
+      mode: :strategic_flyby,
+      communications_available: true,
+      story_script: vessel.story_script
+    }
+
+    {:ok, jurisdiction} = Territory.classify(voyage.position_km)
+    Map.put(encounter, :classification,
+      EncounterDirector.classify(encounter, jurisdiction, reputations))
   end
 
   defp available_vessel?(contact, encounter) when is_map(contact) do

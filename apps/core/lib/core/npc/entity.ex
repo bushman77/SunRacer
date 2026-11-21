@@ -30,13 +30,18 @@ defmodule Core.NPC.Entity do
     :next_attack_tick,
     :patrol_step
   ]
-  defstruct @enforce_keys ++ [:destination, :target_id, :course, :strategic_vessel_id]
+  # surrender_at: scripted hull fraction at which a story NPC gives up.
+  # private_to: the only pilot who is shown a private story actor.
+  defstruct @enforce_keys ++ [:destination, :target_id, :course, :strategic_vessel_id,
+                              :surrender_at, :private_to]
 
   @type state :: :idle | :patrol | :pursue | :attack | :cruise | :evade | :surrendered | :destroyed
 
   @type t :: %__MODULE__{
           id: String.t(),
           strategic_vessel_id: String.t() | nil,
+          surrender_at: float() | nil,
+          private_to: term() | nil,
           kind: :npc,
           npc_type_id: String.t(),
           display_name: String.t(),
