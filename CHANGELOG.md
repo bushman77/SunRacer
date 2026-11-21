@@ -8,6 +8,77 @@
 
 ## Unreleased
 
+### Newtonian flight given weight; cruise handbrake removed (2026-11-21, branch `story_line`)
+
+#### Changed
+
+- `Core.World.FlightDynamics` now derives acceleration from the hull's
+  `acceleration_g` rather than hardcoding multiples of top speed. One constant,
+  `@g_acceleration`, scales g ratings into simulation units and so sets the
+  weight of every ship in the game. For the Sunracer this is 64 u/s^2 against
+  the previous 480 (Newtonian) and 240 (cruise).
+- Both flight modes now share one envelope. The Newtonian ceiling drops from
+  `speed * 1.5` to `speed * 1.0`, so cruise and Newtonian have the same top
+  speed and the same acceleration. Cruise is flight assistance on the same
+  engine, not a weaker drive; what Newtonian buys is control, not performance.
+- `reverse_factor` is new game data on `Core.Ships.Ship`, 0.33 on the Sunracer,
+  applied to negative throttle in cruise only. Full reverse is -105.6 instead
+  of -320. Newtonian flight is deliberately not capped: velocity and facing are
+  independent there, so a pilot who turns around and burns is thrusting
+  forward, and there is no reverse to limit.
+- Slowing down now uses the same thrust as speeding up, replacing a separate
+  and much larger braking constant. A full stop from top speed takes 5.0 s
+  rather than 0.83 s.
+
+#### Fixed
+
+- Switching from Newtonian to cruise no longer deletes lateral momentum. It
+  kept `dot(velocity, forward)` and discarded the remainder instantly, so a
+  pilot drifting at full speed with the nose across the vector could cancel 320
+  units/s in a single tick, for free, with one keypress — a combat exploit that
+  made momentum optional. `Core.World.Entity` now carries `drift_velocity`, the
+  momentum the assist has not yet cancelled, and the controller bleeds it off
+  at the drive's thrust. The same 320 units/s now takes 5.1 s to shed.
+
+#### Why
+
+- At 480 u/s^2 the velocity vector swings at 86 deg/s under perpendicular
+  thrust while the nose can only point at 44 deg/s. Momentum therefore never
+  lagged behind pointing, and Newtonian flight was functionally identical to
+  cruise. At 64 u/s^2 the vector swings at 11.4 deg/s, the nose leads it 3.9x,
+  and committing to a vector becomes a real decision.
+- Derivations, measurements and the remaining open numbers are in
+  `docs/flight-combat-balance.md`.
+
+#### Tests
+
+- `mix test` in `apps/core`: 302 tests, 0 failures. Four new
+  `Core.World.FlightDynamicsTest` cases cover envelope parity, the cruise
+  reverse cap, the drift bleed-off, and the nose leading the velocity vector.
+- Three existing tests were updated because they asserted the old behaviour:
+  two hardcoded the former acceleration constants, and one asserted
+  `velocity.y == 0.0` after a mode switch, which was the handbrake itself. A
+  planetary impact test now ticks until the hull reaches the boundary instead
+  of assuming a standing start crosses 4 units in one tick.
+- `mix compile --warnings-as-errors` is clean.
+
+#### Known limitations
+
+- `apps/sunracer` and `apps/sunracer_web` were not compiled or tested: the
+  environment could not reach hex.pm for Phoenix and Ecto. All edits are inside
+  `apps/core` and every outside consumer reads `Core.Ships.Stats` through
+  `Stats.calculate/2` rather than matching the struct exhaustively, so the
+  added fields should be additive — but run `mix precommit` at the umbrella
+  root to confirm.
+- `mix format --check-formatted` was not run. The pre-existing tree fails it
+  under Elixir 1.17.3 on files untouched here, which indicates a formatter
+  version difference rather than a finding.
+- **No manual verification.** Every figure above is from simulation, not from
+  flying the ship. A 5 s acceleration and a 5 s stop need a cockpit to judge.
+- Prologue step 6 still teaches the old static band hold, which this change
+  makes much harder than its prompt implies. The Dart's speed and the step
+  re-tune are still open.
+
 ### SunRacer rename completed across docs, CI, scripts and config (2026-11-21, branch `story_line`)
 
 #### Changed

@@ -37,6 +37,13 @@ defmodule Core.World.Entity do
               rotation_input: %{yaw: 0.0, pitch: 0.0, roll: 0.0},
               angular_velocity: %{yaw: 0.0, pitch: 0.0, roll: 0.0},
               velocity: %{x: 0.0, y: 0.0, z: 0.0},
+              # Residual world-space momentum that cruise assistance has not
+              # yet cancelled. Non-zero only just after a pilot switches from
+              # Newtonian to cruise carrying sideways drift; the controller
+              # bleeds it to zero rather than deleting it on the switch.
+              drift_velocity: %{x: 0.0, y: 0.0, z: 0.0},
+              acceleration_g: nil,
+              reverse_factor: 0.33,
               control_tick: -1_000
             ]
 
@@ -58,6 +65,9 @@ defmodule Core.World.Entity do
           rotation_input: %{yaw: float(), pitch: float(), roll: float()},
           angular_velocity: %{yaw: float(), pitch: float(), roll: float()},
           velocity: %{x: float(), y: float(), z: float()},
+          drift_velocity: %{x: float(), y: float(), z: float()},
+          acceleration_g: number() | nil,
+          reverse_factor: float(),
           control_tick: integer(),
           speed: number(),
           hull: non_neg_integer(),

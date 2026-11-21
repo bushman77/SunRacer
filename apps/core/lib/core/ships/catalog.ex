@@ -31,7 +31,8 @@ defmodule Core.Ships.Catalog do
       acceleration_g: 0.20,
       turn_deg_s: 45,
       cargo_pods: 4,
-      max_cargo_pods: 8
+      max_cargo_pods: 8,
+      reverse_factor: 0.33
     },
     %Ship{
       id: 2,

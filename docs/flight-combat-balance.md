@@ -234,7 +234,8 @@ from a courier who survives to a courier who can fight.
 
 ## Decisions
 
-Settled (Brad, 2026-11-21):
+Settled (Brad, 2026-11-21). D1, D2, D3 and D5 are **implemented** in
+`Core.World.FlightDynamics`; measured results are in "Implemented" below.
 
 - **D1. Envelope parity.** Newtonian's ceiling drops from `speed * 1.5` to
   `speed * 1.0`. Both modes share one top speed and one acceleration rate.
@@ -296,6 +297,36 @@ costs three delivery runs.
 Roughly 25 delivery runs from a stock Sunracer to a fully fitted one: long
 enough to feel earned, short enough that a new pilot sees the whole arc.
 
+## Implemented (2026-11-21)
+
+D1, D2, D3 and D5 are in `Core.World.FlightDynamics`. Acceleration now comes
+from the hull's `acceleration_g` scaled by `@g_acceleration` (320.0), so one
+constant sets the weight of every ship in the game. `reverse_factor` is new
+game data on `Core.Ships.Ship`, and `Core.World.Entity` carries both figures
+plus a `drift_velocity` field holding the momentum cruise has not yet
+cancelled.
+
+Measured against the stock Sunracer (0.20 g, 320 top speed):
+
+| quantity | before | after |
+| --- | --- | --- |
+| drive acceleration | 480 u/s^2 (Newtonian), 240 (cruise) | 64 u/s^2 (both) |
+| 0 to top speed | 0.67 s / 1.33 s | 5.0 s |
+| Newtonian ceiling | 480 | 320 |
+| cruise full reverse | -320 | -105.6 |
+| top speed to full stop | 0.83 s | 5.0 s |
+| velocity vector turn rate | 86 deg/s | 11.4 deg/s |
+| nose turn rate | 44 deg/s | 44 deg/s (unchanged) |
+| 320 u/s of lateral momentum on switching to cruise | deleted instantly, free | bled off over 5.1 s |
+
+The nose now leads the velocity vector 3.9x, so momentum lags behind pointing
+and the two flight modes are distinguishable for the first time.
+
+**Still to do from the build order:** D6 (the Dart's speed) is blocked on Q2,
+and prologue step 6 has not been re-tuned, so the tutorial fight still teaches
+the old static band hold. The band is now much harder to hold than the step's
+prompt implies. That is a known inconsistency, not a fixed design.
+
 ## Balance as a test, not a judgement
 
 Because balance is a hard requirement, it should fail CI rather than rely on
@@ -338,6 +369,13 @@ Status: **not built** — see Q6.
   Alternatively the courier stays fragile by design and shields begin with the
   second hull.
 - **Q7. Build the CI balance band test?**
+- **Q9. Braking rate.** Slowing down is thrust, so the implementation uses the
+  same rate in both directions, replacing a separate and much larger braking
+  constant: a full stop from top speed went from 0.83 s to 5.0 s. A stricter
+  model would brake at the retro rate (`thrust * reverse_factor`), which is
+  about three times slower again, on the grounds that the assist cannot flip
+  the hull to brake on the main drive. This is a feel decision rather than a
+  correctness one, and it affects station approaches most.
 - **Q8. NPC inertia.** The deep fix for F10, and much larger work. Until it
   exists, every tuning decision is tuning a player against a chase function.
 
@@ -370,7 +408,25 @@ by mirroring the relevant function:
 - F2 uses the 700 ms pulse-emitter cooldown and `Core.Equipment.Catalog`.
 - F4, F7 and F8 mirror `Core.World.FlightDynamics.step/4` and `controls/3`.
 
-No automated tests were added for this document, and no code has changed yet.
-No manual play-through has been performed against any of these figures. The
-one previously simulated result on record is in CHANGELOG.md under the player
-beam range entry.
+The flight model changes (D1, D2, D3, D5) are covered by automated tests:
+`mix test` in `apps/core` passes 302 tests with 0 failures, including four new
+`Core.World.FlightDynamicsTest` cases for envelope parity, the reverse cap, the
+drift bleed-off and the nose-leads-vector ratio. `mix compile
+--warnings-as-errors` is clean.
+
+Not verified: `apps/sunracer` and `apps/sunracer_web` were not compiled or
+tested, because the environment used for the change cannot reach hex.pm to
+fetch Phoenix and Ecto. All edits are inside `apps/core`, and every consumer
+outside it reaches `Core.Ships.Stats` through `Stats.calculate/2` and reads
+fields rather than constructing or exhaustively matching the struct, so the
+added fields should be additive — but this has not been proven by a build.
+Run `mix precommit` at the umbrella root before relying on it.
+
+`mix format --check-formatted` was not run: the pre-existing tree already
+fails it under Elixir 1.17.3 on files untouched by this change, which points
+at a formatter version difference rather than a real finding. The new code
+follows the surrounding style by hand.
+
+**No manual play-through has been performed.** Every figure above comes from
+the simulation, not from flying the ship. The feel of a 5 second acceleration
+and a 5 second stop needs a cockpit to judge.

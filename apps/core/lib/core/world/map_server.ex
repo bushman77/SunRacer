@@ -343,6 +343,8 @@ defmodule Core.World.MapServer do
           orientation: Orientation.from_angles(attitude),
           destination: nil,
           speed: stats.speed,
+          acceleration_g: stats.acceleration_g,
+          reverse_factor: stats.reverse_factor,
           hull: condition.hull,
           max_hull: condition.max_hull,
           shields: condition.shields,

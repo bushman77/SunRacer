@@ -36,7 +36,11 @@ defmodule Core.Ships.Ship do
     acceleration_g: nil,
     turn_deg_s: nil,
     cargo_pods: 0,
-    max_cargo_pods: 0
+    max_cargo_pods: 0,
+    # Retro thrusters are far weaker than the main drive. Cruise reverse is
+    # capped at this fraction of forward top speed; Newtonian flight has no
+    # reverse concept to cap, because velocity and facing are independent.
+    reverse_factor: 0.33
   ]
 
   @type t :: %__MODULE__{
@@ -58,6 +62,7 @@ defmodule Core.Ships.Ship do
           acceleration_g: number() | nil,
           turn_deg_s: number() | nil,
           cargo_pods: non_neg_integer(),
-          max_cargo_pods: non_neg_integer()
+          max_cargo_pods: non_neg_integer(),
+          reverse_factor: float()
         }
 end

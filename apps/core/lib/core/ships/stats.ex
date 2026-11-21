@@ -37,7 +37,8 @@ defmodule Core.Ships.Stats do
     :acceleration_g,
     :turn_deg_s,
     :cargo_pods,
-    :max_cargo_pods
+    :max_cargo_pods,
+    :reverse_factor
   ]
 
   @type t :: %__MODULE__{
@@ -55,7 +56,8 @@ defmodule Core.Ships.Stats do
           acceleration_g: number() | nil,
           turn_deg_s: number() | nil,
           cargo_pods: non_neg_integer(),
-          max_cargo_pods: non_neg_integer()
+          max_cargo_pods: non_neg_integer(),
+          reverse_factor: float()
         }
 
   @spec calculate(pos_integer(), map(), keyword()) :: {:ok, t()} | {:error, term()}
@@ -203,6 +205,7 @@ defmodule Core.Ships.Stats do
       turn_deg_s: ship.turn_deg_s,
       cargo_pods: ship.cargo_pods,
       max_cargo_pods: ship.max_cargo_pods,
+      reverse_factor: ship.reverse_factor,
       shield_absorption: weighted_absorption,
       shield_regeneration:
         ship.shield_regeneration +

@@ -7,15 +7,19 @@ were measured against the code, not estimated. No code has changed yet.
 - [x] Measure the combat baseline and establish where the current numbers break
       (shield gains cap at 4.8x, the LF laser line runs to 20x, reverse equals
       forward in both flight modes, Newtonian is dominant on every axis).
-- [ ] Envelope parity: drop the Newtonian ceiling from `speed * 1.5` to
-      `speed * 1.0`, and slow acceleration below 240 u/s^2 so the nose leads the
-      velocity vector. Above that threshold Newtonian is indistinguishable from
-      cruise. Honour the unused `acceleration_g` field while here.
-- [ ] Fix the mode-switch handbrake: entering cruise currently discards lateral
-      momentum instantly and for free, deleting up to 320 units/s in one tick.
-      Bleed it off at `cruise_braking` instead.
-- [ ] Add `reverse_factor` to `Core.Ships.Ship`, per hull, around 1/3, applied
-      in cruise only. Reverse is not a meaningful quantity in Newtonian.
+- [x] Envelope parity: Newtonian ceiling dropped from `speed * 1.5` to
+      `speed * 1.0`, and acceleration now comes from the hull's `acceleration_g`
+      scaled by one constant, giving 64 u/s^2 for the Sunracer instead of 480.
+      The velocity vector swings at 11.4 deg/s against a 44 deg/s nose, so
+      momentum lags behind pointing and the two modes finally differ.
+- [x] Fixed the mode-switch handbrake: entering cruise kept the along-nose
+      component and deleted the rest instantly and for free. The lateral part
+      is now carried as `Entity.drift_velocity` and bled off at the drive's
+      thrust — 320 units/s now takes 5.1 seconds to shed instead of one tick.
+- [x] Added `reverse_factor` to `Core.Ships.Ship` as per-hull game data, 0.33
+      on the Sunracer, applied in cruise only. Full reverse is now -105.6
+      rather than -320. Newtonian is deliberately untouched: velocity and
+      facing are independent there, so reverse is not a quantity to cap.
 - [ ] Raise the Dart above the Sunracer's 320 movement speed, per the project's
       own Space Rogue source data (Dart 0.30 g against the Sunracer's 0.20 g),
       then re-tune prologue step 6 around a firing pass rather than a static
@@ -27,6 +31,10 @@ were measured against the code, not estimated. No code has changed yet.
       rescaling or retiring them.
 - [ ] Wire up `cargo_pods`, which is currently display-only: the equipment page
       promises a hold expanding from 4 to 8 and nothing can act on it.
+- [ ] Decide the braking rate. The implementation slows down at the same thrust
+      it accelerates with, so a full stop from top speed went from 0.83 s to
+      5.0 s. Braking at the retro rate would be three times slower again.
+      Affects station approaches most; needs a cockpit to judge.
 - [ ] Equipment unlocks (two gates: a story-granted authorization token, then a
       credit purchase) and the Ilya Quill outfitter transaction.
 - [ ] Open numbers before building: time to top speed, the Dart's speed, and the

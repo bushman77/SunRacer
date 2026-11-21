@@ -29,6 +29,11 @@ defmodule Core.World.FlightDynamics do
     pitch: %{speed: 88.0, acceleration: 240.0, braking: 320.0}
   }
   @input_expiry_ticks 10
+  # Simulation units are not metres, so a hull's g rating is scaled into them.
+  # Tuning this one number sets the weight of every ship in the game.
+  @g_acceleration 320.0
+  @default_acceleration_g 0.20
+  @default_reverse_factor 0.33
 
   @spec controls(Entity.t(), map(), non_neg_integer()) ::
           {:ok, Entity.t()} | {:error, :invalid_flight_controls}
@@ -45,15 +50,23 @@ defmodule Core.World.FlightDynamics do
          mode in [:cruise, :newtonian, "cruise", "newtonian"] do
       mode = if mode in [:newtonian, "newtonian"], do: :newtonian, else: :cruise
 
-      # A pilot switching from Newtonian to Cruise keeps the component of
-      # their existing momentum along the CURRENT nose. Cruise assistance
-      # cancels sideways drift from that point onward.
-      cruise_speed =
+      # A pilot switching from Newtonian to Cruise keeps ALL of their
+      # momentum. The component along the CURRENT nose becomes the cruise
+      # scalar; the sideways remainder is handed to the controller as drift
+      # and bled off over time by step/4. Switching assistance on is not a
+      # handbrake: deleting the lateral component here would let a pilot
+      # cancel any amount of momentum instantly, for free, with one keypress.
+      {cruise_speed, drift_velocity} =
         if mode == :cruise and entity.flight_mode != :cruise do
-          dot(entity.velocity, forward(entity))
-          |> clamp(-entity.speed * 1.0, entity.speed * 1.0)
+          nose = forward(entity)
+
+          along =
+            dot(entity.velocity, nose)
+            |> clamp(-entity.speed * reverse_factor(entity), entity.speed * 1.0)
+
+          {along, subtract(entity.velocity, scale(nose, along))}
         else
-          entity.cruise_speed
+          {entity.cruise_speed, entity.drift_velocity}
         end
 
       # Exiting mouse-look must not leave its high angular velocity coasting
@@ -78,6 +91,7 @@ defmodule Core.World.FlightDynamics do
          | angular_velocity: angular_velocity,
            throttle: throttle * 1.0,
            cruise_speed: cruise_speed,
+           drift_velocity: drift_velocity,
            rotation_input: %{yaw: yaw * 1.0, pitch: pitch * 1.0, roll: roll * 1.0,
                              mouse_steering: mouse_steering?},
            flight_mode: mode,
@@ -140,33 +154,52 @@ defmodule Core.World.FlightDynamics do
     # Cruise is an assisted target-speed controller: the throttle selects a
     # signed desired speed and the server integrates acceleration/braking over
     # simulation ticks. Newtonian mode instead applies physical thrust.
-    cruise_acceleration = max(18.0, entity.speed * 0.75) * dt
-    cruise_braking = max(28.0, entity.speed * 1.2) * dt
-    thrust_acceleration = max(24.0, entity.speed * 1.5) * dt
+    # One engine, one envelope. Cruise is flight assistance, not a different
+    # drive: an autopilot cannot make a reactor stronger, so both modes share
+    # this acceleration and this top speed. What Newtonian flight buys is
+    # control -- nose and velocity vector become independent -- not
+    # performance.
     speed = entity.speed * 1.0
-    {velocity, cruise_speed} =
+    thrust_acceleration = drive_acceleration(entity) * dt
+    reverse_cap = speed * reverse_factor(entity)
+    {velocity, cruise_speed, drift} =
       case entity.flight_mode do
         :cruise ->
           # Cruise speed is a scalar in ship-forward coordinates. Each tick
           # realigns the actual velocity vector with the LIVE attitude, not
           # with a stale world-space vector from before the pilot turned.
-          # Smooth acceleration remains; only lateral drift is eliminated.
-          target_speed = entity.throttle * speed
-          braking? = abs(target_speed) < abs(entity.cruise_speed) or
-                     entity.cruise_speed * target_speed < 0.0
-          max_change = if braking?, do: cruise_braking, else: cruise_acceleration
-          forward_speed = approach_scalar(entity.cruise_speed, target_speed, max_change)
-          {scale(heading, forward_speed), forward_speed}
+          # Reverse runs on retro thrusters, so the assisted controller cannot
+          # select more than the hull's reverse fraction astern.
+          target_speed =
+            if entity.throttle < 0.0,
+              do: entity.throttle * reverse_cap,
+              else: entity.throttle * speed
+
+          # Slowing down is also thrust, so it uses the same rate rather than
+          # the old separate (and much larger) braking constant. A stricter
+          # model would brake at the retro rate, thrust * reverse_factor,
+          # since the assist cannot flip the hull to brake on the main drive;
+          # that is roughly three times slower again and is a feel decision,
+          # not a correctness one.
+          forward_speed =
+            approach_scalar(entity.cruise_speed, target_speed, thrust_acceleration)
+
+          # Momentum the assist has not yet cancelled still moves the ship.
+          # It decays at the thrust the drive can actually produce.
+          drift = decay(entity.drift_velocity, thrust_acceleration)
+          {add(scale(heading, forward_speed), drift), forward_speed, drift}
 
         :newtonian ->
           # In Newtonian flight turning alone never cancels existing momentum.
-          # New thrust still accelerates in the current nose direction.
+          # New thrust still accelerates in the current nose direction. There
+          # is no reverse to cap here: velocity and facing are independent, so
+          # a pilot who turns around and burns is simply thrusting forward.
           velocity =
             entity.velocity
             |> add(scale(heading, entity.throttle * thrust_acceleration))
-            |> limit(speed * 1.5)
+            |> limit(speed)
 
-          {velocity, entity.cruise_speed}
+          {velocity, entity.cruise_speed, %{x: 0.0, y: 0.0, z: 0.0}}
       end
 
     predicted = %Position{
@@ -189,12 +222,49 @@ defmodule Core.World.FlightDynamics do
       z: if(position.z == predicted.z, do: velocity.z, else: 0.0)
     }
 
+    drift = %{
+      x: if(position.x == predicted.x, do: drift.x, else: 0.0),
+      y: if(position.y == predicted.y, do: drift.y, else: 0.0),
+      z: if(position.z == predicted.z, do: drift.z, else: 0.0)
+    }
+
     # The map owner resolves *swept* planetary impacts for BOTH manual
     # flight and plotted autopilot paths. Do not silently stop or project the
     # ship away from the surface in flight physics.
     %{entity | position: position, velocity: velocity, cruise_speed: cruise_speed,
-               attitude: attitude, orientation: orientation, angular_velocity: angular_velocity}
+               drift_velocity: drift, attitude: attitude, orientation: orientation,
+               angular_velocity: angular_velocity}
   end
+
+  @doc """
+  The hull's thrust in simulation units per second squared.
+
+  Ships are rated in g, after the Space Rogue recognition guide, but
+  simulation units are not metres per second, so the rating is scaled rather
+  than taken literally. `@g_acceleration` is set so the Sunracer's 0.20 g
+  reaches its 320 top speed in five seconds.
+
+  This rate must stay well below the nose's turn rate or the model breaks: a
+  velocity vector under perpendicular thrust swings at `acceleration / speed`
+  radians per second, and if that exceeds the yaw limit then momentum never
+  lags behind pointing and Newtonian flight becomes indistinguishable from
+  cruise. At 0.20 g the vector swings about 11 deg/s against a 44 deg/s nose.
+  """
+  @spec drive_acceleration(Entity.t()) :: float()
+  def drive_acceleration(%Entity{acceleration_g: g}) when is_number(g) and g > 0.0 do
+    g * @g_acceleration
+  end
+
+  def drive_acceleration(%Entity{}), do: @default_acceleration_g * @g_acceleration
+
+  @doc "The fraction of forward top speed this hull can make astern in cruise."
+  @spec reverse_factor(Entity.t()) :: float()
+  def reverse_factor(%Entity{reverse_factor: factor})
+      when is_number(factor) and factor >= 0.0 and factor <= 1.0 do
+    factor * 1.0
+  end
+
+  def reverse_factor(%Entity{}), do: @default_reverse_factor
 
   @spec forward(Entity.t() | map()) :: %{x: float(), y: float(), z: float()}
   def forward(%Entity{} = entity) do
@@ -242,9 +312,21 @@ defmodule Core.World.FlightDynamics do
   defp valid_axis?(_), do: false
 
   defp add(a, b), do: %{x: a.x + b.x, y: a.y + b.y, z: a.z + b.z}
+  defp subtract(a, b), do: %{x: a.x - b.x, y: a.y - b.y, z: a.z - b.z}
   defp scale(a, n), do: %{x: a.x * n, y: a.y * n, z: a.z * n}
   defp magnitude(a), do: :math.sqrt(a.x * a.x + a.y * a.y + a.z * a.z)
   defp dot(a, b), do: a.x * b.x + a.y * b.y + a.z * b.z
+
+  # Shrink a vector toward zero by at most max_delta, keeping its direction.
+  defp decay(vector, max_delta) do
+    distance = magnitude(vector)
+
+    if distance <= max_delta do
+      %{x: 0.0, y: 0.0, z: 0.0}
+    else
+      scale(vector, (distance - max_delta) / distance)
+    end
+  end
 
   defp limit(vector, maximum) do
     distance = magnitude(vector)

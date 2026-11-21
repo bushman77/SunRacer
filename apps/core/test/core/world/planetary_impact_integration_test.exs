@@ -117,8 +117,17 @@ defmodule Core.World.PlanetaryImpactIntegrationTest do
     assert {:ok, _} =
       World.flight_controls(session.id, %{mode: "newtonian", throttle: 1.0}, ctx.opts)
 
-    assert {:ok, snapshot} = World.tick("sol:venus", ctx.opts)
-    ship = Enum.find(snapshot.entities, &(&1.id == :manual_crash))
+    # Tick until the hull reaches the boundary rather than assuming a
+    # particular acceleration: thrust is now the ship's rated g, not a
+    # multiple of its top speed, so a standing start takes a few ticks.
+    ship =
+      Enum.reduce_while(1..40, nil, fn _tick, _acc ->
+        assert {:ok, snapshot} = World.tick("sol:venus", ctx.opts)
+        found = Enum.find(snapshot.entities, &(&1.id == :manual_crash))
+
+        if found.status == :destroyed, do: {:halt, found}, else: {:cont, found}
+      end)
+
     assert ship.status == :destroyed
     assert ship.hull == 0
     assert ship.shields == 0

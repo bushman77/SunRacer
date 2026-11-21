@@ -122,16 +122,17 @@ defmodule Core.World.FlightDynamicsTest do
     first = FlightDynamics.step(full, map, 0.1, 1)
     second = FlightDynamics.step(first, map, 0.1, 2)
 
-    # At 200 u/s maximum, cruise accelerates 150 u/s^2: 15 u/s per tick.
-    assert_in_delta first.cruise_speed, 15.0, 1.0e-8
-    assert_in_delta second.cruise_speed, 30.0, 1.0e-8
+    # Acceleration is the hull's rated thrust, not a multiple of top speed:
+    # 0.20 g scaled into simulation units is 64 u/s^2, so 6.4 u/s per tick.
+    assert_in_delta first.cruise_speed, 6.4, 1.0e-8
+    assert_in_delta second.cruise_speed, 12.8, 1.0e-8
     assert second.cruise_speed < second.speed
 
     {:ok, idle} = FlightDynamics.controls(second, %{throttle: 0.0}, 2)
     braking = FlightDynamics.step(idle, map, 0.1, 3)
     assert braking.cruise_speed > 0.0
     assert braking.cruise_speed < second.cruise_speed
-    assert_in_delta braking.cruise_speed, 6.0, 1.0e-8
+    assert_in_delta braking.cruise_speed, 6.4, 1.0e-8
 
     stopped = FlightDynamics.step(braking, map, 0.1, 4)
     assert stopped.cruise_speed == 0.0
@@ -224,10 +225,127 @@ defmodule Core.World.FlightDynamicsTest do
       FlightDynamics.controls(drifting, %{mode: "cruise", throttle: 0.0}, 2)
 
     assert_in_delta cruise.cruise_speed, 40.0, 1.0e-8
+    # The sideways 60 u/s is NOT deleted by the switch; the controller takes
+    # it as drift to bleed off. Deleting it here would be a free handbrake.
+    assert_in_delta cruise.drift_velocity.y, -60.0, 1.0e-8
+
     moved = FlightDynamics.step(cruise, map, 0.1, 3)
     assert moved.velocity.x > 0
-    assert_in_delta moved.velocity.y, 0.0, 1.0e-8
+    assert_in_delta moved.velocity.y, -53.6, 1.0e-8
     assert moved.cruise_speed < 40
+  end
+
+  test "cruise bleeds retained drift to zero instead of deleting it" do
+    map = MapDefinition.starting_map()
+    drifting = %{ship() | flight_mode: :newtonian,
+      attitude: %{yaw: :math.pi() / 2, pitch: 0.0, roll: 0.0},
+      velocity: %{x: 0.0, y: -60.0, z: 0.0}}
+
+    # Nose is +x, all 60 u/s of motion is across it: the worst case for the
+    # old behaviour, which cancelled every bit of it in a single tick.
+    {:ok, cruise} =
+      FlightDynamics.controls(drifting, %{mode: "cruise", throttle: 0.0}, 2)
+
+    assert_in_delta cruise.cruise_speed, 0.0, 1.0e-8
+    assert_in_delta cruise.drift_velocity.y, -60.0, 1.0e-8
+
+    {ticks, settled} =
+      Enum.reduce_while(1..200, {0, cruise}, fn tick, {_n, current} ->
+        moved = FlightDynamics.step(current, map, 0.1, tick + 2)
+
+        if moved.drift_velocity.y == 0.0,
+          do: {:halt, {tick, moved}},
+          else: {:cont, {tick, moved}}
+      end)
+
+    # 60 u/s shed at 6.4 u/s per tick: ten ticks, one second of sideways
+    # slide, not an instantaneous stop.
+    assert ticks == 10
+    assert settled.velocity.y == 0.0
+    assert settled.drift_velocity == %{x: 0.0, y: 0.0, z: 0.0}
+  end
+
+  test "both flight modes share one top speed" do
+    map = MapDefinition.starting_map()
+
+    top = fn mode ->
+      {:ok, started} =
+        FlightDynamics.controls(ship(), %{throttle: 1.0, mode: mode}, 0)
+
+      burn(started, map, 1..120, 0)
+    end
+
+    cruising = top.("cruise")
+    burning = top.("newtonian")
+    assert_in_delta cruising.cruise_speed, ship().speed, 1.0e-6
+    assert_in_delta magnitude(burning.velocity), ship().speed, 1.0e-6
+  end
+
+  test "cruise reverse is capped to the hull's retro fraction" do
+    map = MapDefinition.starting_map()
+    {:ok, astern} = FlightDynamics.controls(ship(), %{throttle: -1.0, mode: "cruise"}, 0)
+
+    backing = burn(astern, map, 1..120, 0)
+
+    expected = -ship().speed * FlightDynamics.reverse_factor(ship())
+    assert_in_delta backing.cruise_speed, expected, 1.0e-6
+    # Reverse must never match forward: that is what made free kiting work.
+    assert abs(backing.cruise_speed) < ship().speed
+  end
+
+  test "the nose points faster than the velocity vector can follow" do
+    map = MapDefinition.starting_map()
+    sunracer = %{ship() | speed: 320.0, acceleration_g: 0.20}
+
+    # Build up to top speed, then hold the nose across the vector and burn.
+    {:ok, started} =
+      FlightDynamics.controls(sunracer, %{throttle: 1.0, mode: "newtonian"}, 0)
+
+    fast = burn(started, map, 1..120, 0)
+
+    before = :math.atan2(fast.velocity.x, -fast.velocity.y)
+    across = %{fast | attitude: %{yaw: :math.pi() / 2, pitch: 0.0, roll: 0.0},
+                      orientation: nil}
+    {:ok, across} = FlightDynamics.controls(across, %{throttle: 1.0, mode: "newtonian"}, 121)
+
+    swung = burn(across, map, 122..131, 0)
+
+    vector_turn =
+      abs(:math.atan2(swung.velocity.x, -swung.velocity.y) - before)
+      |> then(&(&1 * 180.0 / :math.pi()))
+
+    # Now measure the nose over one second, after letting its angular rate
+    # reach the limit: it ramps at 95 deg/s^2, so a cold start understates it.
+    {:ok, turning} = FlightDynamics.controls(sunracer, %{yaw: 1.0, mode: "cruise"}, 0)
+    spun = burn(turning, map, 1..10, 0)
+    # Re-issue the control: rotation input expires after @input_expiry_ticks
+    # and a stale axis correctly brakes the turn.
+    {:ok, holding} = FlightDynamics.controls(spun, %{yaw: 1.0, mode: "cruise"}, 10)
+    pointed = burn(holding, map, 11..20, 0)
+
+    nose_turn =
+      abs(pointed.attitude.yaw - spun.attitude.yaw) * 180.0 / :math.pi()
+
+    # If the vector can swing as fast as the nose can point, momentum never
+    # lags and Newtonian flight is indistinguishable from cruise.
+    assert vector_turn > 0.0
+    assert_in_delta vector_turn, 11.4, 0.2
+    assert_in_delta nose_turn, 44.0, 0.5
+    assert nose_turn > vector_turn * 3.0
+  end
+
+  defp magnitude(%{x: x, y: y, z: z}), do: :math.sqrt(x * x + y * y + z * z)
+
+  # Hold the ship mid-map between ticks so these tests measure the velocity
+  # model and not the sector boundary, which legitimately absorbs velocity.
+  # Position does not feed back into the velocity integration.
+  defp burn(entity, map, ticks, _unused) do
+    centre = %Position{x: map.width / 2.0, y: map.height / 2.0, z: 0.0}
+
+    Enum.reduce(ticks, entity, fn tick, current ->
+      %{FlightDynamics.step(%{current | position: centre}, map, 0.1, tick) |
+        position: centre}
+    end)
   end
 
   test "reversed throttle after turning travels behind the current nose" do
