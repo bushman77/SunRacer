@@ -12,6 +12,7 @@ test("standalone markup contains the real Atlas and 3D/SBS cockpit", () => {
     "nav-solar-chart", "display-mode", "action-hotbar", "pilot-logout-form",
     "nav-helmet-open", "helmet-panel", "helmet-host", "helmet-qr",
     "helmet-relay-mini", "helmet-relay-status", "helmet-relay-check",
+    "helmet-relay-reconnect", "helmet-relay-qr",
     "pilot-respawn-panel", "pilot-respawn-message", "pilot-respawn-button"]) {
     assert.match(document, new RegExp('id="' + id + '"'))
   }

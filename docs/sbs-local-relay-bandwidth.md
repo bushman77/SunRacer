@@ -174,7 +174,7 @@ The ordinary `/helmet` page on port 4443 still cannot generate invitations.
 
 ## Stage 1b — Integrate link proof into the existing headset QR
 
-**Implemented in the native game HMD panel.** The old Tauri launcher relay
+**Implemented in the native game HMD panel.** The removed Tauri launcher relay
 modal and its manual copied URL were removed. Opening **PILOT HMD** in the
 compiled Tauri client now starts the restricted TLS listener while requesting
 the existing Phoenix pairing code. One QR contains both, with the Tauri
@@ -196,3 +196,16 @@ be reachable at trusted `https://<same-laptop-IP>:4443/helmet`; the local
 listener binds to that IP on port 4455. A mismatched or untrusted address
 leaves Phoenix pairing intact but skips the LAN test. **No global automatic
 listener** is opened at app launch; the pilot must open the HMD panel first.
+
+
+### Existing saved headset registrations
+
+Opening PILOT HMD in the native client while a headset is already registered
+also starts the opt-in LAN listener and shows a small **reconnect QR** beside
+the paired-device details. It points to the existing Phoenix `/helmet` page
+with **no new `pair` code**, only the LAN proof fragment. The S21 must still
+have the saved authenticated Phoenix headset credential. After it verifies
+that credential, the phone automatically sends the one-time native proof and
+the laptop status changes to `LOCAL LINK / VERIFIED`. This avoids forgetting
+an otherwise working headset just to test LAN transport. The QR disappears
+from the paired panel once the proof succeeds.

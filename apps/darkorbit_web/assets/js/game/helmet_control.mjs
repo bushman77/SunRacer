@@ -35,6 +35,9 @@ export class HelmetControl {
     if (panel) panel.hidden = !available
     if (label) label.textContent = this.relayStatus
     if (check) check.hidden = !available || !this.status.connected
+    const reconnect = this.root.querySelector("#helmet-relay-reconnect")
+    if (reconnect) reconnect.hidden =
+      !available || !this.status.paired || !this.relayUrl || this.relayVerified
   }
 
   async checkRelay() {
@@ -79,7 +82,30 @@ export class HelmetControl {
       this.relayStatus = "LOCAL LINK / UNAVAILABLE (" + String(error).slice(0, 85) + ")"
     }
     this.renderRelayStatus()
-    if (this.open && this.code === code) await this.drawQR()
+    if (this.open && this.code === code) {
+      if (this.status.paired) await this.drawRelayReconnectQR()
+      else await this.drawQR()
+    }
+  }
+
+  async drawRelayReconnectQR() {
+    if (!this.open || !this.relayUrl || !this.status.paired) return
+    const host = this.root.querySelector("#helmet-host")?.value.trim().replace(/\/+$/, "")
+    const canvas = this.root.querySelector("#helmet-relay-qr")
+    if (!canvas || !host) return
+    try {
+      const qrUrl = new URL("/helmet", host).toString()
+      const qr = relayQRUrl(qrUrl, this.relayUrl)
+      if (qr === qrUrl) {
+        this.relayStatus = "LOCAL LINK / HTTPS 4443 LAN ADDRESS REQUIRED"
+        return this.renderRelayStatus()
+      }
+      await QRCode.toCanvas(canvas, qr, {width: 190, margin: 2, errorCorrectionLevel: "M"})
+      this.renderRelayStatus()
+    } catch {
+      this.relayStatus = "LOCAL LINK / UNABLE TO DRAW RECONNECT QR"
+      this.renderRelayStatus()
+    }
   }
 
   start() {
@@ -197,6 +223,7 @@ export class HelmetControl {
       void this.checkRelay()
     }
     if (!this.status.paired) this.requestPairing()
+    else if (this.nativeRelayInvoke()) void this.prepareRelayQR(null)
   }
 
   closePanel() {
@@ -207,6 +234,8 @@ export class HelmetControl {
     this.relayPoll = null
     this.code = null
     this.clearQR()
+    const reconnect = this.root.querySelector("#helmet-relay-reconnect")
+    if (reconnect) reconnect.hidden = true
     if (this.channel?.state === "joined") this.channel.push("cancel_pairing", {})
   }
 

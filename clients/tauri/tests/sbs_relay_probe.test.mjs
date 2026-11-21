@@ -77,6 +77,10 @@ test("relay controls live only in the native PILOT HMD panel", () => {
   assert.match(control, /stop_sbs_relay_probe/)
   assert.match(control, /this\.status\.connected/)
   assert.match(control, /relayQRUrl\(url\.toString\(\), this\.relayUrl\)/)
+  assert.match(control, /drawRelayReconnectQR/)
+  assert.match(control, /this\.status\.paired/)
+  assert.match(gameMarkup, /id="helmet-relay-reconnect"/)
+  assert.match(gameMarkup, /id="helmet-relay-qr"/)
   assert.doesNotMatch(control, /navigator\.clipboard|navigator\.share/)
 })
 

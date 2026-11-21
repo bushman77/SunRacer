@@ -48,7 +48,7 @@ h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
   const token=location.hash.startsWith("#")?location.hash.slice(1):"";
   history.replaceState(null,"","/relay-check");
   if(!/^[0-9a-f]{48}$/.test(token)){
-    status.textContent="Invalid invitation. Open the fresh link shown by the Tauri launcher.";
+    status.textContent="Invalid local invitation. Scan a fresh PILOT HMD QR code.";
     report(false);
     return;
   }
@@ -137,7 +137,7 @@ fn random_token() -> Result<String, String> {
 pub async fn start_sbs_relay_probe(window: WebviewWindow) -> Result<ProbeInfo, String> {
     crate::network::require_local(&window)?;
     if window.label() != "main" {
-        return Err("The SBS relay requires the local main launcher.".into())
+        return Err("The SBS relay requires the local Tauri main game window.".into())
     }
     if active().lock().map_err(|_| "Relay state locked.")?.is_some() {
         return Err("SBS test already running. Stop it before making another invitation.".into())

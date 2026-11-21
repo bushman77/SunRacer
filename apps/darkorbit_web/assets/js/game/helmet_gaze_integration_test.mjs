@@ -19,7 +19,8 @@ test("cockpit remains anchored to ship rather than following the HMD head", () =
 
 test("helmet has explicit sensor permission, read-only local controls and recenter", () => {
   assert.match(phone, /id="helmet-fullscreen"/)
-  assert.match(phone, /id="helmet-relay-test"/)
+  assert.match(phone, /id="helmet-relay-result"/)
+  assert.doesNotMatch(phone, /id="helmet-relay-test"|id="helmet-relay-url"|id="helmet-relay-submit"/)
   assert.match(phone, /id="helmet-tracking-status"/)
   assert.doesNotMatch(phone, /id="helmet-enable-tracking"|id="helmet-recenter-tracking"/)
   assert.match(helmet, /void this\.headTracking\.startFromGesture\(\)/)
@@ -142,11 +143,12 @@ test("compact SBS geometry reduces telemetry and never blocks the NAV hitbox", (
   assert.match(view, /this\.raycaster\.intersectObjects\(/)
 })
 
-test("phone has two main actions and requests gyro and fullscreen from the Enter VR tap", () => {
+test("phone has one main VR action; local link tests automatically after QR pairing", () => {
   assert.match(phone, /ENTER VR/)
-  assert.match(phone, /TEST LOCAL RELAY/)
-  assert.match(phone, /id="helmet-relay-entry" hidden/)
+  assert.doesNotMatch(phone, /TEST LOCAL RELAY|PASTE LINK FROM TAURI/)
   assert.match(phone, /id="helmet-relay-result" hidden/)
+  assert.match(helmet, /relayInvitationFromQR\(window\.location\.href\)/)
+  assert.match(helmet, /this\.localLink\.prove\(relayInvitation\)/)
   assert.match(phone, /id="helmet-windowed" hidden/)
   assert.doesNotMatch(phone, /ENABLE HEAD TRACKING|RECENTER VIEW|NET · BANDWIDTH/)
   assert.doesNotMatch(phone, /Lens calibration uses|In the cockpit, look right/)

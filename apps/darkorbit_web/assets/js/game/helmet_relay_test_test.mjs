@@ -18,6 +18,10 @@ test("one existing QR carries Phoenix pairing plus private one-use LAN proof", (
   assert.equal(parsed.searchParams.has("relay"), false)
   assert.ok(parsed.hash.includes("relay="))
   assert.equal(relayInvitationFromQR(qr), invite)
+  const reconnectQr = relayQRUrl(page, invite)
+  assert.equal(new URL(reconnectQr).searchParams.has("pair"), false,
+    "already-paired device does not redeem a fresh Phoenix registration")
+  assert.equal(relayInvitationFromQR(reconnectQr), invite)
   assert.equal(relayInvitationFromQR(page), null)
   assert.equal(relayQRUrl(page + "?pair=CODE",
     "https://192.168.0.49:4455/relay-check#" + secret),

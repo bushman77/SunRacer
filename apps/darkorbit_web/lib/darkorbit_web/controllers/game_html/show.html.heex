@@ -439,6 +439,14 @@
         <div id="helmet-paired" hidden class="space-y-3">
           <p class="text-sm text-cyan-100">This helmet is remembered across disconnects and server restarts.
             The phone displays black in the Atlas and renders SBS only in the combat cockpit.</p>
+          <%!-- Only the native client draws this: no new Phoenix registration
+               is needed when the phone already has its saved credential. --%>
+          <div id="helmet-relay-reconnect" hidden class="flex flex-wrap items-center gap-3">
+            <canvas id="helmet-relay-qr" width="190" height="190"
+                    class="rounded-md bg-white" aria-label="Reconnect the existing headset over LAN"></canvas>
+            <p class="text-xs text-cyan-100">Already paired? Scan to verify the local link.
+              Your saved headset registration stays unchanged.</p>
+          </div>
           <button id="helmet-forget" class="nav-button nav-danger" type="button">Forget headset</button>
         </div>
       </section>
