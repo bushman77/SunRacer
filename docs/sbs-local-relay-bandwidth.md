@@ -49,3 +49,10 @@ Pair tokens must be random, short-lived, single-use and separate from the pilot'
 7. Define numeric bandwidth budgets from the measured results, including peak and sustained bytes per pilot; fail CI/performance checks on regression.
 
 Do not move this milestone to EC2 production until the local secure relay and network acceptance tests pass. Keep the old direct helmet path as an explicit development fallback only during migration.
+
+## Read the stage-0 estimates without developer tools
+
+- **Laptop / Tauri:** In the game window, open the small **NET** disclosure at the bottom-right. It updates once per second while expanded.
+- **Galaxy S21:** Leave fullscreen VR and open **NET · BANDWIDTH** on the headset setup screen to review the counters accumulated during play.
+- Watch `Server -> device` (incoming) and `Device -> server` (outgoing), plus the largest event totals. The readout is diagnostic JSON payload only; it is not an EC2 transfer-rate or billing meter.
+- The original `window.spaceNovaBandwidth.snapshot()` remains available for optional browser debugging, but neither game UI requires a console.

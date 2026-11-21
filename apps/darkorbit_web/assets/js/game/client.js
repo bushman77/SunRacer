@@ -24,6 +24,7 @@ import {FlightControls} from "./flight_controls.mjs"
 import {flightInputState, FLIGHT_INPUT_LABELS} from "./flight_input_state.mjs"
 import {WorldStreamDelta} from "./world_stream_delta.mjs"
 import {BandwidthProbe, instrumentPhoenixSocket} from "./bandwidth_probe.mjs"
+import {attachBandwidthPanel} from "./bandwidth_panel.mjs"
 import {gameSocketEndpoint} from "./socket_endpoint.mjs"
 import {
   MouseSteering, validMouseSensitivity, enabledMouseSteering, MOUSE_STEERING_IDLE_MS,
@@ -413,6 +414,7 @@ class SpaceClient {
       }
     })
     window.addEventListener("keydown", event => this.handleStationNpcKey(event), true)
+    attachBandwidthPanel(this.root, this.bandwidth)
     this.connect()
     requestAnimationFrame(time => this.frame(time))
   }

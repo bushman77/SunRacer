@@ -1,6 +1,7 @@
 import {Socket} from "phoenix"
 import {StereoSpaceView} from "./stereo_view.js"
 import {BandwidthProbe, instrumentPhoenixSocket} from "./bandwidth_probe.mjs"
+import {attachBandwidthPanel} from "./bandwidth_panel.mjs"
 import {visualLaserRays} from "./laser_burst.mjs"
 import {laserFeedback} from "./laser_feedback.mjs"
 import {helmetSocketParams} from "./helmet_auth.mjs"
@@ -74,6 +75,7 @@ export class HelmetClient {
 
   async start() {
     this.setupImmersiveControls()
+    attachBandwidthPanel(this.root, this.bandwidth)
 
     if (this.credential) {
       const verification = await this.verifySavedCredential()

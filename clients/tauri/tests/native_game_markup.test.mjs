@@ -19,6 +19,8 @@ test("standalone markup contains the real Atlas and 3D/SBS cockpit", () => {
   assert.match(document, /native_game.css/)
   assert.match(document, /native_bootstrap.mjs/)
   assert.match(document, /native-login-form/)
+  assert.match(document, /data-bandwidth-panel/)
+  assert.match(document, /data-bandwidth-readout/)
 })
 
 test("native game includes an initially hidden Earth recovery overlay", () => {

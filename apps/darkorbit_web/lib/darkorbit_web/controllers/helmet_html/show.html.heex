@@ -106,6 +106,12 @@
         With the headset on, look straight ahead and press C on the laptop
         to center the cockpit (no need to remove the phone).
       </p>
+      <%!-- Read this while out of the headset; never overlay the SBS eyes. --%>
+      <details data-bandwidth-panel class="rounded-lg border border-cyan-600/70 p-2 text-left font-mono text-xs text-cyan-100">
+        <summary class="cursor-pointer px-2 py-1 font-bold tracking-widest">NET · BANDWIDTH</summary>
+        <pre data-bandwidth-readout class="mt-2 max-h-44 overflow-auto whitespace-pre-wrap break-words p-2 text-[0.65rem] leading-relaxed">Open to view estimated traffic.</pre>
+      </details>
+
       <button id="helmet-windowed" type="button"
               class="text-xs text-slate-400 underline underline-offset-4">
         Continue without fullscreen

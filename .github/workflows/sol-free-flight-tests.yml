@@ -58,6 +58,7 @@ on:
       - "apps/darkorbit_web/test/darkorbit_web/channels/helmet_channel_test.exs"
       - "apps/darkorbit_web/assets/js/game/helmet_client.mjs"
       - "apps/darkorbit_web/assets/js/game/bandwidth_probe*.mjs"
+      - "apps/darkorbit_web/assets/js/game/bandwidth_panel*.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_head_tracking.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_head_tracking_test.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_gaze_dwell.mjs"
@@ -158,6 +159,7 @@ jobs:
           node --test apps/darkorbit_web/assets/js/game/solar_atlas_view_test.mjs
           node --test apps/darkorbit_web/assets/js/game/solar_atlas_test.mjs
           node --test apps/darkorbit_web/assets/js/game/bandwidth_probe_test.mjs
+          node --test apps/darkorbit_web/assets/js/game/bandwidth_panel_test.mjs
           node --test apps/darkorbit_web/assets/js/game/space_environment_field_test.mjs
           node --check apps/darkorbit_web/assets/js/game/space_environment_visual.js
           node --test apps/darkorbit_web/assets/js/game/green_starbase_visual_test.mjs

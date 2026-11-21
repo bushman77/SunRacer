@@ -206,6 +206,14 @@
     </.form>
   </header>
 
+  <%!-- Safe on-screen diagnostics for native Tauri builds with no dev console. --%>
+  <details data-bandwidth-panel
+           class="pointer-events-auto absolute bottom-3 right-3 z-[95] rounded-lg border border-cyan-400/40 bg-slate-950/95 font-mono text-cyan-100 shadow-lg">
+    <summary class="cursor-pointer select-none px-3 py-2 text-xs font-bold tracking-widest">NET</summary>
+    <div class="w-72 max-w-[80vw] border-t border-cyan-400/30 p-3">
+      <pre data-bandwidth-readout class="max-h-60 overflow-auto whitespace-pre-wrap break-words text-[0.67rem] leading-relaxed">Open to view estimated traffic.</pre>
+    </div>
+  </details>
 
   <section id="navigation-computer" class="navigation-computer" role="dialog" aria-modal="true" aria-labelledby="nav-title">
     <div class="nav-shell atlas-hud-shell">
