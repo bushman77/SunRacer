@@ -11,7 +11,7 @@ Run from the umbrella root after installing dependencies and applying migrations
 git status --short
 git pull --ff-only origin sbs
 mix ecto.migrate
-mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
+mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
 mix test
 ```
 

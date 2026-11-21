@@ -4,8 +4,8 @@ on:
   push:
     branches: [native_client]
     paths:
-      - "apps/darkorbit_web/assets/js/game/world_stream_delta*"
-      - "apps/darkorbit_web/assets/js/game/client.js"
+      - "apps/sunracer_web/assets/js/game/world_stream_delta*"
+      - "apps/sunracer_web/assets/js/game/client.js"
       - ".github/workflows/world-stream-tests.yml"
   workflow_dispatch:
 
@@ -21,4 +21,4 @@ jobs:
         with:
           node-version: "22"
       - name: Verify state reconstruction and resync behavior
-        run: node --test apps/darkorbit_web/assets/js/game/world_stream_delta_test.mjs
+        run: node --test apps/sunracer_web/assets/js/game/world_stream_delta_test.mjs

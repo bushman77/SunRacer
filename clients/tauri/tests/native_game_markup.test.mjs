@@ -3,7 +3,7 @@ import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
 import {convertGameMarkup, nativeGameDocument} from "../scripts/native-game-markup.mjs"
 
-const template = readFileSync(new URL("../../../apps/darkorbit_web/lib/darkorbit_web/controllers/game_html/show.html.heex", import.meta.url), "utf8")
+const template = readFileSync(new URL("../../../apps/sunracer_web/lib/sunracer_web/controllers/game_html/show.html.heex", import.meta.url), "utf8")
 const markup = convertGameMarkup(template)
 const document = nativeGameDocument(markup)
 

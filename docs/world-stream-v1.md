@@ -2,7 +2,7 @@
 
 The authoritative `Core.World.MapServer` still simulates and broadcasts
 complete world snapshots every 100 ms. The authenticated Phoenix
-`DarkorbitWeb.WorldChannel` now has a **negotiated**, transport-only
+`SunracerWeb.WorldChannel` now has a **negotiated**, transport-only
 `delta_v1` mode. Older clients keep receiving `world_state` untouched.
 All changes remain server-owned.
 
@@ -60,11 +60,11 @@ and response shapes.
 ## Tests and measurement
 
 ```sh
-cd apps/darkorbit_web/assets
+cd apps/sunracer_web/assets
 npm test
 cd ../../..
-mix test apps/darkorbit_web/test/darkorbit_web/world_stream_delta_test.exs
-mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
+mix test apps/sunracer_web/test/sunracer_web/world_stream_delta_test.exs
+mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
 ```
 
 The Elixir unit test measures serialized `Jason.encode!/1` byte sizes
@@ -101,7 +101,7 @@ world**. Skipped ticks cannot silently advance the baseline, so client-side
 used to determine hits, collisions or state settlement: all mechanics still
 run at full frequency on the Elixir map server.
 
-Run `mix test apps/darkorbit_web/test/darkorbit_web/world_stream_policy_test.exs`
+Run `mix test apps/sunracer_web/test/sunracer_web/world_stream_policy_test.exs`
 and the world-channel integration tests after pulling. These tests validate
 motion cadence, the no-op heartbeat, immediate surrender/damage changes,
 and duplicate preview suppression. Byte savings depend on scene density and

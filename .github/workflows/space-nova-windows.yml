@@ -5,13 +5,13 @@ on:
     branches: [native_client]
     paths:
       - "clients/tauri/**"
-      - "apps/darkorbit_web/assets/js/game/**"
-      - "apps/darkorbit_web/assets/js/native_game.js"
-      - "apps/darkorbit_web/lib/darkorbit_web/controllers/game_html/show.html.heex"
-      - "apps/darkorbit_web/assets/css/app.css"
+      - "apps/sunracer_web/assets/js/game/**"
+      - "apps/sunracer_web/assets/js/native_game.js"
+      - "apps/sunracer_web/lib/sunracer_web/controllers/game_html/show.html.heex"
+      - "apps/sunracer_web/assets/css/app.css"
       - "config/config.exs"
-      - "apps/darkorbit_web/assets/package-lock.json"
-      - "apps/darkorbit_web/priv/static/images/game/**"
+      - "apps/sunracer_web/assets/package-lock.json"
+      - "apps/sunracer_web/priv/static/images/game/**"
       - ".github/workflows/space-nova-windows.yml"
   workflow_dispatch:
 
@@ -44,7 +44,7 @@ jobs:
           elixir-version: '1.18.4'
 
       - name: Install shared renderer dependencies
-        run: npm ci --prefix apps/darkorbit_web/assets
+        run: npm ci --prefix apps/sunracer_web/assets
 
       - name: Test launcher
         working-directory: clients/tauri

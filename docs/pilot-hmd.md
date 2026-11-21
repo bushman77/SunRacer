@@ -91,7 +91,7 @@ it *before* the first stereoscopic frame. If this database field is empty
 migrated into it. An unacknowledged local change survives a disconnect and
 is reconciled on reconnect without overwriting newer adjustments.
 
-Migration: `apps/darkorbit/priv/repo/migrations/20261102210000_add_helmet_calibration.exs`.
+Migration: `apps/sunracer/priv/repo/migrations/20261102210000_add_helmet_calibration.exs`.
 It adds nullable `eye_gap_px` and `eye_sep_mm`, with bounded database checks.
 Forgetting a device deletes its calibration.
 
@@ -114,14 +114,14 @@ eyestrain or double vision.
 From the umbrella root:
 
     mix ecto.migrate
-    npm install --prefix apps/darkorbit_web/assets
+    npm install --prefix apps/sunracer_web/assets
     mix assets.build
-    DARKORBIT_LAN_HMD=1 iex -S mix phx.server
+    SUNRACER_LAN_HMD=1 iex -S mix phx.server
 
-In development, DARKORBIT_LAN_HMD=1 intentionally enables LAN binding; without
+In development, SUNRACER_LAN_HMD=1 intentionally enables LAN binding; without
 it Phoenix stays on loopback. Prefer a trusted private hotspot, not a shared
 or untrusted Wi-Fi network. You can override auto-discovery by setting
-DARKORBIT_HMD_HOST to the preferred laptop hostname or IPv4 address.
+SUNRACER_HMD_HOST to the preferred laptop hostname or IPv4 address.
 The QR link uses the current page's scheme and port with that host. If there
 are no usable LAN interfaces, manually enter the reachable URL in the Atlas. Avoid exposing these bearer tokens over an
 untrusted network: deploy HTTPS/WSS for networks beyond a trusted local setup.
@@ -129,11 +129,11 @@ Phone landscape, lens alignment and frame rate require hardware testing.
 
 ## Tests
 
-    cd apps/darkorbit_web
-    mix test test/darkorbit_web/channels/helmet_channel_test.exs \
-             test/darkorbit_web/controllers/helmet_controller_test.exs
+    cd apps/sunracer_web
+    mix test test/sunracer_web/channels/helmet_channel_test.exs \
+             test/sunracer_web/controllers/helmet_controller_test.exs
     cd ../..
-    npm test --prefix apps/darkorbit_web/assets
+    npm test --prefix apps/sunracer_web/assets
 
 The remote repository edits were not run through an Elixir compiler or a real
 Galaxy S21 during implementation. Verify migration, Phoenix joins, browser
@@ -144,7 +144,7 @@ assets, fullscreen and device performance locally.
 
 Phoenix may be rejecting a saved phone credential even though the helmet page
 loads over HTTP. Check the server log for
-\`REFUSED CONNECTION TO DarkorbitWeb.UserSocket\` with \`helmet_token\`
+\`REFUSED CONNECTION TO SunracerWeb.UserSocket\` with \`helmet_token\`
 and a prior database lookup of \`helmet_devices.credential_hash\`. That
 means the stored credential was not authenticated; it is not proof of a bad
 stereo renderer or a LAN connection failure.
@@ -162,8 +162,8 @@ headset is merely offline, leave the registration intact and reopen
 \`/helmet\` on the same phone/browser instead.
 
 Tests:
-\`mix test test/darkorbit_web/controllers/helmet_controller_test.exs\`
-from \`apps/darkorbit_web\`.
+\`mix test test/sunracer_web/controllers/helmet_controller_test.exs\`
+from \`apps/sunracer_web\`.
 
 
 ## Recovery after the earlier world-event crash
@@ -193,9 +193,9 @@ socket joins; the same failure cannot consume a QR unnoticed during joining.
 - Proximity warnings, encounter holds and surrender offers appear in the
   stereo cockpit HUD.
 - Phone-only local settings (not stored on the server yet):
-  - `darkorbit:pilot_hmd_max_dpr`: render resolution cap, 1-3 (default 2).
-  - `darkorbit:pilot_hmd_lens_distortion`: `"1"` enables the beta barrel
+  - `sunracer:pilot_hmd_max_dpr`: render resolution cap, 1-3 (default 2).
+  - `sunracer:pilot_hmd_lens_distortion`: `"1"` enables the beta barrel
     pre-distortion pass (also the setup-screen checkbox).
-  - `darkorbit:pilot_hmd_lens_k`: `"k1,k2"` (default `0.10,0.05`).
+  - `sunracer:pilot_hmd_lens_k`: `"k1,k2"` (default `0.10,0.05`).
   None of these have been verified on a headset yet.
 

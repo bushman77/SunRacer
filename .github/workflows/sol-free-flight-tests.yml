@@ -8,8 +8,8 @@ on:
       - "apps/core/lib/core/universe/sol.ex"
       - "apps/core/lib/core/universe/space_environment.ex"
       - "apps/core/test/core/universe/space_environment_test.exs"
-      - "apps/darkorbit_web/assets/js/game/space_environment_field*.mjs"
-      - "apps/darkorbit_web/assets/js/game/space_environment_visual.js"
+      - "apps/sunracer_web/assets/js/game/space_environment_field*.mjs"
+      - "apps/sunracer_web/assets/js/game/space_environment_visual.js"
       - "apps/core/lib/core/universe/green_starbase.ex"
       - "apps/core/test/core/universe/green_starbase_test.exs"
       - "apps/core/lib/core/universe/navigation/checkpoint.ex"
@@ -31,8 +31,8 @@ on:
       - "apps/core/lib/core/world/green_starbase_docking.ex"
       - "apps/core/test/core/world/green_starbase_docking_test.exs"
       - "apps/core/test/core/world/green_starbase_docking_integration_test.exs"
-      - "apps/darkorbit/lib/darkorbit/pilot_location.ex"
-      - "apps/darkorbit/test/darkorbit/pilot_location_test.exs"
+      - "apps/sunracer/lib/sunracer/pilot_location.ex"
+      - "apps/sunracer/test/sunracer/pilot_location_test.exs"
       - "apps/core/test/core/world/green_starbase_safety_test.exs"
       - "apps/core/test/core/world/green_starbase_impact_integration_test.exs"
       - "apps/core/lib/core/universe/orbital_entry.ex"
@@ -40,61 +40,61 @@ on:
       - "apps/core/test/core/universe/orbital_entry_test.exs"
       - "apps/core/test/core/universe/space_bases_test.exs"
       - "apps/core/test/core/world/station_impact_integration_test.exs"
-      - "apps/darkorbit_web/assets/js/game/station_warning*.mjs"
+      - "apps/sunracer_web/assets/js/game/station_warning*.mjs"
       - "apps/core/test/core/universe/navigation_test.exs"
       - "apps/core/test/core/universe/free_flight_region_test.exs"
       - "apps/core/test/core/world/world_test.exs"
-      - "apps/darkorbit/test/darkorbit/world_test.exs"
-      - "apps/darkorbit/lib/darkorbit/world.ex"
-      - "apps/darkorbit/lib/darkorbit/pilot_location.ex"
-      - "apps/darkorbit/test/darkorbit/pilot_location_test.exs"
-      - "apps/darkorbit_web/lib/darkorbit_web/channels/world_channel.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/channels/helmet_channel.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/native_client_cors.ex"
-      - "apps/darkorbit_web/test/darkorbit_web/native_client_cors_test.exs"
+      - "apps/sunracer/test/sunracer/world_test.exs"
+      - "apps/sunracer/lib/sunracer/world.ex"
+      - "apps/sunracer/lib/sunracer/pilot_location.ex"
+      - "apps/sunracer/test/sunracer/pilot_location_test.exs"
+      - "apps/sunracer_web/lib/sunracer_web/channels/world_channel.ex"
+      - "apps/sunracer_web/lib/sunracer_web/channels/helmet_channel.ex"
+      - "apps/sunracer_web/lib/sunracer_web/native_client_cors.ex"
+      - "apps/sunracer_web/test/sunracer_web/native_client_cors_test.exs"
       - "config/dev.exs"
-      - "apps/darkorbit_web/test/darkorbit_web/helmet_https_config_test.exs"
-      - "apps/darkorbit_web/lib/darkorbit_web/controllers/helmet_html/show.html.heex"
-      - "apps/darkorbit_web/test/darkorbit_web/channels/helmet_channel_test.exs"
-      - "apps/darkorbit_web/assets/js/game/helmet_client.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_relay_test*.mjs"
-      - "apps/darkorbit_web/assets/js/game/sbs_relay_world*.mjs"
-      - "apps/darkorbit_web/lib/darkorbit_web/controllers/helmet_html/show.html.heex"
-      - "apps/darkorbit_web/assets/js/game/bandwidth_probe*.mjs"
-      - "apps/darkorbit_web/assets/js/game/bandwidth_panel*.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_head_tracking.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_head_tracking_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_gaze_dwell.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_gaze_dwell_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_hud_pages*.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_bandwidth_hud*.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_gaze_integration_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_control.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_network.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_network_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_alignment_keys.mjs"
-      - "apps/darkorbit_web/assets/js/game/stereo_view.js"
-      - "apps/darkorbit_web/assets/js/game/stereo_layout.mjs"
-      - "apps/darkorbit_web/assets/js/game/stereo_layout_test.mjs"
-      - "apps/darkorbit_web/assets/css/app.css"
-      - "apps/darkorbit_web/assets/js/game/green_starbase_visual.js"
-      - "apps/darkorbit_web/assets/js/game/green_starbase_visual_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/solar_atlas.mjs"
-      - "apps/darkorbit_web/assets/js/game/solar_atlas_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/ambient_refinery_traffic*.mjs"
-      - "apps/darkorbit_web/assets/js/game/stereo_viewport.mjs"
-      - "apps/darkorbit_web/assets/js/game/stereo_viewport_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_alignment_keys_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_keyboard_only_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_planetary_navigation*.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_screen_wake*.mjs"
-      - "apps/darkorbit_web/assets/js/game/helmet_encounter_view.mjs"
-      - "apps/darkorbit_web/assets/js/game/planetary_body.js"
-      - "apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs"
-      - "apps/darkorbit_web/assets/js/game/navigation_computer.mjs"
-      - "apps/darkorbit_web/assets/js/game/client.js"
-      - "apps/darkorbit_web/assets/js/game/solar_atlas_view_test.mjs"
-      - "apps/darkorbit_web/assets/js/game/orbital_regions_test.mjs"
+      - "apps/sunracer_web/test/sunracer_web/helmet_https_config_test.exs"
+      - "apps/sunracer_web/lib/sunracer_web/controllers/helmet_html/show.html.heex"
+      - "apps/sunracer_web/test/sunracer_web/channels/helmet_channel_test.exs"
+      - "apps/sunracer_web/assets/js/game/helmet_client.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_relay_test*.mjs"
+      - "apps/sunracer_web/assets/js/game/sbs_relay_world*.mjs"
+      - "apps/sunracer_web/lib/sunracer_web/controllers/helmet_html/show.html.heex"
+      - "apps/sunracer_web/assets/js/game/bandwidth_probe*.mjs"
+      - "apps/sunracer_web/assets/js/game/bandwidth_panel*.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_head_tracking.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_head_tracking_test.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_gaze_dwell.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_gaze_dwell_test.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_hud_pages*.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_bandwidth_hud*.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_gaze_integration_test.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_control.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_network.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_network_test.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_alignment_keys.mjs"
+      - "apps/sunracer_web/assets/js/game/stereo_view.js"
+      - "apps/sunracer_web/assets/js/game/stereo_layout.mjs"
+      - "apps/sunracer_web/assets/js/game/stereo_layout_test.mjs"
+      - "apps/sunracer_web/assets/css/app.css"
+      - "apps/sunracer_web/assets/js/game/green_starbase_visual.js"
+      - "apps/sunracer_web/assets/js/game/green_starbase_visual_test.mjs"
+      - "apps/sunracer_web/assets/js/game/solar_atlas.mjs"
+      - "apps/sunracer_web/assets/js/game/solar_atlas_test.mjs"
+      - "apps/sunracer_web/assets/js/game/ambient_refinery_traffic*.mjs"
+      - "apps/sunracer_web/assets/js/game/stereo_viewport.mjs"
+      - "apps/sunracer_web/assets/js/game/stereo_viewport_test.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_alignment_keys_test.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_keyboard_only_test.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_planetary_navigation*.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_screen_wake*.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_encounter_view.mjs"
+      - "apps/sunracer_web/assets/js/game/planetary_body.js"
+      - "apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs"
+      - "apps/sunracer_web/assets/js/game/navigation_computer.mjs"
+      - "apps/sunracer_web/assets/js/game/client.js"
+      - "apps/sunracer_web/assets/js/game/solar_atlas_view_test.mjs"
+      - "apps/sunracer_web/assets/js/game/orbital_regions_test.mjs"
       - ".github/workflows/sol-free-flight-tests.yml"
   workflow_dispatch:
 
@@ -110,7 +110,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: darkorbit_test
+          POSTGRES_DB: sunracer_test
         ports:
           - 5432:5432
         options: >-
@@ -144,55 +144,55 @@ jobs:
           mix test apps/core/test/core/universe/green_starbase_test.exs
           mix test apps/core/test/core/universe/free_flight_region_test.exs
           mix test apps/core/test/core/world/world_test.exs
-          mix test apps/darkorbit/test/darkorbit/world_test.exs
-          mix test apps/darkorbit/test/darkorbit/pilot_location_test.exs
+          mix test apps/sunracer/test/sunracer/world_test.exs
+          mix test apps/sunracer/test/sunracer/pilot_location_test.exs
           mix test apps/core/test/core/universe/orbital_entry_test.exs
           mix test apps/core/test/core/universe/space_bases_test.exs
           mix test apps/core/test/core/world/planetary_collision_test.exs
           mix test apps/core/test/core/world/station_safety_test.exs
           mix test apps/core/test/core/world/green_starbase_docking_test.exs
           mix test apps/core/test/core/world/green_starbase_docking_integration_test.exs
-          mix test apps/darkorbit/test/darkorbit/pilot_location_test.exs
+          mix test apps/sunracer/test/sunracer/pilot_location_test.exs
           mix test apps/core/test/core/world/green_starbase_safety_test.exs
           mix test apps/core/test/core/world/green_starbase_impact_integration_test.exs
           mix test apps/core/test/core/world/station_impact_integration_test.exs
       - name: Test authenticated Phoenix handoffs
         run: |
-          mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/channels/helmet_channel_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/native_client_cors_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/helmet_https_config_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/channels/helmet_channel_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/native_client_cors_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/helmet_https_config_test.exs
       - name: Test navigation controls and map ID validation
         run: |
-          node --test apps/darkorbit_web/assets/js/game/solar_atlas_view_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/solar_atlas_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/bandwidth_probe_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/bandwidth_panel_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/space_environment_field_test.mjs
-          node --check apps/darkorbit_web/assets/js/game/space_environment_visual.js
-          node --test apps/darkorbit_web/assets/js/game/green_starbase_visual_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/orbital_regions_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/stereo_viewport_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/stereo_layout_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_alignment_keys_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_alignment_test.mjs
-          node --check apps/darkorbit_web/assets/js/game/stereo_view.js
-          node --check apps/darkorbit_web/assets/js/game/helmet_client.mjs
-          node --check apps/darkorbit_web/assets/js/game/helmet_relay_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_relay_test_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/sbs_relay_world_test.mjs
+          node --test apps/sunracer_web/assets/js/game/solar_atlas_view_test.mjs
+          node --test apps/sunracer_web/assets/js/game/solar_atlas_test.mjs
+          node --test apps/sunracer_web/assets/js/game/bandwidth_probe_test.mjs
+          node --test apps/sunracer_web/assets/js/game/bandwidth_panel_test.mjs
+          node --test apps/sunracer_web/assets/js/game/space_environment_field_test.mjs
+          node --check apps/sunracer_web/assets/js/game/space_environment_visual.js
+          node --test apps/sunracer_web/assets/js/game/green_starbase_visual_test.mjs
+          node --test apps/sunracer_web/assets/js/game/orbital_regions_test.mjs
+          node --test apps/sunracer_web/assets/js/game/stereo_viewport_test.mjs
+          node --test apps/sunracer_web/assets/js/game/stereo_layout_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_alignment_keys_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_alignment_test.mjs
+          node --check apps/sunracer_web/assets/js/game/stereo_view.js
+          node --check apps/sunracer_web/assets/js/game/helmet_client.mjs
+          node --check apps/sunracer_web/assets/js/game/helmet_relay_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_relay_test_test.mjs
+          node --test apps/sunracer_web/assets/js/game/sbs_relay_world_test.mjs
           node --test clients/tauri/tests/native_game_markup.test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_network_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_head_tracking_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_gaze_dwell_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_hud_pages_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_delta_integration_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_bandwidth_hud_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_gaze_integration_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_keyboard_only_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_screen_wake_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_planetary_navigation_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/helmet_encounter_view_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/planetary_body_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/ambient_refinery_traffic_test.mjs
-          node --test apps/darkorbit_web/assets/js/game/station_warning_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_network_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_head_tracking_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_gaze_dwell_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_hud_pages_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_delta_integration_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_bandwidth_hud_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_gaze_integration_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_keyboard_only_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_screen_wake_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_planetary_navigation_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_encounter_view_test.mjs
+          node --test apps/sunracer_web/assets/js/game/planetary_body_test.mjs
+          node --test apps/sunracer_web/assets/js/game/ambient_refinery_traffic_test.mjs
+          node --test apps/sunracer_web/assets/js/game/station_warning_test.mjs

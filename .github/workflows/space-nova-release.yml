@@ -30,7 +30,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: darkorbit_test
+          POSTGRES_DB: sunracer_test
         ports:
           - 5432:5432
         options: >-
@@ -70,7 +70,7 @@ jobs:
           mix compile --warnings-as-errors
           mix test
       - name: All browser JavaScript tests
-        working-directory: apps/darkorbit_web/assets
+        working-directory: apps/sunracer_web/assets
         run: |
           npm ci
           npm test
@@ -113,11 +113,11 @@ jobs:
         run: |
           python3 scripts/space-nova-version.py check "$RELEASE_VERSION"
           test "$(uname -m)" = x86_64
-          npm ci --prefix apps/darkorbit_web/assets
+          npm ci --prefix apps/sunracer_web/assets
           mix deps.get --only prod
           mix compile --warnings-as-errors
           mix assets.deploy
-          test -s apps/darkorbit_web/priv/static/cache_manifest.json
+          test -s apps/sunracer_web/priv/static/cache_manifest.json
           mix release space_mmo --overwrite
           test -x _build/prod/rel/space_mmo/bin/space_mmo
       - name: Exercise release migration and HTTPS startup
@@ -133,7 +133,7 @@ jobs:
             -keyout "$SPACE_NOVA_TLS_KEYFILE" -out "$SPACE_NOVA_TLS_CERTFILE" \
             -subj '/CN=localhost' >/dev/null 2>&1
           bin=_build/prod/rel/space_mmo/bin/space_mmo
-          "$bin" eval 'Darkorbit.Release.migrate()'
+          "$bin" eval 'Sunracer.Release.migrate()'
           "$bin" start > "$RUNNER_TEMP/space-nova-server.log" 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
@@ -192,7 +192,7 @@ jobs:
           mkdir -p "$RUNNER_TEMP/server"
           tar -xzf dist/space-nova-server-linux-x64.tar.gz -C "$RUNNER_TEMP/server"
           bin="$RUNNER_TEMP/server/space_mmo/bin/space_mmo"
-          "$bin" eval 'Darkorbit.Release.migrate()'
+          "$bin" eval 'Sunracer.Release.migrate()'
           "$bin" start > "$RUNNER_TEMP/proxy-server.log" 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
@@ -250,7 +250,7 @@ jobs:
           otp-version: '27.3'
           elixir-version: '1.18.4'
       - name: Install shared renderer dependencies
-        run: npm ci --prefix apps/darkorbit_web/assets
+        run: npm ci --prefix apps/sunracer_web/assets
       - name: Install client dependencies
         working-directory: clients/tauri
         run: npm ci
@@ -319,7 +319,7 @@ jobs:
           otp-version: '27.3'
           elixir-version: '1.18.4'
       - name: Install shared renderer dependencies
-        run: npm ci --prefix apps/darkorbit_web/assets
+        run: npm ci --prefix apps/sunracer_web/assets
       - name: Install client dependencies
         working-directory: clients/tauri
         run: npm ci
@@ -400,7 +400,7 @@ jobs:
                   raise SystemExit(f"Empty signature file: {sig_file}")
               return {
                   "signature": signature,
-                  "url": f"https://github.com/bushman77/darkorbit_umbrella/releases/download/v{version}/{quote(package.name, safe='')}"
+                  "url": f"https://github.com/bushman77/SunRacer/releases/download/v{version}/{quote(package.name, safe='')}"
               }
 
           platforms = {

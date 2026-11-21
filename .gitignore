@@ -23,7 +23,7 @@ erl_crash.dump
 /tmp/
 
 # The umbrella root has no Node package manifest; Node projects own their
-# lockfiles below apps/darkorbit_web/assets and clients/tauri.
+# lockfiles below apps/sunracer_web/assets and clients/tauri.
 /package-lock.json
 
 # Generated Tauri permissions
@@ -33,4 +33,4 @@ erl_crash.dump
 /dist/releases/
 
 # Local headset HTTPS certificates and private keys; never commit.
-/apps/darkorbit_web/priv/cert/
+/apps/sunracer_web/priv/cert/

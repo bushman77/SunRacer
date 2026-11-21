@@ -1,3 +1,9 @@
+## 2026-11-21 — SunRacer namespace migration
+
+- Renamed application/module references, directories, CI paths, and configuration.
+- Automated tests have not yet been run; local verification is required.
+- Existing database data and production deployment need separate migration checks.
+
 # Changelog
 
 ## Unreleased
@@ -31,7 +37,7 @@
   0 and at most 200 units. Updated: the long-range hit test (now 500 units,
   inside the band) and the dual-laser test (aims the eye sight, not ship
   centre; it previously passed only because beams converged at 3,600).
-- `mix test` core 298 / darkorbit 82 / darkorbit_web 96, 0 failures;
+- `mix test` core 298 / sunracer 82 / sunracer_web 96, 0 failures;
   `npm test` 400 pass. The simulations were run as throwaway tests and not
   committed.
 - Manual verification: none. The band has not been flown in the cockpit.
@@ -40,7 +46,7 @@
 
 #### Added
 
-- `Darkorbit.Story` and the pure engine `Darkorbit.Story.Prologue`: the
+- `Sunracer.Story` and the pure engine `Sunracer.Story.Prologue`: the
   nine-step prologue from `docs/story-first-run.md`. Steps advance only from
   server-confirmed events (flight commands the map accepted, Navigation
   snapshots, hails, encounter resolution, tactical start and settlement,
@@ -86,7 +92,7 @@
 #### Verification
 
 - Automated, run in this session from the umbrella root with the full
-  dependency set: `mix test` core 297 / darkorbit 82 / darkorbit_web 96,
+  dependency set: `mix test` core 297 / sunracer 82 / sunracer_web 96,
   0 failures; `npm test` 400 pass; `mix compile --warnings-as-errors` clean;
   esbuild bundle of `app.js` and `native_game.js` builds.
 - Tests added: `story_traffic_navigation_test.exs` (6), staged Corsair
@@ -222,7 +228,7 @@
 - The sight ring is drawn at the depth of what it points at: the cockpit
   control under the head-gaze, otherwise 60 units ahead (same angular size).
 - Headset render resolution cap 2.0 (was 1.5); override with localStorage
-  `darkorbit:pilot_hmd_max_dpr` (1-3). Laptop cap unchanged.
+  `sunracer:pilot_hmd_max_dpr` (1-3). Laptop cap unchanged.
 - First-run centre gap -48 CSS px (was +8). Saved calibration unchanged.
 - Laptop manual flight: the own ship's orientation and position are predicted
   between server ticks by running the server's turn rules
@@ -237,7 +243,7 @@
 - Optional lens distortion correction (beta, off by default): a checkbox on
   the headset setup screen enables a per-eye barrel pre-distortion pass
   centred on the calibrated lens centre. Defaults k1=0.10, k2=0.05; override
-  with localStorage `darkorbit:pilot_hmd_lens_k` ("k1,k2").
+  with localStorage `sunracer:pilot_hmd_lens_k` ("k1,k2").
 
 #### Not changed
 
@@ -263,7 +269,7 @@
 #### Removed
 
 - Removed five accidental zero-byte command-token files from the Phoenix asset
-  project: `FETCH_HEAD`, `core`, `darkorbit`, `node`, and `test`.
+  project: `FETCH_HEAD`, `core`, `sunracer`, `node`, and `test`.
 - Removed the empty root `package-lock.json`; the umbrella root has no
   `package.json`, while the Phoenix asset and Tauri npm lockfiles remain at
   their actual package roots.
@@ -820,8 +826,8 @@
 
 - Changed the default development Bandit interface from loopback
   `127.0.0.1` to `0.0.0.0`, supporting an external SBS headset without
-  requiring the former `DARKORBIT_LAN_HMD=1` launch flag.
-- Added `DARKORBIT_LOOPBACK_ONLY=1` to opt into a restricted local-only
+  requiring the former `SUNRACER_LAN_HMD=1` launch flag.
+- Added `SUNRACER_LOOPBACK_ONLY=1` to opt into a restricted local-only
   listener on untrusted networks. Production endpoint configuration is unchanged.
 - Not verified on physical headset; run from a trusted LAN and use the
   laptop's IPv4 address for remote device connections.
@@ -950,7 +956,7 @@
 - Base Sunracer now has 300 armor, a 10-point built-in Garnet, a four-tonne
   cargo hold and original Forward-1/missile/drive system metadata.
 - Added Beryl (15) and Sapphire (20) named upgrades; single Sunracer
-  beams replace rather than stack damage, while existing DarkOrbit
+  beams replace rather than stack damage, while existing SunRacer
   multi-slot ships retain additive equipment calculations.
 - Added /equipment authenticated equipment/loadout screen, account-owned
   equip/unequip forms, and persistent C-1/C-2 selection applied to the
@@ -1081,7 +1087,7 @@
 - Added gen_smtp as Swoosh's SMTP dependency, supporting authenticated TLS-only SMTP on ports 587/465/2525 with certificate and hostname validation.
 - Retained Resend API delivery as an alternative; missing or incomplete provider credentials fail closed.
 - Added independent SPACE_NOVA_REGISTRATION_OPEN flag to keep public signup disabled while testing delivery.
-- Added operator-only Darkorbit.Email.Probe.send_test/1 and tests; no email admin HTTP route or automatic production deployment.
+- Added operator-only Sunracer.Email.Probe.send_test/1 and tests; no email admin HTTP route or automatic production deployment.
 
 
 ### 2026-11-20 — SOL environment regions (Stage 1)

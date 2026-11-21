@@ -1,6 +1,6 @@
 # Core
 
-Pure DarkOrbit game mechanics and the OTP world runtime. This application owns
+Pure SunRacer game mechanics and the OTP world runtime. This application owns
 catalog definitions, derived ship statistics, movement, live sessions, and
 map processes without depending on Phoenix, Ecto, or PostgreSQL.
 

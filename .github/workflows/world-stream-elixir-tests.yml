@@ -4,10 +4,10 @@ on:
   push:
     branches: [native_client]
     paths:
-      - "apps/darkorbit_web/lib/darkorbit_web/world_stream_*.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/channels/world_channel.ex"
-      - "apps/darkorbit_web/test/darkorbit_web/world_stream_*.exs"
-      - "apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs"
+      - "apps/sunracer_web/lib/sunracer_web/world_stream_*.ex"
+      - "apps/sunracer_web/lib/sunracer_web/channels/world_channel.ex"
+      - "apps/sunracer_web/test/sunracer_web/world_stream_*.exs"
+      - "apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs"
       - ".github/workflows/world-stream-elixir-tests.yml"
   workflow_dispatch:
 
@@ -23,7 +23,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: darkorbit_test
+          POSTGRES_DB: sunracer_test
         ports:
           - 5432:5432
         options: >-
@@ -45,6 +45,6 @@ jobs:
         run: mix compile
       - name: Verify stream unit and channel integration tests
         run: |
-          mix test apps/darkorbit_web/test/darkorbit_web/world_stream_delta_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/world_stream_policy_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/world_stream_delta_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/world_stream_policy_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs

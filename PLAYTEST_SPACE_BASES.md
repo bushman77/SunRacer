@@ -13,7 +13,7 @@ git pull --ff-only origin sbs
 mix test apps/core/test/core/universe/space_bases_test.exs
 mix test apps/core/test/core/universe/space_bases_navigation_test.exs
 mix test
-cd apps/darkorbit_web/assets
+cd apps/sunracer_web/assets
 npm test
 ```
 

@@ -20,7 +20,7 @@ if config_env() == :prod do
 
   maybe_ipv6 = if System.get_env("ECTO_IPV6") in ~w(true 1), do: [:inet6], else: []
 
-  config :darkorbit, Darkorbit.Repo,
+  config :sunracer, Sunracer.Repo,
     # ssl: true,
     url: database_url,
     pool_size: String.to_integer(System.get_env("POOL_SIZE") || "10"),
@@ -45,7 +45,7 @@ if config_env() == :prod do
   # Other deployments can continue terminating TLS directly on port 4000.
   behind_proxy? = System.get_env("SPACE_NOVA_PROXY_MODE") in ~w(1 true)
 
-  config :darkorbit_web, DarkorbitWeb.Endpoint,
+  config :sunracer_web, SunracerWeb.Endpoint,
     url: [
       host: System.get_env("PHX_HOST", "spacenova.ddns.net"),
       scheme: "https",
@@ -56,7 +56,7 @@ if config_env() == :prod do
 
   if behind_proxy? do
     # Never expose this plaintext listener outside the EC2 loopback interface.
-    config :darkorbit_web, DarkorbitWeb.Endpoint,
+    config :sunracer_web, SunracerWeb.Endpoint,
       http: [ip: {127, 0, 0, 1}, port: 4000],
       https: false
   else
@@ -68,7 +68,7 @@ if config_env() == :prod do
       System.get_env("SPACE_NOVA_TLS_KEYFILE") ||
         raise "SPACE_NOVA_TLS_KEYFILE must point to the production TLS private key PEM"
 
-    config :darkorbit_web, DarkorbitWeb.Endpoint,
+    config :sunracer_web, SunracerWeb.Endpoint,
       http: false,
       https: [
         ip: {0, 0, 0, 0},
@@ -123,7 +123,7 @@ if config_env() == :prod do
   registration_open? =
     System.get_env("SPACE_NOVA_REGISTRATION_OPEN") in ~w(1 true)
 
-  config :darkorbit_web,
+  config :sunracer_web,
     registration_email_enabled: transport_ready? and registration_open?,
     email_delivery_configured: transport_ready?,
     email_provider: if(transport_ready?, do: email_provider, else: "none"),
@@ -136,7 +136,7 @@ if config_env() == :prod do
       end
 
     email_provider == "resend" ->
-      config :darkorbit, Darkorbit.Mailer,
+      config :sunracer, Sunracer.Mailer,
         adapter: Swoosh.Adapters.Resend,
         api_key: System.fetch_env!("RESEND_API_KEY")
 
@@ -163,7 +163,7 @@ if config_env() == :prod do
           [ssl: false, tls_options: tls_options]
         end
 
-      config :darkorbit, Darkorbit.Mailer,
+      config :sunracer, Sunracer.Mailer,
         [
           adapter: Swoosh.Adapters.SMTP,
           relay: smtp_host,
@@ -180,5 +180,5 @@ if config_env() == :prod do
     IO.warn("Space Nova registration was requested but mail delivery is not ready; signup remains disabled")
   end
 
-  config :darkorbit, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
+  config :sunracer, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")
 end

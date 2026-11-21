@@ -293,7 +293,7 @@ defmodule Core.World do
   @doc """
   Settle a frozen, map-verified report before deleting tactical evidence.
 
-  A persistence callback may be supplied by Darkorbit.World. Core itself
+  A persistence callback may be supplied by Sunracer.World. Core itself
   never accesses PostgreSQL. Failed persistence or Navigation settlement
   leaves the map's prepared report available for an exact retry.
   """

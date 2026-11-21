@@ -60,7 +60,7 @@
     "updater": {
       "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDU4N0JBRjU3RTZEMTdBQjMKUldTemV0SG1WNjk3V0tKOUE5WHFxSGVJQkxHNlFXelVqM2tQQkFnN01ZUjI4R0s4MlpkL0VyTWMK",
       "endpoints": [
-        "https://github.com/bushman77/darkorbit_umbrella/releases/latest/download/latest.json"
+        "https://github.com/bushman77/SunRacer/releases/latest/download/latest.json"
       ],
       "windows": {
         "installMode": "basicUi"

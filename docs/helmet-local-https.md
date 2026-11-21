@@ -6,15 +6,15 @@ whenever you run `mix phx.server`:
 - `http://127.0.0.1:4000` — desktop/Tauri gameplay
 - `https://<detected-laptop-LAN-IP>:4443` — Android SBS headset, motion sensors, gaze and recenter
 
-There is **no** `DARKORBIT_DEV_LAN_HTTPS=1` opt-in. The HTTPS listener is
+There is **no** `SUNRACER_DEV_LAN_HTTPS=1` opt-in. The HTTPS listener is
 mandatory in development and never changes the production/Caddy setup.
 
 ## Prerequisite: locally trusted certificate
 
 The files must exist on your laptop:
 
-- `apps/darkorbit_web/priv/cert/localhost.pem`
-- `apps/darkorbit_web/priv/cert/localhost-key.pem`
+- `apps/sunracer_web/priv/cert/localhost.pem`
+- `apps/sunracer_web/priv/cert/localhost-key.pem`
 
 Both files, including the private key, are ignored by Git. Never commit,
 share or upload the private key or your mkcert CA key.
@@ -24,12 +24,12 @@ and **the laptop's current LAN IP**. For example, if the address is
 `192.168.0.48`:
 
 ```bash
-cd ~/darkorbit_umbrella
-mkdir -p apps/darkorbit_web/priv/cert
-mkcert -cert-file apps/darkorbit_web/priv/cert/localhost.pem \
-       -key-file apps/darkorbit_web/priv/cert/localhost-key.pem \
+cd ~/SunRacer
+mkdir -p apps/sunracer_web/priv/cert
+mkcert -cert-file apps/sunracer_web/priv/cert/localhost.pem \
+       -key-file apps/sunracer_web/priv/cert/localhost-key.pem \
        localhost 127.0.0.1 192.168.0.48
-openssl x509 -in apps/darkorbit_web/priv/cert/localhost.pem \
+openssl x509 -in apps/sunracer_web/priv/cert/localhost.pem \
   -noout -ext subjectAltName
 ```
 
@@ -44,7 +44,7 @@ and restart Phoenix.
 ## Normal start (no variables)
 
 ```bash
-cd ~/darkorbit_umbrella
+cd ~/SunRacer
 mix phx.server
 ```
 
@@ -53,13 +53,13 @@ over wired, VPN and container interfaces. For unusual networking situations,
 you can override **only the host selection**:
 
 ```bash
-DARKORBIT_DEV_LAN_HOST=192.168.0.48 mix phx.server
+SUNRACER_DEV_LAN_HOST=192.168.0.48 mix phx.server
 ```
 
 The optional host override does **not** enable/disable HTTPS. When no suitable
 private interface is found, or when certificate/key files are absent, startup
 stops with an explicit error rather than silently offering an insecure
-headset connection. The legacy single-port `DARKORBIT_DEV_HTTPS=1` mode should
+headset connection. The legacy single-port `SUNRACER_DEV_HTTPS=1` mode should
 remain unset when using the normal dual-port desktop/headset setup.
 
 Verify:

@@ -112,7 +112,7 @@ sudo systemd-run --unit="space-mmo-email-check-$(date +%s)" \
   --property=WorkingDirectory=/home/ubuntu/deploy/space_mmo \
   --property=EnvironmentFile=/home/ubuntu/.config/space_mmo.env \
   /home/ubuntu/deploy/space_mmo/bin/space_mmo rpc \
-  'IO.inspect(Darkorbit.Email.Probe.send_test("your-inbox@example.com"))'
+  'IO.inspect(Sunracer.Email.Probe.send_test("your-inbox@example.com"))'
 ~~~
 
 Replace the recipient with an inbox you control. Expected result:

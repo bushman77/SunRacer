@@ -176,7 +176,7 @@ defmodule Core.Ships.Stats do
 
     # Sunracer: one upgradeable beam hardpoint. An installed beam replaces
     # the Garnet's 10-point rating rather than stacking on top of it.
-    # Later DarkOrbit-influenced hulls keep additive multi-laser slots.
+    # Later SunRacer-influenced hulls keep additive multi-laser slots.
     raw_damage =
       if ship.id == 1 and laser_items != [] do
         laser_items |> Enum.map(& &1.damage) |> Enum.max()

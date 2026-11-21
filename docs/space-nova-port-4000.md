@@ -68,13 +68,13 @@ Caddy's reverse proxy supports the WebSocket upgrade automatically.
 ## Local development
 
 ```sh
-cd ~/darkorbit_umbrella
-DARKORBIT_LOOPBACK_ONLY=1 DARKORBIT_DEV_HTTPS=0 mix phx.server
+cd ~/SunRacer
+SUNRACER_LOOPBACK_ONLY=1 SUNRACER_DEV_HTTPS=0 mix phx.server
 curl -I http://127.0.0.1:4000/login
 ```
 
 Optional local TLS remains available via
-`DARKORBIT_DEV_HTTPS=1` with developer-only certificates.
+`SUNRACER_DEV_HTTPS=1` with developer-only certificates.
 
 ## Optional direct TLS deployment
 

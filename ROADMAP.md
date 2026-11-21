@@ -1,3 +1,10 @@
+## SunRacer rename validation (2026-11-21)
+
+- [ ] Run mix compile --warnings-as-errors, mix test, and mix assets.deploy.
+- [ ] Run existing JavaScript and Tauri tests.
+- [ ] Back up/migrate development databases; verify production DATABASE_URL.
+- [ ] Update external environment variables and running server/service configuration.
+
 ## Green Starbase modular graphics pass (2026-11-08)
 
 - [x] Retain existing server-authoritative station rooms, doorways, NPC kiosks and SBS pairing.
@@ -10,11 +17,11 @@
 - [ ] Import and curate actual Quaternius CC0 modular meshes after asset selection,
       respecting the runtime size/draw-call budget and current collision topology.
 
-# 🚀 Darkorbit Umbrella – Roadmap
+# 🚀 Sunracer Umbrella – Roadmap
 
 ## 🎯 Vision
-based on https://github.com/yusufsahinhamza/darkorbit-cms
-Rebuild a modern, scalable DarkOrbit server ecosystem using Elixir/OTP, replacing legacy PHP CMS-style architectures with:
+based on https://github.com/yusufsahinhamza/sunracer-cms
+Rebuild a modern, scalable SunRacer server ecosystem using Elixir/OTP, replacing legacy PHP CMS-style architectures with:
 
 - Strong domain modeling
 - Real-time systems (Phoenix / Channels)
@@ -556,7 +563,7 @@ validation remain deferred.
 
 - [x] Bind Phoenix dev endpoint to `0.0.0.0:4000` by default to support a
   headset/phone connecting to the laptop over trusted LAN Wi-Fi.
-- [x] Provide `DARKORBIT_LOOPBACK_ONLY=1` opt-out for laptop-only debugging.
+- [x] Provide `SUNRACER_LOOPBACK_ONLY=1` opt-out for laptop-only debugging.
 - [ ] Verify remote HMD pairing from another device and review production
   origin/security rules before any public hosting.
 
@@ -711,7 +718,7 @@ validation remain deferred.
 - [x] Make provoked Scows evade at <=80% hull and surrender at <=35%;
   owner can accept surrender with server verification and return to SOL.
 - [x] Protect surrendered merchants against automatic or manual laser hits.
-- [x] Add Core, Darkorbit DB and Phoenix controller/channel regression tests.
+- [x] Add Core, Sunracer DB and Phoenix controller/channel regression tests.
 - [ ] Run full test/build suites and verify browser/SBS headset gameplay.
 - [ ] Replace provisional speed with original Sunracer acceleration and
   turn dynamics as appropriate to game's tactical speed scale.
@@ -766,7 +773,7 @@ Source: [Symbrella `symbolic_generation`](https://github.com/bushman77/Symbrella
 - [ ] Implement debris entities, swept collisions, physical hull damage and cockpit-only hazards; no random Atlas damage.
 - [ ] Upgrade private local maps to shared, location-grounded tactical instances when co-located pilots interact.
 - [x] Add channel and headless tests for authenticated entry/exit, remote map authorization, flight controls and ship condition gating.
-- [x] Targeted Core, Phoenix Channel, and JavaScript tests passed in [SOL free-flight CI](https://github.com/bushman77/darkorbit_umbrella/actions/runs/42067967403) on 2026-11-05.
+- [x] Targeted Core, Phoenix Channel, and JavaScript tests passed in [SOL free-flight CI](https://github.com/bushman77/SunRacer/actions/runs/42067967403) on 2026-11-05.
 - [ ] Manually verify browser transition, reconnect, server restart, and SBS headset; full repository suites remain a separate verification.
 
 
@@ -1312,7 +1319,7 @@ docking, station walking and mission completion. Branch `story_line`.
   rules and the Chapter 1 hook written down; Brad's decisions recorded.
 - [x] Story progress store: `story_progress` (per pilot and chapter: step,
   flags, skipped, step timestamps) advanced only by server-confirmed events
-  under a row lock; pure step engine `Darkorbit.Story.Prologue`.
+  under a row lock; pure step engine `Sunracer.Story.Prologue`.
 - [x] Tutorial prompts and in-character comms lines: laptop cockpit card
   (`#story-comms`), one-line objective in the stereo HUD (laptop SBS and the
   paired phone headset via `helmet_story`), skip and resume.

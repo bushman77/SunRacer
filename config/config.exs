@@ -10,8 +10,8 @@
 import Config
 
 # Configure Mix tasks and generators
-config :darkorbit,
-  ecto_repos: [Darkorbit.Repo]
+config :sunracer,
+  ecto_repos: [Sunracer.Repo]
 
 # Configure the mailer
 #
@@ -20,7 +20,7 @@ config :darkorbit,
 #
 # For production it's recommended to configure a different adapter
 # at the `config/runtime.exs`.
-config :darkorbit, Darkorbit.Mailer, adapter: Swoosh.Adapters.Local
+config :sunracer, Sunracer.Mailer, adapter: Swoosh.Adapters.Local
 
 # Core.World.Supervisor owns the default SOL map catalogue: legacy Earth 1-1
 # plus all eight planetary orbital regions. Do not set a single-map "maps"
@@ -32,49 +32,49 @@ config :darkorbit, Darkorbit.Mailer, adapter: Swoosh.Adapters.Local
 config :core, Core.World,
   tick_ms: 100,
   auto_tick: true,
-  event_sink: Darkorbit.World.PubSub
+  event_sink: Sunracer.World.PubSub
 
-config :darkorbit_web,
-  ecto_repos: [Darkorbit.Repo],
-  generators: [context_app: :darkorbit]
+config :sunracer_web,
+  ecto_repos: [Sunracer.Repo],
+  generators: [context_app: :sunracer]
 
 # Configures the endpoint
-config :darkorbit_web, DarkorbitWeb.Endpoint,
+config :sunracer_web, SunracerWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   render_errors: [
-    formats: [html: DarkorbitWeb.ErrorHTML, json: DarkorbitWeb.ErrorJSON],
+    formats: [html: SunracerWeb.ErrorHTML, json: SunracerWeb.ErrorJSON],
     layout: false
   ],
-  pubsub_server: Darkorbit.PubSub,
+  pubsub_server: Sunracer.PubSub,
   live_view: [signing_salt: "+Xyxr2l/"]
 
 # Configure esbuild (the version is required)
 config :esbuild,
   version: "0.25.4",
-  darkorbit_web: [
+  sunracer_web: [
     args:
       ~w(js/app.js --bundle --target=es2022 --outdir=../priv/static/assets/js --external:/fonts/* --external:/images/* --alias:@=.),
-    cd: Path.expand("../apps/darkorbit_web/assets", __DIR__),
+    cd: Path.expand("../apps/sunracer_web/assets", __DIR__),
     env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
   ]
 
 # A standalone client entrypoint bundles only Phoenix Channels and game code;
 # no LiveView/cookie or server-rendered page assets are required at runtime.
-config :esbuild, :darkorbit_native,
+config :esbuild, :sunracer_native,
   args: ~w(js/native_game.js --bundle --target=es2022 --outfile=../priv/static/assets/native_game.js --external:/fonts/* --external:/images/* --alias:@=.),
-  cd: Path.expand("../apps/darkorbit_web/assets", __DIR__),
+  cd: Path.expand("../apps/sunracer_web/assets", __DIR__),
   env: %{"NODE_PATH" => [Path.expand("../deps", __DIR__), Mix.Project.build_path()]}
 
 # Configure tailwind (the version is required)
 config :tailwind,
   version: "4.1.12",
-  darkorbit_web: [
+  sunracer_web: [
     args: ~w(
       --input=assets/css/app.css
       --output=priv/static/assets/css/app.css
     ),
-    cd: Path.expand("../apps/darkorbit_web", __DIR__)
+    cd: Path.expand("../apps/sunracer_web", __DIR__)
   ]
 
 # Configure Elixir's Logger

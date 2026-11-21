@@ -38,9 +38,9 @@ export async function stageClient({
   includeNativeGame = true,
 } = {}) {
   const uiSource = path.join(client, "ui")
-  const gameSource = path.join(sourceRoot, "apps/darkorbit_web/assets/js/game")
-  const gameImages = path.join(sourceRoot, "apps/darkorbit_web/priv/static/images/game")
-  const threeSource = path.join(sourceRoot, "apps/darkorbit_web/assets/node_modules/three")
+  const gameSource = path.join(sourceRoot, "apps/sunracer_web/assets/js/game")
+  const gameImages = path.join(sourceRoot, "apps/sunracer_web/priv/static/images/game")
+  const threeSource = path.join(sourceRoot, "apps/sunracer_web/assets/node_modules/three")
   const vendor = path.join(destination, "game", "vendor")
 
   // Refuse to stage a partial runtime. Installing the web assets' locked npm
@@ -50,7 +50,7 @@ export async function stageClient({
       await readFile(path.join(threeSource, sourcePath))
     } catch {
       throw new Error(
-        "Three.js vendor files are missing. Run: npm ci --prefix apps/darkorbit_web/assets",
+        "Three.js vendor files are missing. Run: npm ci --prefix apps/sunracer_web/assets",
       )
     }
   }
@@ -85,7 +85,7 @@ export async function stageClient({
   await cp(gameImages, path.join(destination, "images", "game"), {recursive: true})
 
   if (includeNativeGame) {
-    const publicAssets = path.join(sourceRoot, "apps/darkorbit_web/priv/static/assets")
+    const publicAssets = path.join(sourceRoot, "apps/sunracer_web/priv/static/assets")
     const compiled = [
       ["native_game.js", "native_game.js"],
       ["css/app.css", "native_game.css"],
@@ -99,7 +99,7 @@ export async function stageClient({
       }
     }
     const template = await readFile(path.join(sourceRoot,
-      "apps/darkorbit_web/lib/darkorbit_web/controllers/game_html/show.html.heex"), "utf8")
+      "apps/sunracer_web/lib/sunracer_web/controllers/game_html/show.html.heex"), "utf8")
     const gameHtml = nativeGameDocument(convertGameMarkup(template))
     await writeFile(path.join(destination, "game.html"), gameHtml)
   }

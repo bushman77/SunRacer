@@ -34,7 +34,7 @@ unchanged; XY positions render on a 3D ground plane.
   or track head movement. Eye spacing is provisional.
 - Ground-plane mouse steering is a prototype and requires real browser testing.
 - No manual browser or headset test has been performed.
-- Run `cd apps/darkorbit_web/assets && npm test`, then
+- Run `cd apps/sunracer_web/assets && npm test`, then
   `mix assets.build` and `mix precommit` from the umbrella root.
 - Perform manual checks of switching, targeting, movement, multiplayer state
   and binocular comfort on supported headsets.
@@ -92,7 +92,7 @@ implementation. Node, Elixir, asset-build, and browser tests have **not**
 yet been run in the developer's local environment. Run:
 
 ```bash
-cd apps/darkorbit_web/assets && npm test
+cd apps/sunracer_web/assets && npm test
 cd ../../..
 mix assets.build
 mix precommit
@@ -539,7 +539,7 @@ because SOL game-kilometers are compressed, not physical orbital
 kilometers. When the ship reaches a body, the model stages an orbital
 preview at a 65° apparent diameter.
 
-`apps/darkorbit_web/assets/js/game/planetary_view.mjs`
+`apps/sunracer_web/assets/js/game/planetary_view.mjs`
 validates the payload and maps the angle to a radius at a safe 900
 Three.js scene-unit camera distance. `planetary_body.js` draws a
 procedural cloud-textured and softly haloed sphere, anchored to the

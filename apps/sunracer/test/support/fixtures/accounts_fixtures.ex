@@ -1,0 +1,33 @@
+defmodule Sunracer.AccountsFixtures do
+  @moduledoc false
+
+  def unique_account_attributes(attrs \\ %{}) do
+    unique = System.unique_integer([:positive, :monotonic])
+
+    Map.merge(
+      %{
+        username: "user#{unique}",
+        email: "user#{unique}@example.test",
+        pilot_name: "pilot#{unique}",
+        password: "valid-password-#{unique}"
+      },
+      attrs
+    )
+  end
+
+  def player_account_fixture(attrs \\ %{}) do
+    {:ok, player_account} =
+      attrs
+      |> unique_account_attributes()
+      |> Sunracer.Accounts.register_account()
+
+    player_account
+  end
+
+  def verified_player_account_fixture(attrs \\ %{}) do
+    player_account = player_account_fixture(attrs)
+    token = player_account.verification_token
+    {:ok, verified_account} = Sunracer.Accounts.verify_account(player_account.id, token)
+    verified_account
+  end
+end

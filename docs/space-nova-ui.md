@@ -24,7 +24,7 @@ not proof that corresponding backend systems exist.
 ## Technical guardrails
 
 - Shared CSS variables `--nova-*` and `hud-*` classes live in
-  `apps/darkorbit_web/assets/css/app.css`; launcher equivalents are in
+  `apps/sunracer_web/assets/css/app.css`; launcher equivalents are in
   `clients/tauri/ui/launcher.css` because the Tauri launcher is standalone.
 - Existing IDs used by `navigation_computer.mjs` and the world client remain
   intact. Navigation and combat logic are not altered.

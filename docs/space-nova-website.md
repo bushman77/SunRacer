@@ -3,7 +3,7 @@
 The public homepage at `/` introduces Space Nova, distinguishes current playtest
 features from planned work, and links to browser gameplay and registration.
 The original illustration at
-`apps/darkorbit_web/priv/static/images/landing/sol-approach.svg`
+`apps/sunracer_web/priv/static/images/landing/sol-approach.svg`
 is concept artwork, **not** a gameplay screenshot.
 
 ## Routes
@@ -16,7 +16,7 @@ is concept artwork, **not** a gameplay screenshot.
   verification secret and activates the account.
 - `GET /play`: existing authenticated browser client, unchanged.
 
-Registration uses `Darkorbit.Accounts.register_account/1`, which creates a pilot,
+Registration uses `Sunracer.Accounts.register_account/1`, which creates a pilot,
 starter Sunracer, equipment, settings, title and two loadouts atomically.
 Public parameters cannot set credits, ship ID, faction, verification status or
 other server-owned progression fields. A registered account cannot log in until
@@ -32,10 +32,10 @@ is used by controller tests.
 Run:
 
 ```sh
-cd ~/darkorbit_umbrella
-mix test apps/darkorbit_web/test/darkorbit_web/controllers/page_controller_test.exs \
-  apps/darkorbit_web/test/darkorbit_web/controllers/registration_controller_test.exs \
-  apps/darkorbit_web/test/darkorbit_web/controllers/session_controller_test.exs
+cd ~/SunRacer
+mix test apps/sunracer_web/test/sunracer_web/controllers/page_controller_test.exs \
+  apps/sunracer_web/test/sunracer_web/controllers/registration_controller_test.exs \
+  apps/sunracer_web/test/sunracer_web/controllers/session_controller_test.exs
 mix format --check-formatted
 ```
 

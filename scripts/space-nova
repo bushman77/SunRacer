@@ -3,7 +3,7 @@
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 CLIENT="$ROOT/clients/tauri"
-REPO=bushman77/darkorbit_umbrella
+REPO=bushman77/SunRacer
 BRANCH=native_client
 die() { echo "Error: $*" >&2; exit 1; }
 require() { command -v "$1" >/dev/null 2>&1 || die "Install $1 first."; }
@@ -30,7 +30,7 @@ EOF
 }
 test_client() {
   require npm
-  (cd "$ROOT/apps/darkorbit_web/assets" && npm ci && npm test)
+  (cd "$ROOT/apps/sunracer_web/assets" && npm ci && npm test)
   (cd "$CLIENT" && npm ci && npm test)
 }
 linux_build() (
@@ -48,7 +48,7 @@ linux_build() (
   done
   trap 'for file in "${files[@]}"; do cp "$backup/$file" "$ROOT/$file"; done; rm -rf "$backup"' EXIT
   python3 "$ROOT/scripts/space-nova-version.py" sync
-  (cd "$ROOT/apps/darkorbit_web/assets" && npm ci)
+  (cd "$ROOT/apps/sunracer_web/assets" && npm ci)
   (cd "$CLIENT" && npm ci && npm test && npm run build)
   # Tauri's bundle directories may contain installers from earlier builds.
   # Select only the currently requested version, not every historical package.
@@ -77,16 +77,16 @@ server_build() (
   git -C "$ROOT" archive HEAD | tar -xf - -C "$buildroot"
 
   # Refuse the archive if anyone accidentally committed a local TLS private key.
-  if find "$buildroot/apps/darkorbit_web/priv/cert" -type f -name '*key*' -print -quit 2>/dev/null | grep -q .; then
+  if find "$buildroot/apps/sunracer_web/priv/cert" -type f -name '*key*' -print -quit 2>/dev/null | grep -q .; then
     die "A TLS private key is tracked in Git. Refusing to package it."
   fi
 
   (cd "$buildroot" &&
-    npm ci --prefix apps/darkorbit_web/assets &&
+    npm ci --prefix apps/sunracer_web/assets &&
     MIX_ENV=prod mix deps.get --only prod &&
     MIX_ENV=prod mix compile --warnings-as-errors &&
     MIX_ENV=prod mix assets.deploy &&
-    test -s apps/darkorbit_web/priv/static/cache_manifest.json &&
+    test -s apps/sunracer_web/priv/static/cache_manifest.json &&
     MIX_ENV=prod mix release space_mmo --overwrite)
 
   mkdir -p "$ROOT/dist/releases"
@@ -276,7 +276,7 @@ sudo -n systemd-run --unit="space-nova-migrate-$(date +%s)-$RANDOM" \
   --property=User=ubuntu \
   --property=WorkingDirectory=/home/ubuntu/deploy/space_mmo \
   --property=EnvironmentFile=/home/ubuntu/.config/space_mmo.env \
-  "$active/bin/space_mmo" eval 'Darkorbit.Release.migrate()' </dev/null
+  "$active/bin/space_mmo" eval 'Sunracer.Release.migrate()' </dev/null
 # The remote commands arrive on stdin over SSH. systemd-run --pipe must not
 # inherit that stream, or it can consume the remainder of this deployment script.
 sudo -n systemctl start "$service"

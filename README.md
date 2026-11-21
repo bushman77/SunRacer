@@ -1,4 +1,4 @@
-# Darkorbit Umbrella
+# SunRacer
 
 An experimental Elixir/OTP and Phoenix space-MMO server. The server is being
 built as an authoritative game system: clients submit intentions, while
@@ -34,7 +34,7 @@ mix setup
 mix phx.server
 ```
 
-The setup alias fetches dependencies, creates and migrates `darkorbit_dev`,
+The setup alias fetches dependencies, creates and migrates `sunracer_dev`,
 seeds two playable pilots, and installs/builds the browser assets. Open
 <http://localhost:4000> after the server starts, choose **Launch browser
 client**, and sign in with either development account:
@@ -63,7 +63,7 @@ mix hex.audit
 
 `mix precommit` compiles with warnings treated as errors, removes unused lock
 entries, formats the project, and runs the complete umbrella test suite. The
-test aliases create and migrate `darkorbit_test` automatically. Run
+test aliases create and migrate `sunracer_test` automatically. Run
 `mix hex.audit` before releases to check the locked Hex packages against current
 retirements and security advisories.
 
@@ -72,7 +72,7 @@ short-lived signed socket token. Channel commands contain only movement,
 target-selection, target-clearing, and laser-fire intentions. Core owns
 sessions, map bounds, positions, health, damage, cooldowns, NPC decisions, and
 simulation ticks. Original placeholder graphics live under
-`apps/darkorbit_web/priv/static/images/game`; their categories and dimensions
+`apps/sunracer_web/priv/static/images/game`; their categories and dimensions
 are defined in `assets/js/game/asset_catalog.js`.
 
 ## Architecture
@@ -183,13 +183,13 @@ See [SBS flight and navigation notes](docs/sbs-3d.md).
 ### Rebuild the 3D cockpit JavaScript after changes
 
 The umbrella root forwards `mix assets.setup`, `mix assets.build`, and
-`mix assets.deploy` to `apps/darkorbit_web`, where the Phoenix
+`mix assets.deploy` to `apps/sunracer_web`, where the Phoenix
 esbuild/Tailwind aliases are defined. After updating `sbs`, stop the
 server and from the repository root run:
 
 ```sh
 mix assets.build
-grep -n -m1 'lastPitchKey' apps/darkorbit_web/priv/static/assets/js/app.js
+grep -n -m1 'lastPitchKey' apps/sunracer_web/priv/static/assets/js/app.js
 ```
 
 If that grep does not match, the compiled JS is still outdated or the
@@ -275,7 +275,7 @@ the player's nose and the two authoritative rays still determine hits.
 
 The demo now starts with **one** NPC instead of three: an orange **Dart**
 pirate fighter, modelled as original low-poly delta-wing geometry in
-`apps/darkorbit_web/assets/js/game/dart_model.mjs`. Its pointed nose,
+`apps/sunracer_web/assets/js/game/dart_model.mjs`. Its pointed nose,
 wide swept wings, compact dark canopy, dorsal fin and lit rear engines are
 an original Three.js interpretation of the 1989 *Space Rogue* Dart
 recognition-guide silhouette. The NPC is available in both 3D and stereo
@@ -322,12 +322,12 @@ ahead of server-owned star-system regions, real ephemeris/celestial
 coordinates, travel, stations and an encounter director.
 
 Presentation modules:
-- `apps/darkorbit_web/assets/js/game/solar_system.mjs` — Solar System
+- `apps/sunracer_web/assets/js/game/solar_system.mjs` — Solar System
   catalog; star/planet/dwarf classification, mean AU, orbital period and
   schematic chart projection
-- `apps/darkorbit_web/assets/js/game/solar_atlas.mjs` — SVG orbital
+- `apps/sunracer_web/assets/js/game/solar_atlas.mjs` — SVG orbital
   rings, selectable object markers, information pane
-- `apps/darkorbit_web/assets/js/game/navigation_computer.mjs` —
+- `apps/sunracer_web/assets/js/game/navigation_computer.mjs` —
   system/sector tab orchestration and isolation of existing helm
   commands
 
@@ -381,7 +381,7 @@ The new modules in `apps/core` are:
   travel FSM with Earth as initial location, travel progress, abort,
   arrival and world event delivery.
 
-`DarkorbitWeb.WorldChannel` provides `solar_set_course` and
+`SunracerWeb.WorldChannel` provides `solar_set_course` and
 `solar_cancel_course` intentions on the authenticated connection,
 and sends the initial `solar_navigation` snapshot with every
 successful join. SOL progress broadcasts are per player; the client
@@ -466,7 +466,7 @@ with M or Esc while cruise continues. No change to cruise lockouts.
 Test targeted changes from `apps/core` with
 `mix test test/core/universe/planetary_view_test.exs
 test/core/universe/navigation_test.exs`, and frontend with
-`npm test --prefix apps/darkorbit_web/assets` from the umbrella root.
+`npm test --prefix apps/sunracer_web/assets` from the umbrella root.
 
 ### Interplanetary cruise V2 — real-time sublight travel (2026-11-02)
 
@@ -536,7 +536,7 @@ apparent size updates as the ship's distance changes. This is a
 planetary-relative tactical **staging** system: no orbital gravity,
 terrain, docking, atmospheric entry, or surface landings yet.
 
-`DarkorbitWeb.WorldChannel` enforces the server-resolved region on
+`SunracerWeb.WorldChannel` enforces the server-resolved region on
 join, publishes SOL navigation to a dedicated shared topic, and pushes
 `world_region_changed` when the voyage arrives. The browser leaves
 its old channel, re-enters the destination region and refreshes its
@@ -557,8 +557,8 @@ orbital regions, not gravitationally simulated orbits.
 cd apps/core
 mix test test/core/universe/orbital_entry_test.exs test/core/universe/navigation_test.exs test/core/world/flight_dynamics_test.exs test/core/world/world_test.exs
 cd ../..
-npm test --prefix apps/darkorbit_web/assets
-mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
+npm test --prefix apps/sunracer_web/assets
+mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
 ```
 
 ### Fatal planetary collisions V1 — hard approach limit (2026-11-03)
@@ -593,7 +593,7 @@ mix test test/core/world/planetary_collision_test.exs \
   test/core/world/planetary_impact_integration_test.exs \
   test/core/world/flight_dynamics_test.exs
 cd ../..
-npm test --prefix apps/darkorbit_web/assets
+npm test --prefix apps/sunracer_web/assets
 ```
 
 
@@ -637,7 +637,7 @@ mix test test/core/world/planetary_proximity_test.exs \
   test/core/world/planetary_impact_integration_test.exs \
   test/core/world/planetary_collision_test.exs
 cd ../..
-npm test --prefix apps/darkorbit_web/assets
+npm test --prefix apps/sunracer_web/assets
 mix assets.build
 ```
 
@@ -681,8 +681,8 @@ mix test test/core/universe/sol_test.exs \
   test/core/world/planetary_proximity_test.exs \
   test/core/world/planetary_impact_integration_test.exs
 cd ../..
-mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
-npm test --prefix apps/darkorbit_web/assets
+mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
+npm test --prefix apps/sunracer_web/assets
 mix assets.build
 ```
 
@@ -740,8 +740,8 @@ mix test test/core/universe/traffic_test.exs \
   test/core/universe/encounters_test.exs \
   test/core/universe/navigation_test.exs
 cd ../..
-mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
-npm test --prefix apps/darkorbit_web/assets
+mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
+npm test --prefix apps/sunracer_web/assets
 mix assets.build
 ```
 
@@ -780,8 +780,8 @@ mix test apps/core/test/core/universe/encounter_director_test.exs \
   apps/core/test/core/universe/encounters_test.exs \
   apps/core/test/core/universe/navigation_test.exs \
   apps/core/test/core/universe/traffic_test.exs
-mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
-npm test --prefix apps/darkorbit_web/assets
+mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
+npm test --prefix apps/sunracer_web/assets
 mix precommit
 ```
 
@@ -822,8 +822,8 @@ Suggested checks from the umbrella root:
 
 ```sh
 mix test apps/core/test/core/universe/navigation_test.exs
-mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
-npm test --prefix apps/darkorbit_web/assets
+mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
+npm test --prefix apps/sunracer_web/assets
 mix assets.build
 mix precommit
 ```
@@ -843,7 +843,7 @@ paired SBS headset/phone on the **same trusted LAN** can access the laptop at
 the laptop but cannot be used from a separate device.
 
 Run normally: `iex -S mix phx.server`. To deliberately restrict the dev server
-to the laptop, launch with `DARKORBIT_LOOPBACK_ONLY=1 iex -S mix phx.server`.
+to the laptop, launch with `SUNRACER_LOOPBACK_ONLY=1 iex -S mix phx.server`.
 This dev configuration is not intended for untrusted/public networks;
 `check_origin: false` remains enabled for development and should not be
 used for a public deployment. Firewalls and Wi-Fi client isolation can still
@@ -1132,8 +1132,8 @@ https://cdn.steamstatic.com/steam/apps/569200/manuals/space_rogue_manual.pdf
 Tests to run: `mix test apps/core/test/core/npc/ai_test.exs`,
 `mix test apps/core/test/core/npc/cruise_route_test.exs`,
 `mix test apps/core/test/core/world/world_test.exs`,
-`mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs`,
-`npm test --prefix apps/darkorbit_web/assets`, and `mix assets.build`.
+`mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs`,
+`npm test --prefix apps/sunracer_web/assets`, and `mix assets.build`.
 Full Mix/browser/HMD execution is still pending on the player's machine.
 
 
@@ -1149,7 +1149,7 @@ in "Your Ship" (printed p.2).
 **Ship catalog ID 1 is now Sunracer**, preserving all existing account
 ship ownership and its two saved configurations. The existing runtime's
 320 game-units/s speed is intentionally unchanged: it is not the
-original 0.20G acceleration model. Other DarkOrbit-influenced hulls
+original 0.20G acceleration model. Other SunRacer-influenced hulls
 remain in the catalog for future ship ownership and purchases.
 
 Core.Ships.Stats now derives Sunracer's base 300 hull, 10 Garnet damage,
@@ -1158,7 +1158,7 @@ single laser hardpoint is a **replacement**, not an additive mounting:
 Beryl (15), Sapphire (20), and previously owned LF-class modules
 replace the current 10-damage Garnet when fitted. Removing an upgrade
 restores the built-in Garnet at 10. Multi-slot later ships retain the
-existing additive DarkOrbit-style calculation. The hotbar retains
+existing additive SunRacer-style calculation. The hotbar retains
 its internal stable action IDs so saved controls continue to work;
 the visible name is Garnet.
 
@@ -1184,8 +1184,8 @@ simulation; return to cockpit to start a new runtime session.
 
 **Persistent cargo hold:** The existing `player_equipment.items`
 inventory JSON now carries a separate `cargo` stack map. Typed
-`Darkorbit.Cargo.Catalog` commodities currently weigh one tonne
-per quantity. `Darkorbit.Inventory.add_cargo/remove_cargo` use DB
+`Sunracer.Cargo.Catalog` commodities currently weigh one tonne
+per quantity. `Sunracer.Inventory.add_cargo/remove_cargo` use DB
 locks, account-checked active ship capacity, and server-supplied
 catalog masses. Sunracer is limited to four tonnes; unknown cargo
 identifiers and negative or excessive quantities are rejected.
@@ -1211,13 +1211,13 @@ Testing:
 ```sh
 mix test apps/core/test/core/ships/stats_test.exs
 mix test apps/core/test/core/world/world_test.exs
-mix test apps/darkorbit/test/darkorbit/accounts_test.exs
-mix test apps/darkorbit/test/darkorbit/inventory_test.exs
-mix test apps/darkorbit/test/darkorbit/ship_stats_test.exs
-mix test apps/darkorbit/test/darkorbit/loadouts_test.exs
-mix test apps/darkorbit_web/test/darkorbit_web/controllers/equipment_controller_test.exs
-mix test apps/darkorbit_web/test/darkorbit_web/channels/world_channel_test.exs
-npm test --prefix apps/darkorbit_web/assets
+mix test apps/sunracer/test/sunracer/accounts_test.exs
+mix test apps/sunracer/test/sunracer/inventory_test.exs
+mix test apps/sunracer/test/sunracer/ship_stats_test.exs
+mix test apps/sunracer/test/sunracer/loadouts_test.exs
+mix test apps/sunracer_web/test/sunracer_web/controllers/equipment_controller_test.exs
+mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
+npm test --prefix apps/sunracer_web/assets
 mix assets.build
 ```
 All tests and browser/HMD acceptance require local execution. No new

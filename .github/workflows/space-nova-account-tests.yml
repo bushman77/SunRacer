@@ -4,31 +4,31 @@ on:
   push:
     branches: [native_client]
     paths:
-      - "apps/darkorbit/lib/darkorbit/accounts/**"
-      - "apps/darkorbit/lib/darkorbit/pilot_location.ex"
-      - "apps/darkorbit/lib/darkorbit/pilot_location/**"
-      - "apps/darkorbit/priv/repo/migrations/20261108010000_create_pilot_location_checkpoints.exs"
-      - "apps/darkorbit/test/darkorbit/pilot_location_test.exs"
-      - "apps/darkorbit/lib/darkorbit/accounts.ex"
-      - "apps/darkorbit/lib/darkorbit/mailer.ex"
-      - "apps/darkorbit/lib/darkorbit/email/**"
-      - "apps/darkorbit/test/darkorbit/email/**"
-      - "apps/darkorbit/mix.exs"
+      - "apps/sunracer/lib/sunracer/accounts/**"
+      - "apps/sunracer/lib/sunracer/pilot_location.ex"
+      - "apps/sunracer/lib/sunracer/pilot_location/**"
+      - "apps/sunracer/priv/repo/migrations/20261108010000_create_pilot_location_checkpoints.exs"
+      - "apps/sunracer/test/sunracer/pilot_location_test.exs"
+      - "apps/sunracer/lib/sunracer/accounts.ex"
+      - "apps/sunracer/lib/sunracer/mailer.ex"
+      - "apps/sunracer/lib/sunracer/email/**"
+      - "apps/sunracer/test/sunracer/email/**"
+      - "apps/sunracer/mix.exs"
       - "mix.lock"
       - "config/runtime.exs"
-      - "apps/darkorbit/test/darkorbit/accounts_test.exs"
-      - "apps/darkorbit/test/support/fixtures/accounts_fixtures.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/controllers/registration_controller.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/controllers/registration_html/**"
-      - "apps/darkorbit_web/lib/darkorbit_web/registration_email.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/router.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/native_client_cors.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/native_login_limiter.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/controllers/native_client_controller.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/endpoint.ex"
-      - "apps/darkorbit_web/lib/darkorbit_web/application.ex"
-      - "apps/darkorbit_web/test/darkorbit_web/controllers/native_client_controller_test.exs"
-      - "apps/darkorbit_web/test/darkorbit_web/controllers/registration_controller_test.exs"
+      - "apps/sunracer/test/sunracer/accounts_test.exs"
+      - "apps/sunracer/test/support/fixtures/accounts_fixtures.ex"
+      - "apps/sunracer_web/lib/sunracer_web/controllers/registration_controller.ex"
+      - "apps/sunracer_web/lib/sunracer_web/controllers/registration_html/**"
+      - "apps/sunracer_web/lib/sunracer_web/registration_email.ex"
+      - "apps/sunracer_web/lib/sunracer_web/router.ex"
+      - "apps/sunracer_web/lib/sunracer_web/native_client_cors.ex"
+      - "apps/sunracer_web/lib/sunracer_web/native_login_limiter.ex"
+      - "apps/sunracer_web/lib/sunracer_web/controllers/native_client_controller.ex"
+      - "apps/sunracer_web/lib/sunracer_web/endpoint.ex"
+      - "apps/sunracer_web/lib/sunracer_web/application.ex"
+      - "apps/sunracer_web/test/sunracer_web/controllers/native_client_controller_test.exs"
+      - "apps/sunracer_web/test/sunracer_web/controllers/registration_controller_test.exs"
       - ".github/workflows/space-nova-account-tests.yml"
   workflow_dispatch:
 
@@ -44,7 +44,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: darkorbit_test
+          POSTGRES_DB: sunracer_test
         ports:
           - 5432:5432
         options: >-
@@ -66,16 +66,16 @@ jobs:
         run: mix compile --warnings-as-errors
       - name: Verify account lifecycle and registration recovery
         run: |
-          mix test apps/darkorbit/test/darkorbit/email/probe_test.exs
-          mix test apps/darkorbit/test/darkorbit/accounts_test.exs
-          mix test apps/darkorbit/test/darkorbit/pilot_location_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/controllers/registration_controller_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/controllers/session_controller_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/controllers/native_client_controller_test.exs
+          mix test apps/sunracer/test/sunracer/email/probe_test.exs
+          mix test apps/sunracer/test/sunracer/accounts_test.exs
+          mix test apps/sunracer/test/sunracer/pilot_location_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/controllers/registration_controller_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/controllers/session_controller_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/controllers/native_client_controller_test.exs
       - name: Check production SMTP runtime (no email sent)
         env:
           MIX_ENV: prod
-          DATABASE_URL: ecto://postgres:postgres@127.0.0.1/darkorbit_test
+          DATABASE_URL: ecto://postgres:postgres@127.0.0.1/sunracer_test
           SECRET_KEY_BASE: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
           PHX_HOST: spacenova.ddns.net
           SPACE_NOVA_PROXY_MODE: 'true'
@@ -88,7 +88,7 @@ jobs:
           SPACE_NOVA_REGISTRATION_OPEN: 'false'
         run: |
           mix run --no-start -e '
-            cfg = Application.fetch_env!(:darkorbit, Darkorbit.Mailer)
+            cfg = Application.fetch_env!(:sunracer, Sunracer.Mailer)
             unless cfg[:adapter] == Swoosh.Adapters.SMTP and
                    cfg[:tls] == :always and cfg[:tls_options][:verify] == :verify_peer and
                    cfg[:tls_options][:depth] == 10 and
@@ -96,14 +96,14 @@ jobs:
                    cfg[:tls_options][:server_name_indication] == ~c"smtp.example.test" and
                    is_list(cfg[:tls_options][:cacerts]) and
                    cfg[:port] == 587 and
-                   Application.get_env(:darkorbit_web, :email_delivery_configured) == true and
-                   Application.get_env(:darkorbit_web, :registration_email_enabled) == false do
+                   Application.get_env(:sunracer_web, :email_delivery_configured) == true and
+                   Application.get_env(:sunracer_web, :registration_email_enabled) == false do
               raise "SMTP transport misconfigured or registration accidentally enabled"
             end
             IO.puts("SMTP runtime verified; public signup remains closed")
           '
           SMTP_PORT=465 mix run --no-start -e '
-            cfg = Application.fetch_env!(:darkorbit, Darkorbit.Mailer)
+            cfg = Application.fetch_env!(:sunracer, Sunracer.Mailer)
             unless cfg[:adapter] == Swoosh.Adapters.SMTP and
                    cfg[:port] == 465 and cfg[:ssl] == true and
                    cfg[:sockopts][:verify] == :verify_peer and

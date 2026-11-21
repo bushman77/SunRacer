@@ -1,4 +1,4 @@
-defmodule Darkorbit.Umbrella.MixProject do
+defmodule Sunracer.Umbrella.MixProject do
   use Mix.Project
 
   def project do
@@ -10,8 +10,8 @@ defmodule Darkorbit.Umbrella.MixProject do
       releases: [
         space_mmo: [
           applications: [
-            darkorbit: :permanent,
-            darkorbit_web: :permanent
+            sunracer: :permanent,
+            sunracer_web: :permanent
           ]
         ]
       ],
@@ -74,7 +74,7 @@ defmodule Darkorbit.Umbrella.MixProject do
     ]
   end
   defp run_web_asset_task(task) do
-    project_dir = Path.expand("apps/darkorbit_web", __DIR__)
+    project_dir = Path.expand("apps/sunracer_web", __DIR__)
     Mix.shell().info("Building assets in #{project_dir} via mix #{task}")
 
     case System.cmd("mix", [task], cd: project_dir, stderr_to_stdout: true) do

@@ -24,19 +24,19 @@ used by the Galaxy S21 (for example with `hostname -I`; do not accidentally
 use a Docker, VPN or loopback address). Substitute it below:
 
 ```sh
-cd ~/darkorbit_umbrella
+cd ~/SunRacer
 LAN_IP=192.168.1.123   # replace with laptop's LAN address
 
-mkdir -p apps/darkorbit_web/priv/cert
+mkdir -p apps/sunracer_web/priv/cert
 mkcert -install
-mkcert -cert-file apps/darkorbit_web/priv/cert/localhost.pem \
-  -key-file apps/darkorbit_web/priv/cert/localhost-key.pem \
+mkcert -cert-file apps/sunracer_web/priv/cert/localhost.pem \
+  -key-file apps/sunracer_web/priv/cert/localhost-key.pem \
   localhost 127.0.0.1 "$LAN_IP"
 
-DARKORBIT_LOOPBACK_ONLY=1 \
-DARKORBIT_DEV_HTTPS=0 \
-DARKORBIT_DEV_LAN_HTTPS=1 \
-DARKORBIT_DEV_LAN_HOST="$LAN_IP" \
+SUNRACER_LOOPBACK_ONLY=1 \
+SUNRACER_DEV_HTTPS=0 \
+SUNRACER_DEV_LAN_HTTPS=1 \
+SUNRACER_DEV_LAN_HOST="$LAN_IP" \
 mix phx.server
 ```
 

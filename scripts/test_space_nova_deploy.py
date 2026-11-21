@@ -78,7 +78,7 @@ class DeploymentOptionTest(unittest.TestCase):
     def test_remote_migration_does_not_consume_ssh_script_stdin(self):
         source = SCRIPT.read_text()
         self.assertIn(
-            "\"$active/bin/space_mmo\" eval 'Darkorbit.Release.migrate()' </dev/null",
+            "\"$active/bin/space_mmo\" eval 'Sunracer.Release.migrate()' </dev/null",
             source,
         )
         self.assertIn("--unit=\"space-nova-migrate-$(date +%s)-$RANDOM\"", source)

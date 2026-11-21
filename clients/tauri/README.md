@@ -36,14 +36,14 @@ Install Rust via https://rustup.rs/ and Node.js / npm as necessary.
 To test the registration flow against your local Phoenix server:
 
 ```sh
-cd ~/darkorbit_umbrella
-DARKORBIT_LOOPBACK_ONLY=1 DARKORBIT_DEV_HTTPS=0 mix phx.server
+cd ~/SunRacer
+SUNRACER_LOOPBACK_ONLY=1 SUNRACER_DEV_HTTPS=0 mix phx.server
 ```
 
 In a second terminal:
 
 ```sh
-cd ~/darkorbit_umbrella/clients/tauri
+cd ~/SunRacer/clients/tauri
 npm install
 npm test
 npm run dev
@@ -58,7 +58,7 @@ You can also enter `https://spacenova.ddns.net` to access the deployed site.
 Registration there is disabled until production email delivery is configured.
 
 For local TLS, set up mkcert as documented in the umbrella project and run
-Phoenix with `DARKORBIT_DEV_HTTPS=1`, then enter `https://localhost:4000`.
+Phoenix with `SUNRACER_DEV_HTTPS=1`, then enter `https://localhost:4000`.
 HTTPS replaces HTTP on port 4000; restart Phoenix when switching protocols.
 The default development listener is HTTP-only. The current EC2 deployment uses Caddy on public HTTPS 443 and forwards to localhost Phoenix on port 4000.
 
@@ -67,7 +67,7 @@ The default development listener is HTTP-only. The current EC2 deployment uses C
 From the root of the `native_client` checkout on Pop!_OS:
 
 ```sh
-cd ~/darkorbit_umbrella
+cd ~/SunRacer
 ./scripts/space-nova
 ```
 
@@ -110,7 +110,7 @@ do not require signing credentials. Version `0.3.0` may be published using
 ## Build and distribute
 
 ```sh
-cd ~/darkorbit_umbrella
+cd ~/SunRacer
 git pull --ff-only origin sbs
 cd clients/tauri
 npm install
@@ -264,7 +264,7 @@ If the local network performs HTTPS interception and substitutes an untrusted
 Fortinet certificate, use the repository's integrated production test runner:
 
 ```sh
-cd ~/darkorbit_umbrella
+cd ~/SunRacer
 ./scripts/space-nova-tunnel
 ```
 
@@ -287,15 +287,15 @@ requires reinstalling a client build that includes the native proxy option.
 ## Native asset staging and local render check (migration milestone 1)
 
 The desktop build now stages the existing renderer modules from
-`apps/darkorbit_web/assets/js/game`, the version-locked Three.js ES modules,
+`apps/sunracer_web/assets/js/game`, the version-locked Three.js ES modules,
 and game image assets under `clients/tauri/dist/ui`. This generated tree is
 ignored by Git and bundled into the installer. It does not use a CDN.
 
 Install locked Three.js dependencies before running the Tauri build or dev client:
 
 ```sh
-cd ~/darkorbit_umbrella
-npm ci --prefix apps/darkorbit_web/assets
+cd ~/SunRacer
+npm ci --prefix apps/sunracer_web/assets
 cd clients/tauri
 npm ci
 npm test
@@ -356,8 +356,8 @@ is still enabled. No TLS validation is disabled.
 
 **Build dependencies:** in addition to Node/Rust/WebKitGTK, the native
 build needs Elixir/Erlang and the project's Mix deps. The npm prebuild hook
-compiles the local game bundle with `mix esbuild darkorbit_native` and
-local stylesheet with `mix tailwind darkorbit_web`; Tauri includes the
+compiles the local game bundle with `mix esbuild sunracer_native` and
+local stylesheet with `mix tailwind sunracer_web`; Tauri includes the
 compiled files in the installer. The game template is statically converted
 from the canonical Phoenix HEEx file, with explicit failure if new HEEx
 expressions appear.
@@ -407,5 +407,5 @@ temporary LAN challenge; there is no second Phoenix pairing code.
 
 For LAN problems, verify the laptop's LAN IP matches the certificate SAN,
 Android trusts the local HTTPS CA, and port 4455 is reachable. Never bypass
-certificate warnings. Set `DARKORBIT_DEV_LAN_HOST=192.168.x.y` if the
+certificate warnings. Set `SUNRACER_DEV_LAN_HOST=192.168.x.y` if the
 developer script chooses the wrong network adapter.

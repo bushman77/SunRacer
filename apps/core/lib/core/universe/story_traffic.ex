@@ -12,7 +12,7 @@ defmodule Core.Universe.StoryTraffic do
   short-lived scene props for one encounter hold, not scheduled traffic.
 
   Clients never name, position or choose a script. The story layer in the
-  `darkorbit` app asks Navigation to stage one after a server-confirmed step.
+  `sunracer` app asks Navigation to stage one after a server-confirmed step.
   """
 
   alias Core.Factions

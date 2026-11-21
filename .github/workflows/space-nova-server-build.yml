@@ -45,11 +45,11 @@ jobs:
         run: python3 -m unittest discover -s scripts -p 'test_space_nova_deploy.py'
       - name: Build production Elixir release with bundled assets
         run: |
-          npm ci --prefix apps/darkorbit_web/assets
+          npm ci --prefix apps/sunracer_web/assets
           mix deps.get --only prod --check-locked
           mix compile --warnings-as-errors
           mix assets.deploy
-          test -s apps/darkorbit_web/priv/static/cache_manifest.json
+          test -s apps/sunracer_web/priv/static/cache_manifest.json
           mix release space_mmo --overwrite
           test -x _build/prod/rel/space_mmo/bin/space_mmo
       - name: Smoke-test Caddy proxy mode and migrations
@@ -62,7 +62,7 @@ jobs:
         run: |
           export SECRET_KEY_BASE="$(openssl rand -hex 48)"
           bin=_build/prod/rel/space_mmo/bin/space_mmo
-          "$bin" eval 'Darkorbit.Release.migrate()'
+          "$bin" eval 'Sunracer.Release.migrate()'
           "$bin" start > "$RUNNER_TEMP/space-nova-server.log" 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT

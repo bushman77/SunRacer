@@ -18,10 +18,10 @@ test("game source module imports use bundled Three.js, not a CDN", () => {
 test("desktop packaging stages renderer and assets without build-time network access", async () => {
   const temp = await mkdtemp(path.join(tmpdir(), "space-nova-stage-"))
   const client = path.join(temp, "clients/tauri")
-  const game = path.join(temp, "apps/darkorbit_web/assets/js/game")
-  const vendor = path.join(temp, "apps/darkorbit_web/assets/node_modules/three")
-  const images = path.join(temp, "apps/darkorbit_web/priv/static/images/game/ships")
-  const station = path.join(temp, "apps/darkorbit_web/priv/static/images/game/station")
+  const game = path.join(temp, "apps/sunracer_web/assets/js/game")
+  const vendor = path.join(temp, "apps/sunracer_web/assets/node_modules/three")
+  const images = path.join(temp, "apps/sunracer_web/priv/static/images/game/ships")
+  const station = path.join(temp, "apps/sunracer_web/priv/static/images/game/station")
   try {
     for (const dir of [path.join(client, "ui"), game,
       path.join(vendor, "build"), path.join(vendor, "examples/jsm/loaders"),

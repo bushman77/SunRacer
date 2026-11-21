@@ -6,8 +6,8 @@ import {repoRoot} from "./stage-client.mjs"
 
 const tasks = [
   ["deps.get"],
-  ["esbuild", "darkorbit_native"],
-  ["tailwind", "darkorbit_web"],
+  ["esbuild", "sunracer_native"],
+  ["tailwind", "sunracer_web"],
 ]
 
 for (const args of tasks) {

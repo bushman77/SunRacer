@@ -19,7 +19,7 @@ test("desktop version and updater verification settings are consistent", () => {
   assert.match(config.plugins.updater.pubkey, /^[A-Za-z0-9+/=]+$/)
   assert.ok(config.plugins.updater.pubkey.length > 100)
   assert.deepEqual(config.plugins.updater.endpoints, [
-    "https://github.com/bushman77/darkorbit_umbrella/releases/latest/download/latest.json"
+    "https://github.com/bushman77/SunRacer/releases/latest/download/latest.json"
   ])
   assert.equal(config.plugins.updater.windows.installMode, "basicUi")
 })

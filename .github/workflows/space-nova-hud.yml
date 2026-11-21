@@ -4,9 +4,9 @@ on:
   push:
     branches: [native_client]
     paths:
-      - "apps/darkorbit_web/assets/css/app.css"
-      - "apps/darkorbit_web/lib/darkorbit_web/controllers/**/*.heex"
-      - "apps/darkorbit_web/test/darkorbit_web/controllers/**/*.exs"
+      - "apps/sunracer_web/assets/css/app.css"
+      - "apps/sunracer_web/lib/sunracer_web/controllers/**/*.heex"
+      - "apps/sunracer_web/test/sunracer_web/controllers/**/*.exs"
       - "clients/tauri/**"
       - ".github/workflows/space-nova-hud.yml"
   workflow_dispatch:
@@ -23,7 +23,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: darkorbit_test
+          POSTGRES_DB: sunracer_test
         ports:
           - 5432:5432
         options: >-
@@ -48,19 +48,19 @@ jobs:
         run: mix compile
       - name: Render pilot onboarding and game screens
         run: |
-          mix test apps/darkorbit_web/test/darkorbit_web/controllers/page_controller_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/controllers/session_controller_test.exs
-          mix test apps/darkorbit_web/test/darkorbit_web/controllers/registration_controller_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/controllers/page_controller_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/controllers/session_controller_test.exs
+          mix test apps/sunracer_web/test/sunracer_web/controllers/registration_controller_test.exs
       - name: Install frontend JavaScript dependencies
-        run: npm install --prefix apps/darkorbit_web/assets --no-audit --no-fund
+        run: npm install --prefix apps/sunracer_web/assets --no-audit --no-fund
       - name: Compile frontend assets
         run: mix assets.build
       - name: Verify Atlas HUD, context menu and navigation hooks
         run: |
           node --test \
-            apps/darkorbit_web/assets/js/game/solar_atlas_view_test.mjs \
-            apps/darkorbit_web/assets/js/game/solar_context_menu_test.mjs \
-            apps/darkorbit_web/assets/js/game/atlas_hud_layout_test.mjs \
-            apps/darkorbit_web/assets/js/game/atlas_hud_markup_test.mjs \
-            apps/darkorbit_web/assets/js/game/helmet_alignment_keys_test.mjs \
-            apps/darkorbit_web/assets/js/game/helmet_keyboard_only_test.mjs
+            apps/sunracer_web/assets/js/game/solar_atlas_view_test.mjs \
+            apps/sunracer_web/assets/js/game/solar_context_menu_test.mjs \
+            apps/sunracer_web/assets/js/game/atlas_hud_layout_test.mjs \
+            apps/sunracer_web/assets/js/game/atlas_hud_markup_test.mjs \
+            apps/sunracer_web/assets/js/game/helmet_alignment_keys_test.mjs \
+            apps/sunracer_web/assets/js/game/helmet_keyboard_only_test.mjs

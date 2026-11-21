@@ -5,24 +5,24 @@
 - `apps/core` owns configurable game-data catalogs, pure stat, movement,
   combat, and NPC decision mechanics, player sessions, and the supervised OTP
   world runtime. It has no Phoenix, Ecto, or PostgreSQL dependency.
-- `apps/darkorbit` owns PostgreSQL persistence and the account, fleet,
+- `apps/sunracer` owns PostgreSQL persistence and the account, fleet,
   inventory, loadout, preference, and title domains. It adapts persisted
   loadouts into pure core stats and delivers core events through Phoenix
   PubSub.
-- `apps/darkorbit_web` owns browser-session authentication, the authenticated
+- `apps/sunracer_web` owns browser-session authentication, the authenticated
   game socket and world channel, HTTP routes, and the Canvas 2D client. It
   translates browser intentions and Core events without owning simulation
   mechanics.
 
-`Darkorbit.Application` starts the repository, DNS discovery, Phoenix PubSub,
+`Sunracer.Application` starts the repository, DNS discovery, Phoenix PubSub,
 and then `Core.World.Supervisor`. The world supervisor owns its Registry,
 session manager, and configured map processes as one ephemeral consistency
-boundary. `DarkorbitWeb.Application` separately supervises web telemetry and
+boundary. `SunracerWeb.Application` separately supervises web telemetry and
 the endpoint.
 
 ## Persistent player-state invariants
 
-1. `Darkorbit.Accounts.register_account/1` accepts only username, email, pilot
+1. `Sunracer.Accounts.register_account/1` accepts only username, email, pilot
    name, and password. Currency, progression, faction, verification, session,
    and active-ship values are server controlled.
 2. Registration inserts the account, one starter ship, both loadout
@@ -124,7 +124,7 @@ the endpoint.
     previous lock even though its catalog spawn-slot ID is stable.
 11. Core emits transport-neutral movement, NPC-state, targeting, engagement,
     laser, damage, destruction, respawn, and world-state events.
-    `Darkorbit.World.PubSub` publishes them on `world:<map-id>` topics.
+    `Sunracer.World.PubSub` publishes them on `world:<map-id>` topics.
 
 ## SOL tactical merchant invariants
 
@@ -221,7 +221,7 @@ the endpoint.
    separate pointer-navigation surfaces and share no local movement state.
 4. Layout payload version 1 stores only finite window coordinates, minimap
    width, visibility, collapsed state, and HUD lock state under
-   `darkorbit:cockpit-layout:v1:player:<numeric-player-id>`. Authentication
+   `sunracer:cockpit-layout:v1:player:<numeric-player-id>`. Authentication
    tokens and world state are never persisted. Parse, schema, quota, and
    storage-access failures fall back without interrupting gameplay. Payloads
    created before minimap sizing retain their existing fields and receive the
@@ -253,11 +253,11 @@ the endpoint.
 
 ## Build and release artifact boundaries
 
-1. `apps/darkorbit_web/assets/` is the Phoenix browser source package. Its
+1. `apps/sunracer_web/assets/` is the Phoenix browser source package. Its
    `package.json` and `package-lock.json`, CSS, JavaScript, tests, and vendored
    source modules are tracked; `node_modules/` and accidental root-level
    command-token files are ignored.
-2. Undigested files in `apps/darkorbit_web/priv/static/` are deployable source
+2. Undigested files in `apps/sunracer_web/priv/static/` are deployable source
    inputs. Original game SVG artwork, the favicon, and `robots.txt` stay under
    source control. `mix assets.build` writes compiled CSS/JavaScript under the
    ignored `priv/static/assets/` directory.

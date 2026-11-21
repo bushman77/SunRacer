@@ -141,10 +141,10 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 
 **Where it lives.**
 
-- `Darkorbit.Story.Prologue` (apps/darkorbit): pure step engine, prompts and station lines. No database, socket or clock.
-- `Darkorbit.Story`: applies the engine under a `story_progress` row lock. Crates, credits, the `story_rewards` receipt and the faction event commit with the step change; staging, the hull patch and the cached standing run after commit.
+- `Sunracer.Story.Prologue` (apps/sunracer): pure step engine, prompts and station lines. No database, socket or clock.
+- `Sunracer.Story`: applies the engine under a `story_progress` row lock. Crates, credits, the `story_rewards` receipt and the faction event commit with the step change; staging, the hull patch and the cached standing run after commit.
 - `Core.Universe.StoryTraffic` plus `Navigation.stage_story_contact/3` and `clear_story_contacts/2` (apps/core): the private Vesper-02 and Corsair-17. Core stays database-free.
-- Hooks: `Darkorbit.World` (hail, resolve, tactical start and finish, station talk, story actions) and `DarkorbitWeb.WorldChannel` (accepted flight commands, the pilot's own navigation snapshots, docking). The channel pre-filters with the engine so high-rate events skip the database.
+- Hooks: `Sunracer.World` (hail, resolve, tactical start and finish, station talk, story actions) and `SunracerWeb.WorldChannel` (accepted flight commands, the pilot's own navigation snapshots, docking). The channel pre-filters with the engine so high-rate events skip the database.
 - Client: `story_hud.mjs` (cockpit card `#story-comms`), the stereo HUD objective line, and `helmet_story` for the phone headset.
 
 **Design changes made while building.**

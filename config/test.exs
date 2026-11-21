@@ -5,17 +5,17 @@ import Config
 # The MIX_TEST_PARTITION environment variable can be used
 # to provide built-in test partitioning in CI environment.
 # Run `mix help test` for more information.
-config :darkorbit, Darkorbit.Repo,
+config :sunracer, Sunracer.Repo,
   username: "postgres",
   password: "postgres",
   hostname: "localhost",
-  database: "darkorbit_test#{System.get_env("MIX_TEST_PARTITION")}",
+  database: "sunracer_test#{System.get_env("MIX_TEST_PARTITION")}",
   pool: Ecto.Adapters.SQL.Sandbox,
   pool_size: System.schedulers_online() * 2
 
 # We don't run a server during test. If one is required,
 # you can enable the server option below.
-config :darkorbit_web, DarkorbitWeb.Endpoint,
+config :sunracer_web, SunracerWeb.Endpoint,
   http: [ip: {127, 0, 0, 1}, port: 4002],
   secret_key_base: "c0nFoONi8+4CrFSoOstD+LtVjisAflWssY6zTzAItMovMvO8ncK6gvkR3XQdrqbf",
   server: false
@@ -24,11 +24,11 @@ config :darkorbit_web, DarkorbitWeb.Endpoint,
 config :logger, level: :warning
 
 # Test signup can verify through Swoosh.Adapters.Test without external email.
-config :darkorbit_web, registration_email_enabled: true,
+config :sunracer_web, registration_email_enabled: true,
   registration_from: "noreply@localhost"
 
 # In test we don't send emails
-config :darkorbit, Darkorbit.Mailer, adapter: Swoosh.Adapters.Test
+config :sunracer, Sunracer.Mailer, adapter: Swoosh.Adapters.Test
 
 # Disable swoosh api client as it is only required for production adapters
 config :swoosh, :api_client, false
@@ -41,7 +41,7 @@ config :bcrypt_elixir, log_rounds: 4
 config :core, Core.World, auto_tick: false
 # The global test supervisor has no Ecto sandbox owner. DB behavior is tested
 # in DataCase; independent Core tests supply in-memory callbacks as needed.
-config :darkorbit, :persist_pilot_locations, false
+config :sunracer, :persist_pilot_locations, false
 
 # Initialize plugs at runtime for faster test compilation
 config :phoenix, :plug_init_mode, :runtime
@@ -56,4 +56,4 @@ config :phoenix,
 
 # Preserve historic world:1-1 channel/combat fixtures only during tests.
 # The running game starts on the real collision-ready sol:earth region.
-config :darkorbit, :legacy_test_earth_sector, true
+config :sunracer, :legacy_test_earth_sector, true

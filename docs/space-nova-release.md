@@ -48,7 +48,7 @@ repository file. The private signing key does not belong in source control.
 The interactive menu is `./scripts/space-nova`. For a new version:
 
 ```sh
-cd ~/darkorbit_umbrella
+cd ~/SunRacer
 ./scripts/space-nova version 0.3.2
 git diff -- mix.exs
 git add mix.exs
@@ -90,7 +90,7 @@ production Phoenix assets, creates `mix release space_mmo`, and validates
 the release archive. A release-only entrypoint is provided for migrations:
 
 ```sh
-space_mmo/bin/space_mmo eval 'Darkorbit.Release.migrate()'
+space_mmo/bin/space_mmo eval 'Sunracer.Release.migrate()'
 ```
 
 The CI server job exercises database migration and HTTPS startup against
@@ -107,7 +107,7 @@ workflow alone does not deploy the server.
 From your Pop!_OS checkout on the existing `sbs` branch, run:
 
 ```sh
-cd ~/darkorbit_umbrella
+cd ~/SunRacer
 git pull --ff-only origin sbs
 ./scripts/space-nova      # choose 9
 # Or: ./scripts/space-nova deploy
@@ -131,7 +131,7 @@ SPACE_NOVA_DEPLOY_SSH_KEY=/path/to/your.pem \
 The remote update uses only a *temporary* folder inside
 `/home/ubuntu/deploy`. It stops `space-mmo`, moves the existing OTP release
 aside (no copy), installs the new release at the **same**
-`/home/ubuntu/deploy/space_mmo` location, runs `Darkorbit.Release.migrate()`,
+`/home/ubuntu/deploy/space_mmo` location, runs `Sunracer.Release.migrate()`,
 restarts systemd and checks the local Phoenix login endpoint. On failure it
 tries to restore the prior executable and start the previous service. On
 success it removes the temporary folder and the previous executable. It
