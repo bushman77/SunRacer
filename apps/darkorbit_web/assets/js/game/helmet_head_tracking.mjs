@@ -6,6 +6,13 @@ const RADIANS = Math.PI / 180
 const HALF_SQRT = Math.SQRT1_2
 const INITIAL = Object.freeze({x: 0, y: 0, z: 0, w: 1})
 
+// Statuses where head tracking genuinely cannot work. Only these may show the
+// in-cockpit "HEAD TRACKING UNAVAILABLE" panel. A quiet sensor is NOT one of
+// them: browsers only fire deviceorientation when the angle changes, so a
+// still head produces no events at all.
+const UNAVAILABLE = new Set(["denied", "unsupported", "https-required"])
+export const headTrackingUnavailable = status => UNAVAILABLE.has(status)
+
 const product = (a, b) => ({
   x: a.x*b.w + a.w*b.x + a.y*b.z - a.z*b.y,
   y: a.y*b.w + a.w*b.y + a.z*b.x - a.x*b.z,
@@ -42,6 +49,7 @@ export class HelmetHeadTracking {
     this.status = "off"
     this.last = null
     this.baseline = null
+    this.pendingRecenter = false
     this.lastAt = -Infinity
     this.onOrientation = event => {
       if (!this.enabled) return
@@ -50,7 +58,10 @@ export class HelmetHeadTracking {
       const q = handsetQuaternion(event, screenAngle)
       if (!q) return
       this.last = q
-      if (!this.baseline) this.baseline = q
+      if (!this.baseline || this.pendingRecenter) {
+        this.baseline = q
+        this.pendingRecenter = false
+      }
       this.lastAt = this.now()
       if (this.status !== "tracking") this.setStatus("tracking")
     }
@@ -99,19 +110,29 @@ export class HelmetHeadTracking {
 
   // Recalibrate on the NEXT fresh sensor event, not an old portrait/setup
   // sample. The phone can rotate while entering landscape/fullscreen.
+  // Until that event arrives the view looks straight ahead (the pilot asked
+  // to recenter); it is never reported as "unavailable".
   requestRecenter() {
     if (!this.enabled) return false
-    this.baseline = null
+    this.pendingRecenter = true
     return true
   }
 
-  ready(time = this.now()) {
+  // Ready for gaze selection: a calibrated pose exists. There is deliberately
+  // no staleness timeout: a still head sends no sensor events, and treating
+  // that as lost tracking flashed the warning panel and snapped the view to
+  // straight ahead every time the pilot held still for two seconds.
+  ready(_time = this.now()) {
     return this.enabled && this.last !== null && this.baseline !== null &&
-      time - this.lastAt < 2_000
+      !this.pendingRecenter
   }
 
-  rotation(time = this.now()) {
-    if (!this.ready(time)) return null
+  // Relative head pose, held between sensor events. Neutral while waiting
+  // for the first sample or a requested recenter. Null only when tracking is
+  // not running at all.
+  rotation(_time = this.now()) {
+    if (!this.enabled) return null
+    if (!this.ready()) return {...INITIAL}
     return product(inverseUnit(this.baseline), this.last)
   }
 
@@ -120,6 +141,7 @@ export class HelmetHeadTracking {
     this.enabled = false
     this.last = null
     this.baseline = null
+    this.pendingRecenter = false
     this.lastAt = -Infinity
     this.setStatus("off")
   }

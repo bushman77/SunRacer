@@ -371,6 +371,7 @@ export class StereoSpaceView {
     framing.add(this.helmetTrackingHint)
     this.setHelmetNavOpen(false)
     this.setHelmetHeadRotation(null)
+    this.setHelmetTrackingUnavailable(false)
   }
 
   setHelmetGazeEnabled(enabled) {
@@ -379,7 +380,17 @@ export class StereoSpaceView {
     // these physical meshes until the HMD explicitly opts into gaze mode.
     this.setHelmetNavOpen(this.helmetGazeEnabled && this.helmetNavOpen)
     this.setHelmetHeadRotation(this.helmetHeadRotation)
+    this.setHelmetTrackingUnavailable(this.helmetTrackingUnavailable)
     this.updateGazeFeedback({target: null, armed: false, progress: 0})
+  }
+
+  // The "HEAD TRACKING UNAVAILABLE" panel follows the sensor *status*
+  // (denied / unsupported / HTTPS required), never a momentary missing pose:
+  // flashing it whenever the head held still was disorienting in VR.
+  setHelmetTrackingUnavailable(unavailable) {
+    this.helmetTrackingUnavailable = unavailable === true
+    if (this.helmetTrackingHint) this.helmetTrackingHint.visible =
+      Boolean(this.helmetGazeEnabled && this.helmetTrackingUnavailable)
   }
 
   setHelmetHeadRotation(quaternion) {
@@ -389,8 +400,7 @@ export class StereoSpaceView {
         quaternion.w).normalize() : null
     if (this.gazeReticle) this.gazeReticle.visible =
       Boolean(this.helmetGazeEnabled && this.helmetHeadRotation !== null)
-    if (this.helmetTrackingHint) this.helmetTrackingHint.visible =
-      Boolean(this.helmetGazeEnabled && this.helmetHeadRotation === null)
+
     if (!this.helmetHeadRotation && this.gazeArc) this.gazeArc.visible = false
   }
 

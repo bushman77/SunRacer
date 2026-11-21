@@ -103,7 +103,10 @@ test("the phone renders an accessible NAV target and explains missing gyro", () 
   assert.match(view, /this\.navSwitch\.position\.set\(1\.24, -0\.68, -2\.46\)/)
   assert.match(view, /new THREE\.PlaneGeometry\(1\.52, 0\.55\)/)
   assert.match(view, /HEAD TRACKING UNAVAILABLE/)
-  assert.match(view, /this\.helmetGazeEnabled && this\.helmetHeadRotation === null/)
+  // Driven by sensor status, not by a momentarily missing pose.
+  assert.match(view, /this\.helmetGazeEnabled && this\.helmetTrackingUnavailable/)
+  assert.doesNotMatch(view, /this\.helmetGazeEnabled && this\.helmetHeadRotation === null/)
+  assert.match(helmet, /setHelmetTrackingUnavailable\(headTrackingUnavailable\(status\)\)/)
 })
 
 test("HUD gaze inspects read-only flight, contacts and space pages", () => {

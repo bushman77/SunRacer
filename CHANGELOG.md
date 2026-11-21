@@ -2,6 +2,29 @@
 
 ## Unreleased
 
+### HMD: stop the "HEAD TRACKING UNAVAILABLE" flash in the cockpit (2026-11-21)
+
+#### Fixed
+
+- The in-cockpit "HEAD TRACKING UNAVAILABLE" panel no longer pops up while
+  head tracking is working. Two causes:
+  - A 2-second staleness timeout treated a quiet sensor as lost tracking.
+    Browsers only fire `deviceorientation` when the angle changes, so
+    holding the head still for 2 s flashed the panel and snapped the view to
+    straight ahead until the next small movement. The last pose is now held.
+  - Every recenter (screen tap, gaze RECENTER, entering VR, orientation
+    change) returned no pose until the next sensor event, with the same
+    flash. The view now looks straight ahead while the recenter waits for
+    its fresh sample.
+- The panel now follows the sensor status only: permission denied,
+  unsupported browser, or HTTPS required.
+
+#### Verification
+
+- Browser JavaScript suite: 393 tests pass (head-tracking and gaze
+  integration tests updated for the held-pose rules; one test added).
+- Not verified on the headset yet.
+
 ### Pilot HMD smoothing and comfort fixes; predicted mouse look (2026-11-20)
 
 #### Fixed

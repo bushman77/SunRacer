@@ -1279,3 +1279,12 @@ See `docs/space-nova-release.md` for the distribution procedure.
 - [ ] Browser-verify mouse-look feel on LAN and EC2.
 - [ ] Calibrate lens distortion coefficients and per-headset FOV; consider
   storing them with the gap/IPD calibration.
+
+### HMD head-tracking warning flash (2026-11-21)
+
+- [x] Hold the last head pose while the sensor is quiet; neutral (not "lost")
+  while a recenter waits for a fresh sample.
+- [x] Show the cockpit warning only for denied / unsupported / HTTPS-required.
+- [ ] Verify on the S21: hold still >2 s, tap-recenter, gaze RECENTER — no
+  panel and no view snap.
+

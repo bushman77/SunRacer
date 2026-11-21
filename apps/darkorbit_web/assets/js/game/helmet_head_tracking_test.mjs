@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import {HelmetHeadTracking, handsetQuaternion} from "./helmet_head_tracking.mjs"
+import {headTrackingUnavailable, HelmetHeadTracking, handsetQuaternion} from "./helmet_head_tracking.mjs"
 
 const near = (a, b, tolerance = 1e-8) => assert.ok(Math.abs(a - b) < tolerance)
 
@@ -37,7 +37,7 @@ test("requires a secure sensor-capable phone; denied permission is safe", async 
   }
 })
 
-test("calibrates present head direction, tracks relative yaw, recenters, times out", async () => {
+test("calibrates present head direction, tracks relative yaw, recenters, holds when still", async () => {
   let time = 100
   const phone = fakePhone()
   const status = []
@@ -63,12 +63,23 @@ test("calibrates present head direction, tracks relative yaw, recenters, times o
   near(recentered.y, 0)
   near(recentered.z, 0)
   near(recentered.w, 1)
-  assert.equal(tracking.rotation(2_300), null)
-  // A headset is not neutralized against a stale sensor pose. It waits for
-  // a new sample after the pilot's "center" command.
+  // A still head sends no sensor events. The pose is held, never dropped:
+  // dropping it flashed the warning panel and snapped the view forward.
+  const held = tracking.rotation(60_000)
+  near(held.w, 1)
+  assert.equal(tracking.ready(60_000), true)
+  // After a "center" command the view looks straight ahead (not "lost")
+  // until the next fresh sample becomes the new neutral pose.
   time = 2_301
+  phone.emit({alpha: 64, beta: 30, gamma: 0})
+  assert.ok(Math.abs(tracking.rotation().w) < 1 - 1e-6)
   assert.equal(tracking.requestRecenter(), true)
-  assert.equal(tracking.rotation(), null)
+  const waiting = tracking.rotation()
+  near(waiting.x, 0)
+  near(waiting.y, 0)
+  near(waiting.z, 0)
+  near(waiting.w, 1)
+  assert.equal(tracking.ready(), false)
   phone.emit({alpha: 71, beta: 30, gamma: 0})
   const fresh = tracking.rotation()
   near(fresh.x, 0)
@@ -87,4 +98,13 @@ test("calibrates present head direction, tracks relative yaw, recenters, times o
   assert.equal(phone.hasListener(), false)
   assert.equal(tracking.rotation(), null)
   assert.deepEqual(status, ["waiting", "tracking", "off"])
+})
+
+test("only a real sensor failure counts as unavailable", () => {
+  for (const status of ["denied", "unsupported", "https-required"]) {
+    assert.equal(headTrackingUnavailable(status), true)
+  }
+  for (const status of ["off", "waiting", "tracking", "recentered"]) {
+    assert.equal(headTrackingUnavailable(status), false)
+  }
 })

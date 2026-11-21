@@ -13,7 +13,7 @@ import {helmetPlanetaryNavigation} from "./helmet_planetary_navigation.mjs"
 import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
 import {HelmetScreenWake} from "./helmet_screen_wake.mjs"
-import {HelmetHeadTracking} from "./helmet_head_tracking.mjs"
+import {HelmetHeadTracking, headTrackingUnavailable} from "./helmet_head_tracking.mjs"
 import {attachHelmetRelayTest, relayInvitationFromQR} from "./helmet_relay_test.mjs"
 import {HelmetGazeDwell} from "./helmet_gaze_dwell.mjs"
 import {
@@ -658,6 +658,7 @@ export class HelmetClient {
       try {
         this.view = new StereoSpaceView(this.canvas)
         this.view.maxPixelRatio = helmetMaxPixelRatio(localStorage.getItem(MAX_DPR_KEY))
+        this.view.setHelmetTrackingUnavailable(headTrackingUnavailable(this.headTracking.status))
         this.applyLensDistortion()
         this.view.setMode("sbs")
         this.view.setHelmetGazeEnabled(true)
@@ -877,6 +878,8 @@ export class HelmetClient {
   }
 
   showHeadTrackingStatus(status) {
+    // The cockpit warning panel only appears for a real sensor failure.
+    this.view?.setHelmetTrackingUnavailable(headTrackingUnavailable(status))
     const label = this.root.querySelector("#helmet-tracking-status")
     if (!label) return
     const descriptions = {
