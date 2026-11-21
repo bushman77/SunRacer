@@ -342,7 +342,7 @@ export class StereoSpaceView {
     this.helmetTrackingHint = new THREE.Mesh(
       new THREE.PlaneGeometry(1.70, 0.29),
       new THREE.MeshBasicMaterial({
-        map: cockpitLabel(["ENABLE HEAD TRACKING"], {width: 800, height: 138}),
+        map: cockpitLabel(["HEAD TRACKING UNAVAILABLE"], {width: 800, height: 138}),
         transparent: true, depthTest: false, depthWrite: false,
       }),
     )

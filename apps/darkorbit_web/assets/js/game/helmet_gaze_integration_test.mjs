@@ -101,7 +101,7 @@ test("native desktop starts with ALL headset-only meshes hidden", () => {
 test("the phone renders an accessible NAV target and explains missing gyro", () => {
   assert.match(view, /this\.navSwitch\.position\.set\(1\.24, -0\.68, -2\.46\)/)
   assert.match(view, /new THREE\.PlaneGeometry\(1\.52, 0\.55\)/)
-  assert.match(view, /ENABLE HEAD TRACKING/)
+  assert.match(view, /HEAD TRACKING UNAVAILABLE/)
   assert.match(view, /this\.helmetGazeEnabled && this\.helmetHeadRotation === null/)
 })
 
