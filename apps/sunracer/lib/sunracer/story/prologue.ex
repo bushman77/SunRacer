@@ -279,7 +279,9 @@ defmodule Sunracer.Story.Prologue do
       @ross,
       "Helios dispatch, Earth orbit",
       "Crates are aboard; they arrive with you or not at all. Open the Atlas, plot " <>
-        "Earth to Mars and engage cruise. Quiet lane today. Enjoy it.",
+        "Earth to Mars and engage cruise: the assist keeps your nose and your heading " <>
+        "together. Ctrl+E parts them, but you won't want that today. Quiet lane. " <>
+        "Enjoy it.",
       "Plot a course to Mars and engage cruise"
     )
   end
@@ -318,10 +320,12 @@ defmodule Sunracer.Story.Prologue do
     line(
       @kade,
       "Green Starbase communications",
-      "Corsair-17's guns reach 420; your beam reaches 540. Ease the throttle into " <>
-        "reverse, keep it at the edge of your sight and it can't touch you. If it " <>
-        "offers surrender, accept it, and seize its hold if you have the room.",
-      "Bring Corsair-17 to surrender and accept it"
+      "Corsair-17's guns reach 420; your beam reaches 540. Live in that gap and it " <>
+        "can't answer you. Your retros are far too weak to hold it astern, so cut the " <>
+        "assist with Ctrl+E, run up to speed, then spin to face the raider and coast " <>
+        "away nose-on. Drift inside 420 and it will gut you. Accept its surrender if " <>
+        "it offers, and seize its hold if you have the room.",
+      "Hold Corsair-17 between 420 and 540 until it surrenders"
     )
   end
 
@@ -331,7 +335,7 @@ defmodule Sunracer.Story.Prologue do
       "Vesper-02",
       "That was flying, rookie. I owe you one. Your hull's chewed up, though: divert to " <>
         "the Green Starbase and let Mara Venn look at it. I'll limp on to Mars.",
-      "Plot to the Green Starbase, line up on the bay and hold still to dock"
+      "Dock at the Green Starbase: line up and hold still"
     )
   end
 
@@ -375,7 +379,7 @@ defmodule Sunracer.Story.Prologue do
       "Green Starbase Mission Office",
       "First run done, and paid. Come back to the Green Starbase when you can. " <>
         "We need to talk about where that chip came from.",
-      "Prologue complete. Return to the Green Starbase when Chapter 1 opens"
+      "Prologue complete. Return when Chapter 1 opens"
     )
   end
 

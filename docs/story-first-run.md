@@ -152,10 +152,19 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 - The consignment is **3 crates**, not 6: the Sunracer's hold is 4 t. Three leave room for one seized crate from Corsair-17. If the hold is full, accepting the surrender (without seizing) still completes step 6.
 - **Vesper-02 in the story is a private copy** on the Earth–Mars run, staged for the prologue pilot only. The shared Vesper-02 keeps its Earth–Venus timetable, and other pilots never see the story copy. The story copy cannot be attacked.
 - **Story vessels hold position** where they are staged; they are props for one encounter hold and retire when the voyage ends.
-- **The fight is won by range, not stats.** Player beams reach 540 world units, the Dart's laser 420. Standing still against Corsair-17 loses; reversing to hold it between 420 and 540 wins without damage (simulated). Step 6's prompt teaches this.
+- **The fight is won by range, not stats.** Player beams reach 540 world units, the Dart's laser 420. Standing still against Corsair-17 loses; holding it between 420 and 540 wins without damage. **Updated 2026-11-21:** this is no longer achievable in cruise. Cruise reverse is now capped at a third of forward speed (105.6), which is slower than a Dart closes (210), so the gap collapses in 1.15 s. The gap can only be held under Newtonian flight, by running up to speed and then rotating to face the raider while still coasting away. Step 6's prompt now teaches that manoeuvre and the Ctrl+E mode switch, and step 3 plants the flight assist where cruise is first introduced so step 6 is not a cold introduction. See `docs/flight-combat-balance.md`.
 - **Corsair-17 surrenders at 50% hull.** Destroying it instead loses the data chip, so the rescue is redone like any other failure.
 - **Timing.** Vesper-02 closes in once the Earth–Mars cruise passes 12%. The distress call fires when the pilot cruises within 2.5 million game-km of the Green Starbase, in either direction. After a failed rescue it waits for a later voyage.
 - **Skip** pauses the whole prologue (no staging, no prompts); *Resume story* continues from the same step.
 
 **Not built yet.** The gear shop (Ilya Quill), Chapter 1, and a manual play-through.
+
+**Known gap in the step 6 fight (2026-11-21).** Corsair-17 bee-lines at the
+pilot and has no tactical states, so once the pilot establishes the 420-540 gap
+the raider politely stays inside it. That turns a touchy fight into a slow but
+safe one. A full-health Dart takes 25.9 s of unbroken accurate fire to kill
+with the stock Garnet beam (245 hull plus 120 shields at 0.6 absorption), while
+a Dart kills the pilot in 10.8 s. Corsair-17 surrenders at 50% hull, so the
+tutorial fight is roughly half that, but it is still a long first engagement
+and worth re-checking once the raider can break off and re-approach.
 

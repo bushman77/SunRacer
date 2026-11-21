@@ -162,6 +162,23 @@ defmodule Sunracer.Story.PrologueTest do
     end
 
     assert Prologue.prompt(at(2)).action.id == "accept_consignment"
+  end
+
+  test "every objective fits the stereo HUD's 58-character budget" do
+    # story_hud.mjs renders the headset line as
+    # objective.toUpperCase().slice(0, 58); anything longer is cut mid-word
+    # and the pilot loses the end of the instruction.
+    progressions =
+      Enum.map(1..10, &at(&1)) ++
+        [at(5, %{"rescue_failed" => true}), at(8, %{"talked_mara" => true})]
+
+    for progress <- progressions do
+      objective = Prologue.prompt(progress).objective
+
+      assert String.length(objective) <= 58,
+             "step #{progress.step} objective is #{String.length(objective)} chars: " <>
+               objective
+    end
     assert [%{id: "story"}] = Prologue.topics(at(8), "repair")
     assert [] = Prologue.topics(at(8, %{"talked_mara" => true}), "repair")
     assert [] = Prologue.topics(at(5), "missions")
