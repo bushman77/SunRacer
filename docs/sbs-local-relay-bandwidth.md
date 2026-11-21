@@ -92,3 +92,7 @@ On a local dev Phoenix server, pull the updated `star_base`, rebuild assets,
 restart Phoenix, and close/reopen the Galaxy S21 `/helmet` browser tab. If
 the page remains unchanged, clear that origin's browser cache before
 re-pairing; the phone does not need a rebuilt Tauri installer.
+
+## Direct headset sparse-stream experiment (Stage 0b)
+
+The S21 showed ~19.4 KiB/s incoming JSON while stationary. The existing headset channel was transmitting a complete world-state map on every tick. The delta-v1 optimization now sends one initial snapshot and only changed fields thereafter. No-op updates are suppressed with periodic clock updates. The phone reconstructs its state using the same WorldStreamDelta algorithm as the desktop and can request an authenticated, rate-limited resync after a gap. This is an interim improvement, NOT the complete secure LAN relay: the headset still contacts the server directly. Compare steady RX readings after rebuilding both phone assets and the local Phoenix server. Do not claim measured savings until the Galaxy S21 is retested.

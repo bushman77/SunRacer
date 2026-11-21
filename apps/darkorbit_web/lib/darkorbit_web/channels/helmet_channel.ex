@@ -6,7 +6,7 @@ defmodule DarkorbitWeb.HelmetChannel do
   use DarkorbitWeb, :channel
 
   alias Darkorbit.{Helmets, World}
-  alias DarkorbitWeb.{HelmetManager, HelmetNetwork, HelmetSurrender}
+  alias DarkorbitWeb.{HelmetManager, HelmetNetwork, HelmetSurrender, WorldStreamDelta, WorldStreamPolicy}
   alias Core.Universe.Navigation, as: SolarNavigation
   alias Core.Universe.GreenStarbase
   alias Core.World.SessionManager
@@ -119,6 +119,38 @@ defmodule DarkorbitWeb.HelmetChannel do
     {:reply, {:ok, %{}}, socket}
   end
 
+  # An authenticated headset may repair its OWN stream after a dropped
+  # delta or map transition. Never trust a map_id or player_id from the phone.
+  # Rate-limiting prevents repeated full-map replies from becoming an egress
+  # amplification path.
+  def handle_in("helmet_resync", _payload,
+                %{assigns: %{helmet_role: :viewer, helmet_active: true,
+                             helmet_player_id: player_id, helmet_map_id: map_id}} = socket) do
+    now = System.monotonic_time(:millisecond)
+    last = socket.assigns[:helmet_resync_at]
+
+    if is_integer(last) and now - last < 1_000 do
+      {:reply, {:error, %{reason: "rate_limited"}}, socket}
+    else
+      socket = assign(socket, :helmet_resync_at, now)
+
+      case World.region_for_player(player_id) do
+        {:ok, %{map_id: ^map_id}} ->
+          case World.snapshot(map_id) do
+            {:ok, map} ->
+              {:reply, {:ok, %{map: map}},
+               assign(socket, :helmet_baseline, map)}
+
+            {:error, _} ->
+              {:reply, {:error, %{reason: "world_unavailable"}}, socket}
+          end
+
+        _ ->
+          {:reply, {:error, %{reason: "region_changed"}}, socket}
+      end
+    end
+  end
+
   def handle_in(_event, _payload, socket),
     do: {:reply, {:error, %{reason: "read_only_or_invalid_command"}}, socket}
 
@@ -157,11 +189,13 @@ defmodule DarkorbitWeb.HelmetChannel do
             {:ok, map} ->
               push(socket, "helmet_snapshot",
                 %{map: map, player_id: socket.assigns.helmet_player_id})
-              push_surrender_if_changed(socket, map, true)
+              socket
+              |> assign(:helmet_baseline, map)
+              |> push_surrender_if_changed(map, true)
 
             {:error, _} ->
               push(socket, "helmet_error", %{reason: "world_unavailable"})
-              socket
+              assign(socket, :helmet_baseline, nil)
           end
 
         {:noreply, socket |> assign(:helmet_active, true)
@@ -183,13 +217,49 @@ defmodule DarkorbitWeb.HelmetChannel do
     end
     push(socket, "helmet_mode", %{mode: "standby"})
     {:noreply, socket |> assign(:helmet_active, false)
+                      |> assign(:helmet_baseline, nil)
                       |> assign(:helmet_last_surrender, nil)}
   end
 
-  def handle_info({:world_state, map}, %{assigns: %{helmet_active: true}} = socket) do
-    push(socket, "world_state", map)
-    {:noreply, push_surrender_if_changed(socket, map)}
+  # Use the same sparse, authoritative delta protocol as the Tauri world
+  # channel. The last TRANSMITTED snapshot is the baseline, so an omitted
+  # idle tick never makes the phone's version diverge from the server's.
+  def handle_info({:world_state, %{tick: tick, map_id: map_id} = map},
+                  %{assigns: %{helmet_active: true, helmet_map_id: subscribed_map_id,
+                               helmet_baseline: %{tick: base} = old}} = socket)
+      when map_id == subscribed_map_id do
+    socket = push_surrender_if_changed(socket, map)
+
+    if tick > base do
+      projected = WorldStreamPolicy.project(map, old, socket.assigns.helmet_player_id)
+      delta = WorldStreamDelta.between(old, projected)
+
+      if WorldStreamPolicy.transmit?(delta, map.tick_ms) do
+        push(socket, "world_delta", delta)
+        {:noreply, assign(socket, :helmet_baseline, projected)}
+      else
+        {:noreply, socket}
+      end
+    else
+      {:noreply, socket}
+    end
   end
+
+  # If a map starts after the viewer subscribes, bootstrap on its first
+  # authoritative tick rather than sending an unchecked full snapshot per tick.
+  def handle_info({:world_state, %{map_id: map_id} = map},
+                  %{assigns: %{helmet_active: true, helmet_map_id: subscribed_map_id}} = socket)
+      when map_id == subscribed_map_id do
+    push(socket, "helmet_snapshot",
+      %{map: map, player_id: socket.assigns.helmet_player_id})
+
+    {:noreply, socket
+      |> assign(:helmet_baseline, map)
+      |> push_surrender_if_changed(map, true)}
+  end
+
+  # Never send old-region ticks after the server-owned pilot transition.
+  def handle_info({:world_state, _map}, socket), do: {:noreply, socket}
 
   # Only the paired pilot's encounter reaches the read-only viewer.
   # Limit payloads to visual metadata; never forward cargo or reputation.
@@ -282,10 +352,12 @@ defmodule DarkorbitWeb.HelmetChannel do
           case World.snapshot(map_id) do
             {:ok, map} ->
               push(socket, "helmet_snapshot", %{map: map, player_id: player_id})
-              push_surrender_if_changed(socket, map, true)
+              socket
+              |> assign(:helmet_baseline, map)
+              |> push_surrender_if_changed(map, true)
 
             {:error, _} ->
-              socket
+              assign(socket, :helmet_baseline, nil)
           end
 
         assign(socket, :helmet_map_id, map_id)

@@ -180,6 +180,7 @@ jobs:
           node --test apps/darkorbit_web/assets/js/game/helmet_head_tracking_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_gaze_dwell_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_hud_pages_test.mjs
+          node --test apps/darkorbit_web/assets/js/game/helmet_delta_integration_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_bandwidth_hud_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_gaze_integration_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_keyboard_only_test.mjs

@@ -84,6 +84,16 @@ defmodule DarkorbitWeb.HelmetChannelTest do
     assert_reply ref, :ok, %{mode: "combat"}
     assert_push "helmet_mode", %{mode: "combat"}
     assert_push "helmet_snapshot", %{player_id: ^id, map: %{entities: _}}
+    # Resync must use the authenticated pilot's real map regardless of any
+    # forged viewer-supplied map/player IDs, and full snapshot requests must
+    # be rate-limited to avoid amplifying EC2 egress.
+    ref = push(viewer, "helmet_resync", %{
+      "map_id" => "sol:pluto", "player_id" => id + 5
+    })
+    assert_reply ref, :ok, %{map: %{map_id: "1-1", entities: _}}
+    ref = push(viewer, "helmet_resync", %{})
+    assert_reply ref, :error, %{reason: "rate_limited"}
+
     # A paired viewer must get the planet preview from the pilot's own
     # SOL navigation snapshot, or Three.js cannot draw planetary bodies.
     assert_push "helmet_navigation",

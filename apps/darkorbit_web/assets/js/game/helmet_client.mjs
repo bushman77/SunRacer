@@ -1,6 +1,7 @@
 import {Socket} from "phoenix"
 import {StereoSpaceView} from "./stereo_view.js"
 import {BandwidthProbe, instrumentPhoenixSocket} from "./bandwidth_probe.mjs"
+import {WorldStreamDelta} from "./world_stream_delta.mjs"
 import {attachBandwidthPanel} from "./bandwidth_panel.mjs"
 import {visualLaserRays} from "./laser_burst.mjs"
 import {laserFeedback} from "./laser_feedback.mjs"
@@ -49,8 +50,12 @@ export class HelmetClient {
     this.calibrationSaveTimer = null
     this.calibrationSaveInFlight = false
     this.entities = new Map()
-    // Baseline for the legacy direct server-to-headset channel.
+    // Measure this legacy phone-to-Phoenix connection while the future
+    // laptop-to-phone LAN relay is still under development.
     this.bandwidth = new BandwidthProbe("headset-server")
+    this.worldStream = null
+    this.helmetResyncInFlight = false
+    this.lastHelmetResyncAt = -Infinity
     this.selfId = null
     this.selectedTargetId = null
     this.helmetSurrender = null
@@ -114,10 +119,28 @@ export class HelmetClient {
     this.channel.on("helmet_recenter", () => this.recenterFromPilot())
     this.channel.on("helmet_snapshot", ({map, player_id}) => {
       this.selfId = key(player_id)
+      // A snapshot replaces the complete local delta baseline, including
+      // after changing orbital regions or reconnecting the headset.
+      this.worldStream = new WorldStreamDelta(map)
+      this.helmetResyncInFlight = false
       this.applyWorld(map)
     })
+    this.channel.on("world_delta", delta => {
+      if (this.mode !== "combat") return
+      if (!this.worldStream) {
+        this.requestHelmetResync()
+        return
+      }
+      const map = this.worldStream.apply(delta)
+      if (map) this.applyWorld(map)
+      else this.requestHelmetResync()
+    })
+    // Compatibility with an older local development server. New servers
+    // should send a full snapshot only on initial join/resynchronization.
     this.channel.on("world_state", map => {
-      if (this.mode === "combat") this.applyWorld(map)
+      if (this.mode !== "combat") return
+      this.worldStream = new WorldStreamDelta(map)
+      this.applyWorld(map)
     })
     // Explicit status is pushed on changes and reconnect; the world snapshot
     // remains a second path so the paired phone never depends on target lock.
@@ -552,6 +575,8 @@ export class HelmetClient {
     const bandwidthOverlay = this.root.querySelector("#helmet-bandwidth-sbs")
     if (bandwidthOverlay) bandwidthOverlay.hidden = true
     this.entities.clear()
+    this.worldStream = null
+    this.helmetResyncInFlight = false
     this.navComputer.solarNavigation = {planetary_view: null}
     this.orbitalBase = null
     this.mapId = null
@@ -655,6 +680,25 @@ export class HelmetClient {
     this.lastSbsBandwidthUpdateAt = time
     renderHelmetBandwidth(this.root,
       this.bandwidth.snapshot(HELMET_BANDWIDTH_HUD.windowMs))
+  }
+
+  // Recovery is permitted only for the paired, authenticated visual channel.
+  // Do not send a client-selected map or use the desktop pilot credential.
+  requestHelmetResync() {
+    if (this.helmetResyncInFlight || this.channel?.state !== "joined") return
+    const now = performance.now()
+    if (now - this.lastHelmetResyncAt < 1_500) return
+    this.lastHelmetResyncAt = now
+    this.helmetResyncInFlight = true
+    this.channel.push("helmet_resync", {})
+      .receive("ok", ({map}) => {
+        this.helmetResyncInFlight = false
+        if (!map || this.mode !== "combat") return
+        this.worldStream = new WorldStreamDelta(map)
+        this.applyWorld(map)
+      })
+      .receive("error", () => { this.helmetResyncInFlight = false })
+      .receive("timeout", () => { this.helmetResyncInFlight = false })
   }
 
   frame(time) {
