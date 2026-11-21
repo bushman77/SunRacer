@@ -18,7 +18,7 @@ defmodule DarkorbitWeb.HelmetHttpsConfigTest do
     assert source =~ ~s(http: [ip:)
     assert source =~ ~s(certfile: certfile)
     assert source =~ ~s(keyfile: keyfile)
-    assert source =~ ~s(:inet.getifaddrs())
+    assert source =~ ~s|:inet.getifaddrs()|
     assert source =~ ~s("https://" <> lan_host <> ":4443")
   end
 end
