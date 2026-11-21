@@ -198,7 +198,7 @@ export function buildGreenStarbaseArt({
     add(new T.BoxGeometry(6.5, 0.55, 0.20), green, 0, 16.6, -184.62,
       [0, 0, angle])
   }
-  sign("SPACE NOVA", 0, 11.5, -184.59, 16)
+  sign("SUNRACER", 0, 11.5, -184.59, 16)
   sign("GREEN STARBASE", 0, 6.8, -184.58, 16)
   for (const x of [-6.6, -3.3, 0, 3.3, 6.6]) {
     box([1.6, 0.48, 0.23], green, [x, -1.4, -184.56])

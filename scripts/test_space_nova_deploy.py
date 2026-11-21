@@ -1,4 +1,4 @@
-"""Offline guardrails for Space Nova option 9 (never contacts EC2)."""
+"""Offline guardrails for SunRacer option 9 (never contacts EC2)."""
 from pathlib import Path
 import os
 import subprocess
@@ -13,7 +13,7 @@ class DeploymentOptionTest(unittest.TestCase):
         subprocess.run(["bash", "-n", str(SCRIPT)], check=True)
         result = subprocess.run(["bash", str(SCRIPT), "help"], capture_output=True,
                                 text=True, check=True)
-        self.assertIn("space-nova deploy", result.stdout)
+        self.assertIn("sunracer deploy", result.stdout)
         self.assertIn("Deploy verified Ubuntu server build", result.stdout)
 
     def run_mock_deploy(self, corrupt=False):
@@ -24,8 +24,8 @@ class DeploymentOptionTest(unittest.TestCase):
             (fakebin / "git").write_text(
                 "#!/bin/sh\n"
                 "case \"$*\" in\n"
-                '  *"branch --show-current"*) echo native_client ;;\n'
-                '  *"rev-parse origin/native_client"*) printf "%040d\\n" 1 ;;\n'
+                '  *"branch --show-current"*) echo story_line ;;\n'
+                '  *"rev-parse origin/story_line"*) printf "%040d\\n" 1 ;;\n'
                 "esac\n"
             )
             (fakebin / "gh").write_text(
@@ -36,7 +36,7 @@ class DeploymentOptionTest(unittest.TestCase):
                 '  "run view") echo success ;;\n'
                 '  "run download")\n'
                 '    while [ "$#" -gt 0 ]; do\n'
-                '      if [ "$1" = --dir ]; then shift; cp "$MOCK_DATA/release.tar.gz" "$1/space-nova-server-linux-x64.tar.gz"; cp "$MOCK_DATA/SHA256SUMS" "$1/SHA256SUMS"; break; fi\n'
+                '      if [ "$1" = --dir ]; then shift; cp "$MOCK_DATA/release.tar.gz" "$1/sunracer-server-linux-x64.tar.gz"; cp "$MOCK_DATA/SHA256SUMS" "$1/SHA256SUMS"; break; fi\n'
                 '      shift\n'
                 '    done ;;\n'
                 '  *) echo "Unexpected gh request: $*" >&2; exit 7 ;;\n'
@@ -58,7 +58,7 @@ class DeploymentOptionTest(unittest.TestCase):
             import hashlib
             digest = hashlib.sha256(release.read_bytes()).hexdigest()
             (data / "SHA256SUMS").write_text(
-                f"{'0'*64 if corrupt else digest}  space-nova-server-linux-x64.tar.gz\n"
+                f"{'0'*64 if corrupt else digest}  sunracer-server-linux-x64.tar.gz\n"
             )
             env = os.environ.copy()
             env["PATH"] = str(fakebin) + os.pathsep + env["PATH"]
@@ -81,9 +81,9 @@ class DeploymentOptionTest(unittest.TestCase):
             "\"$active/bin/space_mmo\" eval 'Sunracer.Release.migrate()' </dev/null",
             source,
         )
-        self.assertIn("--unit=\"space-nova-migrate-$(date +%s)-$RANDOM\"", source)
+        self.assertIn("--unit=\"sunracer-migrate-$(date +%s)-$RANDOM\"", source)
         self.assertIn('sudo -n systemctl start "$service"', source)
-        self.assertIn("Space Nova updated successfully", source)
+        self.assertIn("SunRacer updated successfully", source)
 
     def test_corrupted_artifact_never_reaches_ssh(self):
         result = self.run_mock_deploy(corrupt=True)

@@ -1,5 +1,5 @@
-name: Publish signed Space Nova server and desktop release
-run-name: Space Nova v${{ inputs.version }} (${{ inputs.expected_sha }})
+name: Publish signed SunRacer server and desktop release
+run-name: SunRacer v${{ inputs.version }} (${{ inputs.expected_sha }})
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         type: string
         required: true
       expected_sha:
-        description: Exact 40-character native_client commit SHA
+        description: Exact 40-character story_line commit SHA
         type: string
         required: true
 
@@ -17,12 +17,12 @@ permissions:
   contents: read
 
 concurrency:
-  group: space-nova-signed-release
+  group: sunracer-signed-release
   cancel-in-progress: false
 
 jobs:
   tests:
-    if: github.ref == 'refs/heads/native_client'
+    if: github.ref == 'refs/heads/story_line'
     runs-on: ubuntu-24.04
     services:
       postgres:
@@ -54,7 +54,7 @@ jobs:
           RELEASE_VERSION: ${{ inputs.version }}
           GH_TOKEN: ${{ github.token }}
         run: |
-          [[ "$GITHUB_REF" == refs/heads/native_client ]]
+          [[ "$GITHUB_REF" == refs/heads/story_line ]]
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$GITHUB_SHA" == "$EXPECTED_SHA" ]]
           python3 -m py_compile scripts/space-nova-version.py
@@ -134,7 +134,7 @@ jobs:
             -subj '/CN=localhost' >/dev/null 2>&1
           bin=_build/prod/rel/space_mmo/bin/space_mmo
           "$bin" eval 'Sunracer.Release.migrate()'
-          "$bin" start > "$RUNNER_TEMP/space-nova-server.log" 2>&1 &
+          "$bin" start > "$RUNNER_TEMP/sunracer-server.log" 2>&1 &
           pid=$!
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           ready=0
@@ -144,20 +144,20 @@ jobs:
             sleep 1
           done
           if [[ "$ready" != 1 ]]; then
-            cat "$RUNNER_TEMP/space-nova-server.log" >&2
+            cat "$RUNNER_TEMP/sunracer-server.log" >&2
             exit 1
           fi
       - name: Archive and verify server
         run: |
           mkdir -p dist
-          tar -C _build/prod/rel -czf dist/space-nova-server-linux-x64.tar.gz space_mmo
-          tar -tzf dist/space-nova-server-linux-x64.tar.gz | grep -F 'space_mmo/bin/space_mmo' >/dev/null
-          tar -tzf dist/space-nova-server-linux-x64.tar.gz | grep -F 'cache_manifest.json' >/dev/null
+          tar -C _build/prod/rel -czf dist/sunracer-server-linux-x64.tar.gz space_mmo
+          tar -tzf dist/sunracer-server-linux-x64.tar.gz | grep -F 'space_mmo/bin/space_mmo' >/dev/null
+          tar -tzf dist/sunracer-server-linux-x64.tar.gz | grep -F 'cache_manifest.json' >/dev/null
       - uses: actions/upload-artifact@v4
         with:
-          name: space-nova-server
+          name: sunracer-server
           if-no-files-found: error
-          path: dist/space-nova-server-linux-x64.tar.gz
+          path: dist/sunracer-server-linux-x64.tar.gz
 
   server-proxy-smoke:
     needs: server
@@ -179,7 +179,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: space-nova-server
+          name: sunracer-server
           path: dist
       - name: Verify loopback-only Caddy proxy mode
         shell: bash
@@ -190,7 +190,7 @@ jobs:
         run: |
           export SECRET_KEY_BASE="$(openssl rand -hex 48)"
           mkdir -p "$RUNNER_TEMP/server"
-          tar -xzf dist/space-nova-server-linux-x64.tar.gz -C "$RUNNER_TEMP/server"
+          tar -xzf dist/sunracer-server-linux-x64.tar.gz -C "$RUNNER_TEMP/server"
           bin="$RUNNER_TEMP/server/space_mmo/bin/space_mmo"
           "$bin" eval 'Sunracer.Release.migrate()'
           "$bin" start > "$RUNNER_TEMP/proxy-server.log" 2>&1 &
@@ -217,7 +217,7 @@ jobs:
           ss -lnt | grep -Eq '127\.0\.0\.1:4000\b'
   windows:
     needs: tests
-    if: github.ref == 'refs/heads/native_client'
+    if: github.ref == 'refs/heads/story_line'
     runs-on: windows-latest
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -272,19 +272,19 @@ jobs:
           $sig = "$($files[0].FullName).sig"
           if (-not (Test-Path $sig)) { throw 'Missing signed installer signature' }
           New-Item -ItemType Directory -Force dist | Out-Null
-          Copy-Item $files[0].FullName dist/space-nova-windows-x64-setup.exe
-          Copy-Item $sig dist/space-nova-windows-x64-setup.exe.sig
+          Copy-Item $files[0].FullName dist/sunracer-windows-x64-setup.exe
+          Copy-Item $sig dist/sunracer-windows-x64-setup.exe.sig
       - uses: actions/upload-artifact@v4
         with:
-          name: signed-space-nova-windows
+          name: signed-sunracer-windows
           if-no-files-found: error
           path: |
-            dist/space-nova-windows-x64-setup.exe
-            dist/space-nova-windows-x64-setup.exe.sig
+            dist/sunracer-windows-x64-setup.exe
+            dist/sunracer-windows-x64-setup.exe.sig
 
   linux:
     needs: tests
-    if: github.ref == 'refs/heads/native_client'
+    if: github.ref == 'refs/heads/story_line'
     runs-on: ubuntu-24.04
     env:
       TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
@@ -337,20 +337,20 @@ jobs:
           [[ ${#images[@]} == 1 && ${#debs[@]} == 1 ]]
           [[ -s "${images[0]}.sig" ]]
           mkdir -p dist
-          cp "${images[0]}" dist/space-nova-linux-x64.AppImage
-          cp "${images[0]}.sig" dist/space-nova-linux-x64.AppImage.sig
-          cp "${debs[0]}" dist/space-nova-linux-x64.deb
+          cp "${images[0]}" dist/sunracer-linux-x64.AppImage
+          cp "${images[0]}.sig" dist/sunracer-linux-x64.AppImage.sig
+          cp "${debs[0]}" dist/sunracer-linux-x64.deb
       - uses: actions/upload-artifact@v4
         with:
-          name: signed-space-nova-linux
+          name: signed-sunracer-linux
           if-no-files-found: error
           path: |
-            dist/space-nova-linux-x64.AppImage
-            dist/space-nova-linux-x64.AppImage.sig
-            dist/space-nova-linux-x64.deb
+            dist/sunracer-linux-x64.AppImage
+            dist/sunracer-linux-x64.AppImage.sig
+            dist/sunracer-linux-x64.deb
 
   publish:
-    if: github.ref == 'refs/heads/native_client'
+    if: github.ref == 'refs/heads/story_line'
     needs: [tests, server, server-proxy-smoke, windows, linux]
     permissions:
       contents: write
@@ -362,15 +362,15 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
-          name: space-nova-server
+          name: sunracer-server
           path: dist/server
       - uses: actions/download-artifact@v4
         with:
-          name: signed-space-nova-windows
+          name: signed-sunracer-windows
           path: dist/windows
       - uses: actions/download-artifact@v4
         with:
-          name: signed-space-nova-linux
+          name: signed-sunracer-linux
           path: dist/linux
       - name: Generate latest.json from both signed installers
         shell: bash
@@ -410,7 +410,7 @@ jobs:
           manifest = {
               "version": version,
               "pub_date": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds").replace("+00:00", "Z"),
-              "notes": f"Space Nova desktop client v{version}",
+              "notes": f"SunRacer desktop client v{version}",
               "platforms": platforms
           }
           Path("dist/latest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
@@ -421,12 +421,12 @@ jobs:
         run: |
           python3 scripts/space-nova-version.py check "$RELEASE_VERSION"
           files=(
-            dist/server/space-nova-server-linux-x64.tar.gz
-            dist/windows/space-nova-windows-x64-setup.exe
-            dist/windows/space-nova-windows-x64-setup.exe.sig
-            dist/linux/space-nova-linux-x64.AppImage
-            dist/linux/space-nova-linux-x64.AppImage.sig
-            dist/linux/space-nova-linux-x64.deb
+            dist/server/sunracer-server-linux-x64.tar.gz
+            dist/windows/sunracer-windows-x64-setup.exe
+            dist/windows/sunracer-windows-x64-setup.exe.sig
+            dist/linux/sunracer-linux-x64.AppImage
+            dist/linux/sunracer-linux-x64.AppImage.sig
+            dist/linux/sunracer-linux-x64.deb
             dist/latest.json
           )
           for file in "${files[@]}"; do test -s "$file"; done
@@ -440,12 +440,12 @@ jobs:
             exit 1
           fi
           gh release create "v$RELEASE_VERSION" \
-            dist/server/space-nova-server-linux-x64.tar.gz \
-            dist/windows/space-nova-windows-x64-setup.exe dist/windows/space-nova-windows-x64-setup.exe.sig \
-            dist/linux/space-nova-linux-x64.AppImage dist/linux/space-nova-linux-x64.AppImage.sig \
-            dist/linux/space-nova-linux-x64.deb \
+            dist/server/sunracer-server-linux-x64.tar.gz \
+            dist/windows/sunracer-windows-x64-setup.exe dist/windows/sunracer-windows-x64-setup.exe.sig \
+            dist/linux/sunracer-linux-x64.AppImage dist/linux/sunracer-linux-x64.AppImage.sig \
+            dist/linux/sunracer-linux-x64.deb \
             dist/latest.json dist/SHA256SUMS \
             --target "$GITHUB_SHA" --draft \
-            --title "Space Nova v$RELEASE_VERSION" \
+            --title "SunRacer v$RELEASE_VERSION" \
             --notes "Ubuntu dedicated server plus signed Windows and Linux desktop clients, built from $GITHUB_SHA. EC2 deployment is separate."
           gh release edit "v$RELEASE_VERSION" --draft=false --latest

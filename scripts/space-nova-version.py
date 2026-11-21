@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Space Nova's authoritative release version is in the root umbrella mix.exs.
+"""SunRacer's authoritative release version is in the root umbrella mix.exs.
 
 Generate desktop version metadata in build workspaces, not in release commits.
 """

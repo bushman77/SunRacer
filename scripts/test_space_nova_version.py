@@ -18,13 +18,13 @@ class VersionTest(unittest.TestCase):
         client = self.root / "clients" / "tauri"
         (client / "src-tauri").mkdir(parents=True)
         (self.root / "mix.exs").write_text('def project do\n  [apps_path: "apps",\n    version: "0.3.1",\n  ]\nend\n')
-        (client / "package.json").write_text('{"name":"space-nova-client","version":"0.3.1"}')
+        (client / "package.json").write_text('{"name":"sunracer-client","version":"0.3.1"}')
         (client / "package-lock.json").write_text(
-            '{"name":"space-nova-client","version":"0.3.1","packages":{"":{"version":"0.3.1"}}}'
+            '{"name":"sunracer-client","version":"0.3.1","packages":{"":{"version":"0.3.1"}}}'
         )
         (client / "src-tauri" / "tauri.conf.json").write_text('{"version":"0.3.1"}')
         (client / "src-tauri" / "Cargo.toml").write_text(
-            '[package]\nname = "space-nova-client"\nversion = "0.3.1"\n[dependencies]\nserde = "1"\n'
+            '[package]\nname = "sunracer-client"\nversion = "0.3.1"\n[dependencies]\nserde = "1"\n'
         )
 
     def test_root_is_the_only_version_to_edit(self):

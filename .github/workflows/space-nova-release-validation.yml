@@ -1,7 +1,7 @@
-name: Verify Space Nova release manager
+name: Verify SunRacer release manager
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
     paths:
       - "scripts/space-nova"
       - "scripts/space-nova-version.py"

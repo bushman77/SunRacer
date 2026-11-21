@@ -35,7 +35,7 @@ export class GreenStarbaseInterior {
   build() {
     const T = this.THREE
     const group = new T.Group()
-    group.name = "Space Nova / Green Starbase / Hangar and concourse"
+    group.name = "SunRacer / Green Starbase / Hangar and concourse"
     group.userData.nonInteractive = true
     this.node = group
     this.scene.add(group)
@@ -388,7 +388,7 @@ export class GreenStarbaseInterior {
     }).catch(error => {
       // Asset is optional while Mara is still being exported in Blender.
       // Only one request is made per station scene; no retry per frame.
-      console.info("Space Nova: using repair attendant fallback", error?.message)
+      console.info("SunRacer: using repair attendant fallback", error?.message)
     })
   }
 

@@ -1,4 +1,4 @@
-# Space Nova HUD / first implementation pass
+# SunRacer HUD / first implementation pass
 
 Visual direction: dark navy / near-black command deck, cyan edge illumination,
 fine orbital-grid detail, compact monospace instrument labels, beveled panels,

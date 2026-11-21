@@ -1,4 +1,4 @@
-# Space Nova — Merchant Cargo and Faction Playtest
+# SunRacer — Merchant Cargo and Faction Playtest
 
 Branch: `sbs`. This is a manual acceptance checklist for the first
 server-authoritative combat → surrender → cargo → reputation slice.

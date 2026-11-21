@@ -1,12 +1,12 @@
 defmodule SunracerWeb.PageControllerTest do
   use SunracerWeb.ConnCase
 
-  test "GET / introduces Space Nova and exposes play and registration", %{conn: conn} do
+  test "GET / introduces SunRacer and exposes play and registration", %{conn: conn} do
     conn = get(conn, ~p"/")
     html = html_response(conn, 200)
     document = LazyHTML.from_document(html)
 
-    assert html =~ "SPACE NOVA"
+    assert html =~ "SUNRACER"
     assert html =~ "An entire system."
     assert html =~ "Solar Atlas navigation"
     assert html =~ "Linux desktop launcher in testing"

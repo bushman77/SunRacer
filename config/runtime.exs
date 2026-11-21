@@ -132,7 +132,7 @@ if config_env() == :prod do
   cond do
     not transport_ready? ->
       if email_provider != "none" do
-        IO.warn("Space Nova email configuration is incomplete; outbound mail and public registration are disabled")
+        IO.warn("SunRacer email configuration is incomplete; outbound mail and public registration are disabled")
       end
 
     email_provider == "resend" ->
@@ -177,7 +177,7 @@ if config_env() == :prod do
   end
 
   if registration_open? and not transport_ready? do
-    IO.warn("Space Nova registration was requested but mail delivery is not ready; signup remains disabled")
+    IO.warn("SunRacer registration was requested but mail delivery is not ready; signup remains disabled")
   end
 
   config :sunracer, :dns_cluster_query, System.get_env("DNS_CLUSTER_QUERY")

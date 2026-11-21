@@ -1,5 +1,5 @@
 
-# Space Nova registration verification hardening
+# SunRacer registration verification hardening
 
 Implemented on the existing `sbs` branch, without changing the starter-ship
 transaction or requiring a new migration (verification is an existing JSONB
@@ -51,7 +51,7 @@ and configured with an approved mail provider.
 
 ## Outbound email platform (Swoosh + optional SMTP)
 
-Space Nova uses Swoosh for all pilot verification emails. Development and
+SunRacer uses Swoosh for all pilot verification emails. Development and
 automated tests retain their existing Local and Test adapters. In production,
 set one transport and verify it independently before opening registration.
 

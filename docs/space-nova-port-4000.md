@@ -1,6 +1,6 @@
-# Space Nova production networking — Caddy HTTPS and Phoenix
+# SunRacer production networking — Caddy HTTPS and Phoenix
 
-Space Nova's existing AWS EC2 deployment uses Caddy to terminate TLS on
+SunRacer's existing AWS EC2 deployment uses Caddy to terminate TLS on
 public **443**, proxying to Phoenix HTTP on **127.0.0.1:4000**.
 
 ```

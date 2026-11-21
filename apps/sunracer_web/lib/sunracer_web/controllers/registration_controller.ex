@@ -59,7 +59,7 @@ defmodule SunracerWeb.RegistrationController do
           )
 
         {:error, _reason} ->
-          Logger.error("Space Nova registration provisioning failed")
+          Logger.error("SunRacer registration provisioning failed")
 
           conn
           |> put_flash(:error, "We couldn't provision your starter ship. Please try again later.")
@@ -158,7 +158,7 @@ defmodule SunracerWeb.RegistrationController do
           _result = deliver_verification(account)
 
         {:error, _reason} ->
-          Logger.error("Space Nova verification resend could not update the account")
+          Logger.error("SunRacer verification resend could not update the account")
 
         _ignored ->
           :ok
@@ -196,12 +196,12 @@ defmodule SunracerWeb.RegistrationController do
         :ok
 
       _error ->
-        Logger.error("Space Nova verification email delivery failed")
+        Logger.error("SunRacer verification email delivery failed")
         :error
     end
   rescue
     _error ->
-      Logger.error("Space Nova verification email delivery raised an exception")
+      Logger.error("SunRacer verification email delivery raised an exception")
       :error
   end
 

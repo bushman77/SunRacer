@@ -1066,7 +1066,7 @@ body:has(#helmet-client) {
 
 
 /* -----------------------------------------------------------------------
-   SPACE NOVA HUD / visual system V1
+   SUNRACER HUD / visual system V1
    Design tokens shared by the web game and desktop-hosted Phoenix screens.
    All decorative layers are pointer-transparent. No canvas/JS controls are
    simulated here: existing server-owned navigation remains authoritative.
@@ -1336,7 +1336,7 @@ body:has(#helmet-client) {
   .hud-keybar-end { display:none !important; }
 }
 
-/* SPACE NOVA HUD / access screens + website identity */
+/* SUNRACER HUD / access screens + website identity */
 .hud-screen {
   --hud-edge: rgb(77 194 224 / .42);
   --hud-panel-bg: #051625;
@@ -1615,7 +1615,7 @@ body:has(#helmet-client) {
 
 
 /* =======================================================================
-   SPACE NOVA / FULL-SCREEN ATLAS HUD
+   SUNRACER / FULL-SCREEN ATLAS HUD
    The map is the entire play surface; instrument windows float on top.
    The same authoritative SVG, server calls, and cockpit transition remain.
 ======================================================================= */

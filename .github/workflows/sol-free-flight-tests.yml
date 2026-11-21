@@ -2,7 +2,7 @@ name: Verify SOL free-flight mechanics
 
 on:
   push:
-    branches: [main, star_base]
+    branches: [main, star_base, story_line]
     paths:
       - "apps/core/lib/core/universe/navigation.ex"
       - "apps/core/lib/core/universe/sol.ex"

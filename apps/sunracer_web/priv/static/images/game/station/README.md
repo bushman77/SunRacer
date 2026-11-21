@@ -1,4 +1,4 @@
-# Space Nova station character assets
+# SunRacer station character assets
 
 Place the original Blender export at **mara_venn.glb** in this directory.
 

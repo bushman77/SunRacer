@@ -28,7 +28,7 @@ defmodule SunracerWeb.RegistrationControllerTest do
     assert starter_ship.ship_id == 1
 
     assert_email_sent(fn email ->
-      assert email.subject == "Confirm your Space Nova pilot account"
+      assert email.subject == "Confirm your SunRacer pilot account"
       assert email.text_body =~ "/verify-account?"
       assert email.text_body =~ "token="
 

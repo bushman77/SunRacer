@@ -1,6 +1,6 @@
-# Space Nova desktop launcher (Tauri 2)
+# SunRacer desktop launcher (Tauri 2)
 
-This is the first, server-hosted Space Nova desktop client for Pop!_OS and
+This is the first, server-hosted SunRacer desktop client for Pop!_OS and
 other supported Linux desktops. The launcher UI is bundled in the app, but
 the game remains served over HTTPS from the authoritative Phoenix server.
 
@@ -64,11 +64,11 @@ The default development listener is HTTP-only. The current EC2 deployment uses C
 
 ## Easy desktop build and release manager
 
-From the root of the `native_client` checkout on Pop!_OS:
+From the root of the `story_line` checkout on Pop!_OS:
 
 ```sh
 cd ~/SunRacer
-./scripts/space-nova
+./scripts/sunracer
 ```
 
 The menu can run tests, build Linux installers, trigger a Windows `.exe`
@@ -77,13 +77,13 @@ a version bump, or trigger a signed release. Each action is also available
 directly as a command:
 
 ```sh
-./scripts/space-nova test
-./scripts/space-nova linux
-./scripts/space-nova windows
-./scripts/space-nova status
-./scripts/space-nova download
-./scripts/space-nova version 0.3.1
-./scripts/space-nova publish 0.3.1
+./scripts/sunracer test
+./scripts/sunracer linux
+./scripts/sunracer windows
+./scripts/sunracer status
+./scripts/sunracer download
+./scripts/sunracer version 0.3.1
+./scripts/sunracer publish 0.3.1
 ```
 
 For GitHub commands install and authenticate the GitHub CLI once:
@@ -99,13 +99,13 @@ is still building, inspect `status` and retry `download` after success.
 
 For signed updates, run `version X.Y.Z` and follow the printed test, commit,
 and push instructions before running `publish X.Y.Z`. This second command
-checks for uncommitted tracked edits, is synchronized to `origin/native_client`, and
+checks for uncommitted tracked edits, is synchronized to `origin/story_line`, and
 has no existing release of the same version. It asks you to type `PUBLISH`
 before triggering the signed workflow. Configure `TAURI_SIGNING_PRIVATE_KEY`
 and `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` **only as GitHub Actions secrets**.
 The helper never reads or prints them, and ordinary Windows test installers
 do not require signing credentials. Version `0.3.0` may be published using
-`./scripts/space-nova publish 0.3.0` once its secrets are configured.
+`./scripts/sunracer publish 0.3.0` once its secrets are configured.
 
 ## Build and distribute
 
@@ -147,20 +147,20 @@ shown above.
 
 The Tauri application identifier remains `game.sbs.space` for compatibility
 with previously installed test builds. The visible product, launcher and
-package name are now **Space Nova**, version `0.3.1`. Existing installed
+package name are now **SunRacer**, version `0.3.1`. Existing installed
 launcher builds do not update automatically.
 
 ## Build the Windows x64 installer (without owning a Windows machine)
 
 The dedicated GitHub Actions workflow at
-`.github/workflows/space-nova-windows.yml` builds an NSIS
-`Space Nova_*_x64-setup.exe` on a hosted Windows runner.
+`.github/workflows/sunracer-windows.yml` builds an NSIS
+`SunRacer_*_x64-setup.exe` on a hosted Windows runner.
 The Linux workflow and its `.deb` / `.AppImage` outputs remain unchanged.
 
-1. Push changes to the existing `native_client` branch, or manually run the
-   **Build Space Nova Windows installer** workflow from the GitHub Actions tab.
+1. Push changes to the existing `story_line` branch, or manually run the
+   **Build SunRacer Windows installer** workflow from the GitHub Actions tab.
 2. Wait for **Test launcher** and **Build Windows NSIS installer** to pass.
-3. Download the `space-nova-windows-x86_64` artifact from the workflow run.
+3. Download the `sunracer-windows-x86_64` artifact from the workflow run.
 4. Extract the artifact zip and share the resulting setup EXE with your Windows
    tester. The EXE installs the webview launcher; it does not install the game
    server or PostgreSQL.
@@ -212,17 +212,17 @@ variables → Actions:
 
 GitHub's public Actions jobs still produce ordinary unsigned **test**
 installers with `npm run build`. Only the separate,
-operator-triggered **Publish signed Space Nova desktop release** workflow
+operator-triggered **Publish signed SunRacer desktop release** workflow
 receives the signing secrets and enables the optional
 `src-tauri/tauri.updater.conf.json` build overlay.
 
 To publish a version:
 
-1. Confirm both normal Linux and Windows jobs are green on `native_client`.
+1. Confirm both normal Linux and Windows jobs are green on `story_line`.
 2. Bump `version` together in `tauri.conf.json`, `Cargo.toml` and
    `package.json`. Change the verification test if needed.
-3. In GitHub Actions, run **Publish signed Space Nova desktop release**
-   on branch `native_client` and enter the matching version (for example `0.3.0`).
+3. In GitHub Actions, run **Publish signed SunRacer desktop release**
+   on branch `story_line` and enter the matching version (for example `0.3.0`).
 4. The workflow signs Windows NSIS `.exe` and Linux `.AppImage`
    independently, generates a single manifest with the literal `.sig` contents,
    then atomically publishes the bundles, signatures and `latest.json` to
@@ -240,7 +240,7 @@ reputation) and separate from the TLS configuration on the EC2 game server.
 The workflow is manual; merely adding your GitHub Secrets will not
 automatically publish any update.
 
-## Space Nova HUD design pass (0.3.1)
+## SunRacer HUD design pass (0.3.1)
 
 The Tauri launcher now uses a full-window flight-deck treatment rather than
 an isolated centered web card. The Phoenix game, registration, login, and
@@ -250,7 +250,7 @@ not local asset bundling or an offline mode. See `docs/space-nova-ui.md`.
 
 ## Unified server and client releases
 
-The public release version now comes exclusively from the umbrella root `mix.exs`. For future versions, use `./scripts/space-nova version X.Y.Z` rather than editing Tauri, npm or Cargo version fields manually. The unified release workflow derives those mandatory internal version fields in its build workspaces, publishes version-free public asset names, and includes the Linux dedicated server alongside the signed desktop installers. See `docs/space-nova-release.md`. The original `./scripts/space-nova publish` command remains as an alias for `release`.
+The public release version now comes exclusively from the umbrella root `mix.exs`. For future versions, use `./scripts/sunracer version X.Y.Z` rather than editing Tauri, npm or Cargo version fields manually. The unified release workflow derives those mandatory internal version fields in its build workspaces, publishes version-free public asset names, and includes the Linux dedicated server alongside the signed desktop installers. See `docs/space-nova-release.md`. The original `./scripts/sunracer publish` command remains as an alias for `release`.
 
 ## Installed production client through an SSH tunnel (Fortinet-filtered networks)
 
@@ -265,12 +265,12 @@ Fortinet certificate, use the repository's integrated production test runner:
 
 ```sh
 cd ~/SunRacer
-./scripts/space-nova-tunnel
+./scripts/sunracer-tunnel
 ```
 
 The script uses an existing validated local SOCKS5 tunnel or creates one
 with SSH to the configured EC2 host, validates the remote Let's Encrypt
-certificate with curl, runs the **installed** `space-nova-client` executable
+certificate with curl, runs the **installed** `sunracer-client` executable
 with the native SOCKS5 opt-in, and closes only the SSH process it created.
 It does not alter GNOME's desktop-wide proxy settings. A normal Applications
 menu launch still uses the default network and requires a trusted certificate.
@@ -278,7 +278,7 @@ menu launch still uses the default network and requires a trusted certificate.
 To use the native proxy with your own already-running tunnel, run:
 
 ```sh
-SPACE_NOVA_USE_SOCKS_TUNNEL=1 space-nova-client
+SPACE_NOVA_USE_SOCKS_TUNNEL=1 sunracer-client
 ```
 
 Do not pass `--insecure` or trust arbitrary TLS certificates. This feature
@@ -338,7 +338,7 @@ select Network settings → Manual SOCKS5, enter `127.0.0.1` and `1080`,
 and choose **Save and restart client**. Keep the tunnel alive and then
 launch the game. This is client-local and does not require deploying EC2.
 
-## Standalone native gameplay (native_client migration)
+## Standalone native gameplay (story_line)
 
 **Launch standalone game** now opens a *local* `game.html`, not the remote
 `/play` page. The built desktop package contains the same Solar Atlas and
@@ -364,7 +364,7 @@ expressions appear.
 
 1. Deploy the matching EC2 release first (release manager option 9) to
    introduce the new native login/refresh/logout JSON API.
-2. Build/install a matching native_client desktop package.
+2. Build/install a matching story_line desktop package.
 3. Keep the existing SSH SOCKS5 proxy active, configure Networking if needed,
    then select **Launch standalone game** and sign in with the verified pilot.
 

@@ -2,7 +2,7 @@ name: Mouse flight steering smoothing
 
 on:
   push:
-    branches: [star_base]
+    branches: [star_base, story_line]
     paths:
       - "apps/sunracer_web/assets/js/game/mouse_steering.mjs"
       - "apps/sunracer_web/assets/js/game/mouse_steering_test.mjs"

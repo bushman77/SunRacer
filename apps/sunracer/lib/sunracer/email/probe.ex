@@ -35,10 +35,10 @@ defmodule Sunracer.Email.Probe do
         email =
           new()
           |> to(recipient)
-          |> from({"Space Nova", from})
-          |> subject("Space Nova email delivery test")
+          |> from({"SunRacer", from})
+          |> subject("SunRacer email delivery test")
           |> text_body("""
-          This is a Space Nova email delivery test.
+          This is a SunRacer email delivery test.
 
           Your server accepted an operator request to check outbound email.
           No pilot account was created or changed by this message.

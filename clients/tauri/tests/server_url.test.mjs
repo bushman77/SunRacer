@@ -5,7 +5,7 @@ import {
   gameUrl, registrationUrl, homeUrl, destinationUrl, initialServerOrigin
 } from "../ui/server_url.mjs"
 
-test("default launches the live Space Nova server", () => {
+test("default launches the live SunRacer server", () => {
   assert.equal(DEFAULT_SERVER_URL, "https://spacenova.ddns.net")
   assert.equal(gameUrl(DEFAULT_SERVER_URL), "https://spacenova.ddns.net/play")
   assert.equal(registrationUrl(DEFAULT_SERVER_URL), "https://spacenova.ddns.net/register")

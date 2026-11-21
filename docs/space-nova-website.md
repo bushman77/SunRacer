@@ -1,6 +1,6 @@
-# Space Nova website: landing page and pilot registration
+# SunRacer website: landing page and pilot registration
 
-The public homepage at `/` introduces Space Nova, distinguishes current playtest
+The public homepage at `/` introduces SunRacer, distinguishes current playtest
 features from planned work, and links to browser gameplay and registration.
 The original illustration at
 `apps/sunracer_web/priv/static/images/landing/sol-approach.svg`
@@ -8,7 +8,7 @@ is concept artwork, **not** a gameplay screenshot.
 
 ## Routes
 
-- `GET /`: public Space Nova landing page.
+- `GET /`: public SunRacer landing page.
 - `GET /login`, `POST /login`: existing verified pilot login.
 - `GET /register`, `POST /register`: new pilot registration.
 - `GET /register/success`: confirmation email instructions.

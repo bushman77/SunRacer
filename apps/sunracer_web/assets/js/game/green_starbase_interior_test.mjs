@@ -205,7 +205,7 @@ test("service counters have no overhead banners or floating attendant labels", (
   ])
   assert.deepEqual([...room.signTexts].sort(), [
     "STATION ACCESS", "CONCOURSE", "SERVICE DIRECTORY",
-    "MISSION OFFICE", "COMMUNICATIONS", "SPACE NOVA", "GREEN STARBASE",
+    "MISSION OFFICE", "COMMUNICATIONS", "SUNRACER", "GREEN STARBASE",
   ].sort(), "only entry, directory and wall-mounted wayfinding should remain")
   assert.equal(room.node.children.some(mesh =>
     mesh.name?.startsWith("station-sign:service:")), false)

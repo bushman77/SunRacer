@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# SunRacer verified native-client SSH SOCKS5 launch helper.
+set -euo pipefail
+exec "$(dirname "${BASH_SOURCE[0]}")/space-nova-tunnel" "$@"

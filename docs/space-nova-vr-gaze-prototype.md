@@ -1,4 +1,4 @@
-# Space Nova: Galaxy S21 SBS head-gaze prototype
+# SunRacer: Galaxy S21 SBS head-gaze prototype
 
 This experimental headset mode keeps Phoenix world/flight authority on the
 laptop and sends **no orientation data or gaze commands over a socket**.
@@ -10,7 +10,7 @@ are local, read-only controls. Keyboard/mouse flight stays unchanged.
 ## Why HTTPS matters
 
 Android browsers can require a secure context for `DeviceOrientationEvent`.
-On plain `http://<LAN-IP>:4000/helmet`, Space Nova displays
+On plain `http://<LAN-IP>:4000/helmet`, SunRacer displays
 "Head tracking needs HTTPS" and continues normal SBS without gaze controls.
 
 An optional development-only TLS listener lets the phone use

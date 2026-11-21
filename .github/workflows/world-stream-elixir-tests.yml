@@ -2,7 +2,7 @@ name: Validate Phoenix world-stream optimizations
 
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
     paths:
       - "apps/sunracer_web/lib/sunracer_web/world_stream_*.ex"
       - "apps/sunracer_web/lib/sunracer_web/channels/world_channel.ex"

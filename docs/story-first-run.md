@@ -1,4 +1,4 @@
-# Space Nova — Story & Tutorial Design: "First Run"
+# SunRacer — Story & Tutorial Design: "First Run"
 
 Design draft, decisions as of 2026-11-21 (Brad). Editable working copy:
 https://claude.ai/artifact/KcvCtJ1QRxaoBAuAiAdRRW — keep this file in sync
@@ -8,7 +8,7 @@ and ROADMAP.md "Story prologue: First Run" for status.
 
 ## Purpose and principles
 
-Space Nova gets an original story set entirely in the Solar System, and its prologue doubles as the tutorial: new pilots learn every core mechanic by playing the opening chapter, not by reading instructions.
+SunRacer gets an original story set entirely in the Solar System, and its prologue doubles as the tutorial: new pilots learn every core mechanic by playing the opening chapter, not by reading instructions.
 
 - **Every step is server-verified.** A step advances only when the server confirms the pilot did it (docked, arrived, won the fight). Nothing advances on a client claim, matching how cargo, combat and docking already work.
 - **One prompt at a time.** A single short instruction in the cockpit HUD, also drawn in the headset's stereo HUD.

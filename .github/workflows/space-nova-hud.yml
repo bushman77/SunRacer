@@ -1,8 +1,8 @@
-name: Validate Space Nova HUD and pilot screens
+name: Validate SunRacer HUD and pilot screens
 
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
     paths:
       - "apps/sunracer_web/assets/css/app.css"
       - "apps/sunracer_web/lib/sunracer_web/controllers/**/*.heex"

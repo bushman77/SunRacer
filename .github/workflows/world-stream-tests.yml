@@ -2,7 +2,7 @@ name: World stream JS regression tests
 
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
     paths:
       - "apps/sunracer_web/assets/js/game/world_stream_delta*"
       - "apps/sunracer_web/assets/js/game/client.js"

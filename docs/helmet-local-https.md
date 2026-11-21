@@ -1,4 +1,4 @@
-# Local Galaxy HMD HTTPS (Space Nova development)
+# Local Galaxy HMD HTTPS (SunRacer development)
 
 The standard `star_base` development server now launches **both** listeners
 whenever you run `mix phx.server`:

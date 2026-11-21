@@ -1,4 +1,4 @@
-# Space Nova — unified GitHub release runbook
+# SunRacer — unified GitHub release runbook
 
 All release changes land on the existing **sbs** branch. No temporary branch
 and no automatic EC2 deployment are required. The release manager runs on
@@ -10,7 +10,7 @@ The single authoritative public release version is the umbrella root
 `mix.exs` project's `version:` field, initially aligned to `0.3.1`
 to preserve the currently installed Tauri client's upgrade ordering.
 
-Use `./scripts/space-nova version X.Y.Z` to change **only** `mix.exs`.
+Use `./scripts/sunracer version X.Y.Z` to change **only** `mix.exs`.
 The release workflow calls `python3 scripts/space-nova-version.py sync`
 in isolated Windows/Linux runner checkouts to derive the mandatory Tauri,
 Cargo, npm package, and npm lockfile build versions. Those files are build
@@ -23,10 +23,10 @@ metadata and signed update manifests still carry a real semantic version.
 
 Artifacts in every versioned GitHub Release:
 
-- `space-nova-server-linux-x64.tar.gz` — Ubuntu 24.04 x86_64 OTP release
-- `space-nova-linux-x64.AppImage` and `.AppImage.sig`
-- `space-nova-linux-x64.deb`
-- `space-nova-windows-x64-setup.exe` and `.exe.sig`
+- `sunracer-server-linux-x64.tar.gz` — Ubuntu 24.04 x86_64 OTP release
+- `sunracer-linux-x64.AppImage` and `.AppImage.sig`
+- `sunracer-linux-x64.deb`
+- `sunracer-windows-x64-setup.exe` and `.exe.sig`
 - `latest.json` — Tauri signed-updater manifest
 - `SHA256SUMS` — checksums for all other release assets
 
@@ -45,17 +45,17 @@ stored as **GitHub Actions repository secrets**:
 Never paste these into a shell command, release description, chat message, or
 repository file. The private signing key does not belong in source control.
 
-The interactive menu is `./scripts/space-nova`. For a new version:
+The interactive menu is `./scripts/sunracer`. For a new version:
 
 ```sh
 cd ~/SunRacer
-./scripts/space-nova version 0.3.2
+./scripts/sunracer version 0.3.2
 git diff -- mix.exs
 git add mix.exs
-git commit -m "Release Space Nova v0.3.2"
+git commit -m "Release SunRacer v0.3.2"
 git push origin sbs
-./scripts/space-nova release 0.3.2
-./scripts/space-nova status
+./scripts/sunracer release 0.3.2
+./scripts/sunracer status
 ```
 
 The release command asks you to type `PUBLISH`. It dispatches
@@ -73,13 +73,13 @@ The publish action never restarts or deploys to EC2.
 
 ## Dedicated server
 
-The local **option 8 / `./scripts/space-nova server`** is diagnostic.
+The local **option 8 / `./scripts/sunracer server`** is diagnostic.
 It builds an isolated copy from `git archive HEAD` under a temporary
 directory, excluding ignored/untracked local development certificates and
 workstation files. It neither deletes nor moves your TLS keys. Build tools
 and dependencies are fetched into the temporary copy, which is removed
 when the command finishes. Its output is
-`dist/releases/space-nova-server-linux-x64.tar.gz`. Sufficient free disk
+`dist/releases/sunracer-server-linux-x64.tar.gz`. Sufficient free disk
 space and a working production Mix/npm toolchain are required. Local
 builds are not guaranteed to be ABI-compatible with Ubuntu 24.04; use
 the GitHub Actions package for EC2 deployment.
@@ -109,12 +109,12 @@ From your Pop!_OS checkout on the existing `sbs` branch, run:
 ```sh
 cd ~/SunRacer
 git pull --ff-only origin sbs
-./scripts/space-nova      # choose 9
-# Or: ./scripts/space-nova deploy
+./scripts/sunracer      # choose 9
+# Or: ./scripts/sunracer deploy
 ```
 
 This option fetches the current `origin/sbs` commit, finds its Ubuntu 24.04
-server build from `space-nova-server-build.yml`, and requests/waits for a
+server build from `sunracer-server-build.yml`, and requests/waits for a
 build if needed. It refuses non-successful or mismatched builds. It downloads
 the GitHub artifact and verifies `SHA256SUMS` before any SSH operations and
 again on EC2. The operator must explicitly type `DEPLOY`.
@@ -125,7 +125,7 @@ The default SSH destination is `ubuntu@54.200.202.235` using
 ```sh
 SPACE_NOVA_DEPLOY_HOST=ubuntu@your-ec2-address \
 SPACE_NOVA_DEPLOY_SSH_KEY=/path/to/your.pem \
-./scripts/space-nova deploy
+./scripts/sunracer deploy
 ```
 
 The remote update uses only a *temporary* folder inside
@@ -189,7 +189,7 @@ to manage its own certificate on EC2.
 Before replacing the running server:
 
 1. Rebuild the **server** archive after pulling the Caddy proxy mode commit:
-   `./scripts/space-nova server`. An archive built before this correction
+   `./scripts/sunracer server`. An archive built before this correction
    does not support `SPACE_NOVA_PROXY_MODE=true`.
 2. Upload and stage the rebuilt archive. Keep the existing running
    service intact until the database backup and new runtime configuration

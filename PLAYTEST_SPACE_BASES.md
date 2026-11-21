@@ -1,4 +1,4 @@
-# Space Nova — Orbital bases and forward refineries V1
+# SunRacer — Orbital bases and forward refineries V1
 
 This is the first **server-authoritative** dock/refinery simulation.
 It is deliberately not yet a player-controlled station docking UI.

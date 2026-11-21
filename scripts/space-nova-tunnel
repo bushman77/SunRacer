@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Launch the INSTALLED production Space Nova client through a verified SSH SOCKS5 tunnel.
+# Launch the INSTALLED production SunRacer client through a verified SSH SOCKS5 tunnel.
 # Never disables TLS validation, modifies system proxy settings, or runs Tauri dev mode.
 set -euo pipefail
 
@@ -24,7 +24,7 @@ verify_tunnel() {
 
 if ! verify_tunnel; then
   [[ -r "$key" ]] || { echo "SSH key not readable: $key" >&2; exit 1; }
-  echo "Opening Space Nova SSH SOCKS5 tunnel..."
+  echo "Opening SunRacer SSH SOCKS5 tunnel..."
   ssh -N -D 127.0.0.1:1080 \
     -o BatchMode=yes \
     -o ExitOnForwardFailure=yes \
@@ -48,12 +48,12 @@ else
   echo "Reusing existing verified SOCKS5 tunnel on 127.0.0.1:1080."
 fi
 
-client="$(command -v space-nova-client || true)"
+client="$(command -v sunracer-client || command -v space-nova-client || true)"
 [[ -n "$client" && -x "$client" ]] || {
-  echo "Installed Space Nova client not found. Install the new production .deb first." >&2
+  echo "Installed SunRacer client not found. Install the new production .deb first." >&2
   exit 1
 }
 
-echo "TLS verified. Launching installed Space Nova with native SOCKS5 proxy..."
+echo "TLS verified. Launching installed SunRacer with native SOCKS5 proxy..."
 echo "The game connects to https://spacenova.ddns.net using the SSH tunnel."
 SPACE_NOVA_USE_SOCKS_TUNNEL=1 "$client"

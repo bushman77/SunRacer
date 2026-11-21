@@ -1,4 +1,4 @@
-# Space Nova — SBS Local Relay and Bandwidth Budget
+# SunRacer — SBS Local Relay and Bandwidth Budget
 
 **Status:** Stage 0 instrumentation implemented; secure LAN relay NOT implemented.
 **Branch:** `star_base`. No new branches, automatic EC2 deployment or `mix format`.

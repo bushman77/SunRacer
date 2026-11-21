@@ -1,8 +1,8 @@
-name: Validate Space Nova pilot registration and verification
+name: Validate SunRacer pilot registration and verification
 
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
     paths:
       - "apps/sunracer/lib/sunracer/accounts/**"
       - "apps/sunracer/lib/sunracer/pilot_location.ex"

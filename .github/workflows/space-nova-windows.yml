@@ -1,8 +1,8 @@
-name: Build Space Nova Windows installer
+name: Build SunRacer Windows installer
 
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
     paths:
       - "clients/tauri/**"
       - "apps/sunracer_web/assets/js/game/**"
@@ -12,7 +12,7 @@ on:
       - "config/config.exs"
       - "apps/sunracer_web/assets/package-lock.json"
       - "apps/sunracer_web/priv/static/images/game/**"
-      - ".github/workflows/space-nova-windows.yml"
+      - ".github/workflows/sunracer-windows.yml"
   workflow_dispatch:
 
 permissions:
@@ -22,7 +22,7 @@ jobs:
   windows-nsis:
     runs-on: windows-latest
     steps:
-      - name: Check out native_client source
+      - name: Check out story_line source
         uses: actions/checkout@v4
 
       - name: Set up Node.js
@@ -50,7 +50,7 @@ jobs:
         working-directory: clients/tauri
         run: npm test
 
-      - name: Generate Windows ICO from existing Space Nova PNG
+      - name: Generate Windows ICO from existing SunRacer PNG
         working-directory: clients/tauri
         run: npm exec -- tauri icon src-tauri/icons/128x128.png
 
@@ -61,6 +61,6 @@ jobs:
       - name: Upload Windows installer
         uses: actions/upload-artifact@v4
         with:
-          name: space-nova-windows-x86_64
+          name: sunracer-windows-x86_64
           if-no-files-found: error
           path: clients/tauri/src-tauri/target/release/bundle/nsis/*.exe

@@ -1,16 +1,16 @@
-name: Build Space Nova EC2 server package
+name: Build SunRacer EC2 server package
 
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
   workflow_dispatch:
 
 permissions:
   contents: read
 
-# Only the newest native_client revision needs an EC2 package.
+# Only the newest story_line revision needs an EC2 package.
 concurrency:
-  group: space-nova-ec2-server-${{ github.ref }}
+  group: sunracer-ec2-server-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -63,7 +63,7 @@ jobs:
           export SECRET_KEY_BASE="$(openssl rand -hex 48)"
           bin=_build/prod/rel/space_mmo/bin/space_mmo
           "$bin" eval 'Sunracer.Release.migrate()'
-          "$bin" start > "$RUNNER_TEMP/space-nova-server.log" 2>&1 &
+          "$bin" start > "$RUNNER_TEMP/sunracer-server.log" 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           ready=0
@@ -79,24 +79,24 @@ jobs:
             sleep 1
           done
           if [[ "$ready" != 1 ]]; then
-            cat "$RUNNER_TEMP/space-nova-server.log" >&2
+            cat "$RUNNER_TEMP/sunracer-server.log" >&2
             exit 1
           fi
           ss -lnt | grep -Eq '127\.0\.0\.1:4000\b'
       - name: Package and checksum Ubuntu x86_64 release
         run: |
           mkdir -p dist
-          tar -C _build/prod/rel -czf dist/space-nova-server-linux-x64.tar.gz space_mmo
-          tar -tzf dist/space-nova-server-linux-x64.tar.gz | grep -F 'space_mmo/bin/space_mmo' >/dev/null
-          tar -tzf dist/space-nova-server-linux-x64.tar.gz | grep -F 'cache_manifest.json' >/dev/null
-          (cd dist && sha256sum space-nova-server-linux-x64.tar.gz > SHA256SUMS)
+          tar -C _build/prod/rel -czf dist/sunracer-server-linux-x64.tar.gz space_mmo
+          tar -tzf dist/sunracer-server-linux-x64.tar.gz | grep -F 'space_mmo/bin/space_mmo' >/dev/null
+          tar -tzf dist/sunracer-server-linux-x64.tar.gz | grep -F 'cache_manifest.json' >/dev/null
+          (cd dist && sha256sum sunracer-server-linux-x64.tar.gz > SHA256SUMS)
           (cd dist && sha256sum -c SHA256SUMS)
           printf 'Source commit: %s\n' "$GITHUB_SHA"
       - uses: actions/upload-artifact@v4
         with:
-          name: space-nova-ec2-server
+          name: sunracer-ec2-server
           retention-days: 7
           if-no-files-found: error
           path: |
-            dist/space-nova-server-linux-x64.tar.gz
+            dist/sunracer-server-linux-x64.tar.gz
             dist/SHA256SUMS

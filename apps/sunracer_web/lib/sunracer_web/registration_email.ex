@@ -1,5 +1,5 @@
 defmodule SunracerWeb.RegistrationEmail do
-  @moduledoc "Email confirmation for newly created Space Nova pilot accounts."
+  @moduledoc "Email confirmation for newly created SunRacer pilot accounts."
 
   import Swoosh.Email
 
@@ -9,10 +9,10 @@ defmodule SunracerWeb.RegistrationEmail do
 
     new()
     |> to(account.email)
-    |> from({"Space Nova", from_address})
-    |> subject("Confirm your Space Nova pilot account")
+    |> from({"SunRacer", from_address})
+    |> subject("Confirm your SunRacer pilot account")
     |> text_body("""
-    Welcome to Space Nova, #{account.pilot_name}!
+    Welcome to SunRacer, #{account.pilot_name}!
 
     Confirm your email address to activate your pilot account:
 

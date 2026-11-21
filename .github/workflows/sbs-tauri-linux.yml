@@ -1,8 +1,8 @@
-name: Build Space Nova Linux client
+name: Build SunRacer Linux client
 
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
     paths:
       - "clients/tauri/**"
       - "apps/sunracer_web/assets/js/game/**"
@@ -22,7 +22,7 @@ jobs:
   linux:
     runs-on: ubuntu-24.04
     steps:
-      - name: Check out native_client source
+      - name: Check out story_line source
         uses: actions/checkout@v4
 
       - name: Install WebKitGTK build prerequisites
@@ -63,7 +63,7 @@ jobs:
       - name: Upload Linux installers
         uses: actions/upload-artifact@v4
         with:
-          name: space-nova-linux-x86_64
+          name: sunracer-linux-x86_64
           if-no-files-found: error
           path: |
             clients/tauri/src-tauri/target/release/bundle/deb/*.deb

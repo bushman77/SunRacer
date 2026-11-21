@@ -1200,7 +1200,7 @@ See `docs/space-nova-release.md` for the distribution procedure.
 ### Release diagnostic packaging safeguard (2026-11-06)
 
 - [x] Build local server diagnostics from temporary committed source rather than accidentally bundling workstation TLS keys.
-- [ ] Run `./scripts/space-nova server` on Pop!_OS and verify a complete archive; isolated build may require additional disk space.
+- [ ] Run `./scripts/sunracer server` on Pop!_OS and verify a complete archive; isolated build may require additional disk space.
 
 ### Production Caddy compatibility (2026-11-06)
 

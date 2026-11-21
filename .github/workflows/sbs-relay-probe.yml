@@ -2,7 +2,7 @@ name: Verify SBS LAN TLS pairing proof
 
 on:
   push:
-    branches: [star_base]
+    branches: [star_base, story_line]
     paths:
       - "clients/tauri/src-tauri/src/sbs_relay_probe.rs"
       - "clients/tauri/src-tauri/src/network.rs"

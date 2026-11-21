@@ -2,7 +2,7 @@ name: Verify SBS optics do not drift
 
 on:
   push:
-    branches: [native_client]
+    branches: [native_client, story_line]
     paths:
       - "apps/sunracer_web/assets/js/game/stereo_view.js"
       - "apps/sunracer_web/assets/js/game/stereo_viewport.mjs"

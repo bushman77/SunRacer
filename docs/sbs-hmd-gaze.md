@@ -1,4 +1,4 @@
-# Space Nova — HMD gaze HUD interaction
+# SunRacer — HMD gaze HUD interaction
 
 **Branch:** `star_base` · **Scope:** phone headset display only · **No server/gameplay authority changes**
 

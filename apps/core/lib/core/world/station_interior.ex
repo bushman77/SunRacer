@@ -1,6 +1,6 @@
 defmodule Core.World.StationInterior do
   @moduledoc """
-  Server-authoritative room topology for Space Nova's first starbase.
+  Server-authoritative room topology for SunRacer's first starbase.
 
   Positions are shared Three.js X/Z coordinates. A pilot must enter through
   physically connected door openings; the client submits only movement axes.
