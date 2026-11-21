@@ -428,3 +428,30 @@ already used. For unusual networking, set
 The next milestones (not implemented here) are authenticated asset
 delivery and the whitelist-only world-state delta relay. No EC2 changes
 are made by this test.
+
+
+## Stage 1b — One QR, built into PILOT HMD
+
+The **SBS relay test** launcher button, separate invitation input, and phone
+clipboard/paste controls were removed. Run the Tauri client with
+`bash clients/tauri/scripts/dev-sbs-relay.sh` and sign into the native game.
+From **Atlas → PILOT HMD**, opening the unpaired headset panel now starts the
+opt-in TLS listener and prepares a ten-minute challenge automatically.
+The **same existing headset QR** embeds this challenge only in the browser
+URL **fragment**, never a Phoenix query string. The phone redeems its normal
+Phoenix QR pairing first, then attempts a trusted HTTPS connection to Tauri
+and posts the one-time proof directly to the native LAN listener.
+
+The desktop's PILOT HMD panel shows **LOCAL LINK / AWAITING PHONE**, then
+**LOCAL LINK / VERIFIED**, with one compact **CHECK LINK** status button once
+Phoenix reports the headset connected. No phone IP discovery, copied URL,
+second QR, or separate launcher modal is involved. No game state or assets
+travel over the relay yet; Phoenix remains the SBS source during this stage.
+
+Only the **native compiled client** is authorized to start the listener.
+A browser-served game continues using its existing Phoenix-only pairing flow.
+If `SPACE_NOVA_SBS_BIND/CERT/KEY` are missing, or the chosen headset QR
+origin differs from the trusted HTTPS `LAN-IP:4443` endpoint, the normal
+Phoenix QR still works but the LAN proof cannot be verified. Do not bypass
+Android certificate warnings. Existing already-paired phones need a fresh
+headset QR challenge to test this initial proof implementation.

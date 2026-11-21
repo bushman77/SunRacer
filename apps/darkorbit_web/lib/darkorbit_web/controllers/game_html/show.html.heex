@@ -413,6 +413,13 @@
           <button id="nav-helmet-close" type="button" class="nav-button">Close panel</button>
         </div>
         <p id="helmet-device-status" class="my-3 text-sm text-slate-300">No helmet paired</p>
+        <%!-- The native client stages this template: one compact LAN status
+             beside normal HMD pairing, not a separate launcher dialog. --%>
+        <div id="helmet-relay-mini" hidden
+             class="mb-3 flex flex-wrap items-center gap-3 rounded-md border border-cyan-400/30 bg-slate-900/80 p-2 text-xs text-cyan-100">
+          <span id="helmet-relay-status" role="status" aria-live="polite">LOCAL LINK / PREPARING</span>
+          <button id="helmet-relay-check" hidden type="button" class="nav-button hud-mini-button">CHECK LINK</button>
+        </div>
         <div id="helmet-unpaired">
           <div class="flex flex-wrap items-start gap-4">
             <canvas id="helmet-qr" width="220" height="220" class="rounded-lg bg-white"></canvas>

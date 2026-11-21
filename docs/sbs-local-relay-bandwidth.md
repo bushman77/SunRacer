@@ -170,3 +170,29 @@ request, plus an independent native `main` window-label check. Remote
 websites have no native permission; **no remote capability** was introduced.
 Restart the rebuilt Tauri application for this native Rust fix to take effect.
 The ordinary `/helmet` page on port 4443 still cannot generate invitations.
+
+
+## Stage 1b — Integrate link proof into the existing headset QR
+
+**Implemented in the native game HMD panel.** The old Tauri launcher relay
+modal and its manual copied URL were removed. Opening **PILOT HMD** in the
+compiled Tauri client now starts the restricted TLS listener while requesting
+the existing Phoenix pairing code. One QR contains both, with the Tauri
+one-time challenge only in a URL fragment. The S21 pairs with Phoenix and
+then automatically opens an isolated HTTPS iframe to the local Tauri listener
+and consumes the challenge, reporting the boolean result. Tauri requires no
+prior phone address and learns the peer address from the inbound socket.
+
+The small HMD status shows `LOCAL LINK / AWAITING PHONE` and later
+`LOCAL LINK / VERIFIED`. Once Phoenix reports an authenticated headset
+connection, **CHECK LINK** re-reads the native verification state. This
+button checks the completed one-time proof; it does not send a new latency
+probe or transfer world state. Existing game-state authority and SBS rendering
+are unchanged.
+
+Use `bash clients/tauri/scripts/dev-sbs-relay.sh`, sign into the Tauri
+client, open Atlas → PILOT HMD, and scan its QR. The existing phone page must
+be reachable at trusted `https://<same-laptop-IP>:4443/helmet`; the local
+listener binds to that IP on port 4455. A mismatched or untrusted address
+leaves Phoenix pairing intact but skips the LAN test. **No global automatic
+listener** is opened at app launch; the pilot must open the HMD panel first.

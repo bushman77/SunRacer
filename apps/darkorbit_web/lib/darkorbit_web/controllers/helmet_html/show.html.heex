@@ -90,27 +90,10 @@
         ENTER VR
       </button>
 
-      <button id="helmet-relay-test" type="button"
-              class="w-full rounded-lg border border-emerald-400/80 bg-emerald-950 px-5 py-3 text-sm font-bold tracking-wide text-emerald-100">
-        TEST LOCAL RELAY
-      </button>
+      <%!-- QR carries the fragment-only local relay invitation.
+           No additional manual link copying or button is needed on phone. --%>
       <p id="helmet-relay-result" hidden role="status" aria-live="polite"
-         class="rounded-lg border border-cyan-700/70 p-3 font-mono text-sm font-bold tracking-wide text-cyan-100"></p>
-
-      <%!-- Only shown if Android cannot read the copied one-time Tauri URL. --%>
-      <div id="helmet-relay-entry" hidden class="space-y-2 text-left">
-        <label for="helmet-relay-url" class="block text-xs text-slate-300">
-          Paste one-time link from the Tauri launcher
-        </label>
-        <input id="helmet-relay-url" type="url" inputmode="url" autocomplete="off"
-               autocapitalize="off" spellcheck="false"
-               placeholder="https://LAN-IP:4455/relay-check#..."
-               class="w-full rounded-md border border-cyan-700/70 bg-slate-900 px-3 py-2 text-xs text-cyan-100" />
-        <button id="helmet-relay-submit" type="button"
-                class="w-full rounded-md border border-cyan-700/70 px-3 py-2 text-xs font-bold text-cyan-100">
-          RUN TEST
-        </button>
-      </div>
+         class="rounded-md border border-cyan-700/60 px-2 py-1 text-xs text-cyan-200"></p>
 
       <p id="helmet-tracking-status" hidden role="status"
          class="text-xs text-amber-200"></p>

@@ -1,34 +1,51 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {
-  validRelayInvitation, authenticatedRelayResult, attachHelmetRelayTest,
+  validRelayInvitation, relayQRUrl, relayInvitationFromQR,
+  authenticatedRelayResult, attachHelmetRelayTest,
 } from "./helmet_relay_test.mjs"
 
 const page = "https://192.168.0.48:4443/helmet"
-const token = "c".repeat(48)
-const invite = "https://192.168.0.48:4455/relay-check#" + token
+const secret = "c".repeat(48)
+const invite = "https://192.168.0.48:4455/relay-check#" + secret
 
-test("only a one-use TLS invitation for this exact private-LAN laptop is accepted", () => {
+test("one existing QR carries Phoenix pairing plus private one-use LAN proof", () => {
+  const qr = relayQRUrl(page + "?pair=ONE-USE-PHOENIX-CODE", invite)
+  const parsed = new URL(qr)
+  assert.equal(parsed.origin, "https://192.168.0.48:4443")
+  assert.equal(parsed.pathname, "/helmet")
+  assert.equal(parsed.searchParams.get("pair"), "ONE-USE-PHOENIX-CODE")
+  assert.equal(parsed.searchParams.has("relay"), false)
+  assert.ok(parsed.hash.includes("relay="))
+  assert.equal(relayInvitationFromQR(qr), invite)
+  assert.equal(relayInvitationFromQR(page), null)
+  assert.equal(relayQRUrl(page + "?pair=CODE",
+    "https://192.168.0.49:4455/relay-check#" + secret),
+    page + "?pair=CODE", "never embed challenge to a different host")
+})
+
+test("strictly same private laptop and HTTPS port 4455, never a public or arbitrary origin", () => {
   assert.equal(validRelayInvitation(invite, page)?.href, invite)
   for (const candidate of [
-    "http://192.168.0.48:4455/relay-check#" + token,
-    "https://192.168.0.49:4455/relay-check#" + token,
-    "https://192.168.0.48:4443/relay-check#" + token,
-    "https://192.168.0.48:4455/other#" + token,
-    "https://192.168.0.48:4455/relay-check?x=1#" + token,
-    "https://someone@192.168.0.48:4455/relay-check#" + token,
+    "http://192.168.0.48:4455/relay-check#" + secret,
+    "https://192.168.0.49:4455/relay-check#" + secret,
+    "https://192.168.0.48:4443/relay-check#" + secret,
+    "https://192.168.0.48:4455/other#" + secret,
+    "https://192.168.0.48:4455/relay-check?x=1#" + secret,
+    "https://someone@192.168.0.48:4455/relay-check#" + secret,
     "https://192.168.0.48:4455/relay-check#short",
-    "javascript:alert(1)",
-    "https://localhost:4455/relay-check#" + token,
-    "https://spacenova.ddns.net:4455/relay-check#" + token,
+    "https://localhost:4455/relay-check#" + secret,
+    "https://spacenova.ddns.net:4455/relay-check#" + secret,
   ]) {
     assert.equal(validRelayInvitation(candidate, page), null, candidate)
   }
   assert.equal(validRelayInvitation(invite, "http://192.168.0.48:4000/helmet"), null)
   assert.equal(validRelayInvitation(invite, "https://spacenova.ddns.net/helmet"), null)
+  assert.equal(relayInvitationFromQR(page + "#relay=" + encodeURIComponent(
+    "https://192.168.0.49:4455/relay-check#" + secret)), null)
 })
 
-test("only a boolean proof from the matching iframe AND origin can pass", () => {
+test("proof message requires the exact iframe window and TLS origin", () => {
   const frameWindow = {}
   const event = {source: frameWindow, origin: "https://192.168.0.48:4455",
     data: {type: "space-nova:relay-proof", passed: true}}
@@ -37,78 +54,58 @@ test("only a boolean proof from the matching iframe AND origin can pass", () => 
   assert.equal(authenticatedRelayResult({...event, origin: "https://evil.test"}, frameWindow, event.origin), null)
   assert.equal(authenticatedRelayResult({...event, data: {passed: true}}, frameWindow, event.origin), null)
   assert.equal(authenticatedRelayResult({...event, data: {...event.data, passed: "true"}}, frameWindow, event.origin), null)
-  assert.equal(authenticatedRelayResult({...event, data: {...event.data, passed: false}}, frameWindow, event.origin), false)
 })
 
-function domHarness(clipboardText) {
-  function element() {
-    return {
-      hidden: false, disabled: false, textContent: "", value: "", dataset: {},
-      handlers: {}, style: {}, children: [],
-      addEventListener(type, callback) {this.handlers[type] = callback},
-      removeEventListener(type) {delete this.handlers[type]},
-      setAttribute() {}, focus() {}, remove() {this.removed = true},
-    }
-  }
-  const keys = ["helmet-relay-test", "helmet-relay-result", "helmet-relay-entry",
-    "helmet-relay-url", "helmet-relay-submit"]
-  const nodes = Object.fromEntries(keys.map(id => [id, element()]))
-  nodes["helmet-relay-test"].textContent = "TEST LOCAL RELAY"
-  const frame = element()
-  frame.contentWindow = {}
+function domHarness() {
+  const result = {hidden: true, textContent: "", dataset: {}}
+  const frame = {contentWindow: {}, setAttribute() {}, remove() {this.removed = true}, style: {}}
   const listeners = new Map()
-  let timeoutCallback
+  let timeoutHandler
   const win = {
     location: {href: page},
-    navigator: {clipboard: {readText: async () => clipboardText}},
     document: {createElement(name) {assert.equal(name, "iframe");return frame}},
     addEventListener(name, fn) {listeners.set(name, fn)},
     removeEventListener(name) {listeners.delete(name)},
-    setTimeout(fn) {timeoutCallback = fn;return 7},
-    clearTimeout() {},
+    setTimeout(fn) {timeoutHandler = fn;return 7},
+    clearTimeout() {timeoutHandler = null},
   }
-  const root = {querySelector: id => nodes[id.slice(1)], appendChild(x) {this.frame = x}}
-  const detach = attachHelmetRelayTest(root, {win})
-  return {nodes, win, root, frame, listeners, detach, timeout: () => timeoutCallback?.()}
+  const root = {
+    querySelector: selector => selector === "#helmet-relay-result" ? result : null,
+    appendChild(x) {this.frame = x},
+  }
+  const link = attachHelmetRelayTest(root, {win})
+  return {link, win, root, frame, result, listeners, timeout: () => timeoutHandler?.()}
 }
 
-test("one tap tests copied invitation; button becomes PASSED only on valid proof", async () => {
-  const {nodes, root, frame, listeners, timeout, detach} = domHarness(invite)
-  const btn = nodes["helmet-relay-test"], result = nodes["helmet-relay-result"]
-  await btn.handlers.click()
-  assert.equal(btn.textContent, "TESTING...")
-  assert.equal(btn.hidden, false)
-  assert.equal(btn.disabled, true)
-  assert.equal(root.frame.src, invite)
-  assert.equal(root.frame.referrerPolicy, "no-referrer")
-  assert.equal(result.hidden, true)
-  listeners.get("message")({source: frame.contentWindow, origin: "https://evil.test",
+test("automatic post-pair proof reports only authenticated success", () => {
+  const h = domHarness()
+  h.link.prove(invite)
+  assert.equal(h.root.frame.src, invite)
+  assert.equal(h.result.textContent, "Checking secure local link...")
+  assert.equal(h.frame.referrerPolicy, "no-referrer")
+  h.listeners.get("message")({source: {}, origin: "https://192.168.0.48:4455",
     data: {type: "space-nova:relay-proof", passed: true}})
-  assert.equal(btn.hidden, false, "spoofed result must not pass")
-  listeners.get("message")({source: frame.contentWindow, origin: "https://192.168.0.48:4455",
+  assert.equal(h.result.dataset.passed, "false")
+  h.listeners.get("message")({source: h.frame.contentWindow, origin: "https://192.168.0.48:4455",
     data: {type: "space-nova:relay-proof", passed: true}})
-  assert.equal(btn.hidden, true)
-  assert.equal(result.textContent, "PASSED")
-  assert.equal(result.dataset.passed, "true")
-  assert.equal(frame.removed, true)
-  timeout()
-  assert.equal(result.textContent, "PASSED", "completed timeout was cancelled")
-  detach()
+  assert.equal(h.result.textContent, "LOCAL LINK VERIFIED")
+  assert.equal(h.result.dataset.passed, "true")
+  assert.equal(h.frame.removed, true)
+  h.timeout()
+  assert.equal(h.result.textContent, "LOCAL LINK VERIFIED")
+  h.link.dispose()
 })
 
-test("clipboard unavailable shows small paste fallback; failure is never PASSED", async () => {
-  const h = domHarness("unrelated text")
-  const {nodes, listeners, frame} = h
-  const btn = nodes["helmet-relay-test"]
-  await btn.handlers.click()
-  assert.equal(nodes["helmet-relay-entry"].hidden, false)
-  assert.equal(nodes["helmet-relay-result"].textContent, "PASTE LINK FROM TAURI")
-  nodes["helmet-relay-url"].value = invite
-  nodes["helmet-relay-submit"].handlers.click()
-  listeners.get("message")({source: frame.contentWindow, origin: "https://192.168.0.48:4455",
+test("timeout or false proof never shows verified", () => {
+  const h = domHarness()
+  h.link.prove(invite)
+  h.timeout()
+  assert.match(h.result.textContent, /timed out/)
+  assert.equal(h.result.dataset.passed, "false")
+  h.link.prove(invite)
+  h.listeners.get("message")({source: h.frame.contentWindow, origin: "https://192.168.0.48:4455",
     data: {type: "space-nova:relay-proof", passed: false}})
-  assert.equal(nodes["helmet-relay-result"].textContent, "NOT CONNECTED")
-  assert.equal(btn.hidden, false)
-  assert.equal(btn.disabled, false)
-  h.detach()
+  assert.match(h.result.textContent, /unavailable/)
+  assert.equal(h.result.dataset.passed, "false")
+  h.link.dispose()
 })

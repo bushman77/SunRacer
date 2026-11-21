@@ -15,7 +15,7 @@ import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
 import {HelmetScreenWake} from "./helmet_screen_wake.mjs"
 import {HelmetHeadTracking} from "./helmet_head_tracking.mjs"
-import {attachHelmetRelayTest} from "./helmet_relay_test.mjs"
+import {attachHelmetRelayTest, relayInvitationFromQR} from "./helmet_relay_test.mjs"
 import {HelmetGazeDwell} from "./helmet_gaze_dwell.mjs"
 import {
   HELMET_BANDWIDTH_HUD, renderHelmetBandwidth,
@@ -84,8 +84,14 @@ export class HelmetClient {
   }
 
   async start() {
+    // Capture the QR fragment before any pairing code clears the URL.
+    // It cannot be sent to Phoenix: fragments are browser-local.
+    const relayInvitation = relayInvitationFromQR(window.location.href)
+    if (window.location.hash) {
+      window.history.replaceState({}, "", window.location.pathname + window.location.search)
+    }
     this.setupImmersiveControls()
-    attachHelmetRelayTest(this.root)
+    this.localLink = attachHelmetRelayTest(this.root)
     attachBandwidthPanel(this.root, this.bandwidth)
 
     if (this.credential) {
@@ -107,6 +113,10 @@ export class HelmetClient {
       this.message("No saved helmet registration. Open Atlas → PILOT HMD and scan a new QR code.")
       return
     }
+
+    // The phone automatically reaches Tauri on the local LAN only after
+    // the existing Phoenix QR credential has been authenticated.
+    if (relayInvitation) this.localLink.prove(relayInvitation)
 
     this.socket = instrumentPhoenixSocket(new Socket("/socket", {
       params: () => helmetSocketParams({credential: this.credential}),

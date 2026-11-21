@@ -5,7 +5,11 @@ import {readFileSync} from "node:fs"
 const read = path => readFileSync(new URL(path, import.meta.url), "utf8")
 const native = read("../src-tauri/src/sbs_relay_probe.rs")
 const launcher = read("../ui/index.html")
-const ui = read("../ui/sbs_relay_probe.mjs")
+const control = read("../../../apps/darkorbit_web/assets/js/game/helmet_control.mjs")
+const gameMarkup = read("../../../apps/darkorbit_web/lib/darkorbit_web/controllers/game_html/show.html.heex")
+const phoneMarkup = read("../../../apps/darkorbit_web/lib/darkorbit_web/controllers/helmet_html/show.html.heex")
+const phoneJS = read("../../../apps/darkorbit_web/assets/js/game/helmet_client.mjs")
+const relayJS = read("../../../apps/darkorbit_web/assets/js/game/helmet_relay_test.mjs")
 const cargo = read("../src-tauri/Cargo.toml")
 const main = read("../src-tauri/src/main.rs")
 const network = read("../src-tauri/src/network.rs")
@@ -63,19 +67,28 @@ test("native IPC capabilities are strictly local and explicit", () => {
   assert.match(network, /if label == "main"/)
 })
 
-test("the installed launcher exposes start, stop, proof URL and completion state", () => {
-  for (const id of [
-    "sbs-relay-panel", "sbs-relay-open", "sbs-relay-start", "sbs-relay-stop",
-    "sbs-relay-url", "sbs-relay-copy", "sbs-relay-close", "sbs-relay-status",
-  ]) {
-    assert.equal(launcher.split('id="' + id + '"').length - 1, 1, id)
+test("relay controls live only in the native PILOT HMD panel", () => {
+  assert.doesNotMatch(launcher, /sbs-relay-open|sbs-relay-panel|sbs_relay_probe.mjs/)
+  for (const id of ["helmet-relay-mini", "helmet-relay-status", "helmet-relay-check"]) {
+    assert.equal(gameMarkup.split('id="' + id + '"').length - 1, 1, id)
   }
-  assert.match(launcher, /sbs_relay_probe\.mjs/)
-  assert.match(ui, /start_sbs_relay_probe/)
-  assert.match(ui, /stop_sbs_relay_probe/)
-  assert.match(ui, /sbs_relay_probe_status/)
-  assert.match(ui, /Phone verified over local HTTPS/)
-  assert.doesNotMatch(ui, /fetch\(|WebSocket|\/socket|console\.log/)
+  assert.match(control, /start_sbs_relay_probe/)
+  assert.match(control, /sbs_relay_probe_status/)
+  assert.match(control, /stop_sbs_relay_probe/)
+  assert.match(control, /this\.status\.connected/)
+  assert.match(control, /relayQRUrl\(url\.toString\(\), this\.relayUrl\)/)
+  assert.doesNotMatch(control, /navigator\.clipboard|navigator\.share/)
+})
+
+test("QR initiates phone handshake after Phoenix authentication, with no copied links", () => {
+  assert.match(phoneJS, /relayInvitationFromQR\(window\.location\.href\)/)
+  assert.match(phoneJS, /this\.localLink\.prove\(relayInvitation\)/)
+  assert.match(phoneJS, /if \(!this\.credential\)/)
+  assert.match(relayJS, /new URLSearchParams\(\{relay: valid\.href\}\)/)
+  assert.match(relayJS, /frame\.src = link\.href/)
+  assert.match(relayJS, /authenticatedRelayResult/)
+  assert.doesNotMatch(phoneMarkup, /helmet-relay-url|helmet-relay-submit|PASTE LINK/)
+  assert.doesNotMatch(relayJS, /clipboard|navigator\.share/)
 })
 
 test("Rust dependency versions are pinned to existing lockfile-compatible versions", () => {

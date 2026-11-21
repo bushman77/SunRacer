@@ -26,7 +26,7 @@ export SPACE_NOVA_SBS_BIND="${SPACE_NOVA_SBS_BIND:-$host:4455}"
 export SPACE_NOVA_SBS_CERT="$cert"
 export SPACE_NOVA_SBS_KEY="$key"
 echo "Space Nova: opt-in HTTPS relay proof configured at ${SPACE_NOVA_SBS_BIND}"
-echo "Open the Tauri launcher -> SBS relay test -> Start secure LAN test."
+echo "In the native game: open PILOT HMD, then scan its single QR with the S21."
 echo "No world-state relay or asset server is enabled by this stage."
 cd "$repo/clients/tauri"
 exec npm run dev

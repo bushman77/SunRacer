@@ -1,5 +1,6 @@
 import QRCode from "qrcode"
 import {chooseHelmetOrigin, helmetPairingOrigin} from "./helmet_network.mjs"
+import {relayQRUrl} from "./helmet_relay_test.mjs"
 
 // The Atlas owns enrollment; the cockpit owns the headset's operating mode.
 export class HelmetControl {
@@ -13,6 +14,72 @@ export class HelmetControl {
     this.code = null
     this.open = false
     this.hostEdited = false
+    this.relayUrl = null
+    this.relayStatus = "LOCAL LINK / NOT TESTED"
+    this.relayPoll = null
+    this.relayVerified = false
+  }
+
+  nativeRelayInvoke() {
+    // Tauri's local-only IPC capability authorizes the calling game.html
+    // origin. Phoenix-served pages never acquire this capability.
+    return this.root.dataset.nativeClient === "true"
+      ? window.__TAURI__?.core?.invoke : null
+  }
+
+  renderRelayStatus() {
+    const panel = this.root.querySelector("#helmet-relay-mini")
+    const label = this.root.querySelector("#helmet-relay-status")
+    const check = this.root.querySelector("#helmet-relay-check")
+    const available = Boolean(this.nativeRelayInvoke())
+    if (panel) panel.hidden = !available
+    if (label) label.textContent = this.relayStatus
+    if (check) check.hidden = !available || !this.status.connected
+  }
+
+  async checkRelay() {
+    const invoke = this.nativeRelayInvoke()
+    if (!invoke || !this.open) return
+    try {
+      const state = await invoke("sbs_relay_probe_status")
+      if (state.verified) {
+        this.relayVerified = true
+        this.relayStatus = "LOCAL LINK / VERIFIED"
+      } else if (state.running) {
+        this.relayStatus = "LOCAL LINK / AWAITING PHONE"
+      } else if (this.relayUrl) {
+        this.relayStatus = "LOCAL LINK / NOT CONNECTED"
+      }
+    } catch (error) {
+      this.relayStatus = "LOCAL LINK / " + String(error).slice(0, 90)
+    }
+    this.renderRelayStatus()
+  }
+
+  async prepareRelayQR(code) {
+    const invoke = this.nativeRelayInvoke()
+    this.relayUrl = null
+    this.relayVerified = false
+    if (!invoke) return this.drawQR() // Browser-only game retains Phoenix QR.
+    this.relayStatus = "LOCAL LINK / PREPARING"
+    this.renderRelayStatus()
+    try {
+      // Replace a previous single-use challenge, never keep multiple
+      // active pairing tokens. This is only called after opening PILOT HMD.
+      await invoke("stop_sbs_relay_probe")
+      const invitation = await invoke("start_sbs_relay_probe")
+      if (!this.open || this.code !== code) {
+        await invoke("stop_sbs_relay_probe")
+        return
+      }
+      this.relayUrl = invitation.url
+      this.relayStatus = "LOCAL LINK / AWAITING PHONE"
+    } catch (error) {
+      // Never break the existing authenticated Phoenix QR enrollment.
+      this.relayStatus = "LOCAL LINK / UNAVAILABLE (" + String(error).slice(0, 85) + ")"
+    }
+    this.renderRelayStatus()
+    if (this.open && this.code === code) await this.drawQR()
   }
 
   start() {
@@ -20,6 +87,7 @@ export class HelmetControl {
     this.root.querySelector("#nav-helmet-open")?.addEventListener("click", () => this.openPanel())
     this.root.querySelector("#nav-helmet-close")?.addEventListener("click", () => this.closePanel())
     this.root.querySelector("#helmet-forget")?.addEventListener("click", () => this.forget())
+    this.root.querySelector("#helmet-relay-check")?.addEventListener("click", () => this.checkRelay())
     // Center the phone while it is already mounted in the VR headset.
     // Keep this separate from the calibration arrows and flight controls.
     window.addEventListener("keydown", event => {
@@ -121,6 +189,13 @@ export class HelmetControl {
     this.open = true
     this.panel.hidden = false
     this.updateStatus(this.status)
+    this.renderRelayStatus()
+    if (this.nativeRelayInvoke()) {
+      this.relayPoll = setInterval(() => {
+        if (this.status.connected || this.relayUrl) void this.checkRelay()
+      }, 2000)
+      void this.checkRelay()
+    }
     if (!this.status.paired) this.requestPairing()
   }
 
@@ -128,6 +203,8 @@ export class HelmetControl {
     if (!this.open) return
     this.open = false
     this.panel.hidden = true
+    if (this.relayPoll !== null) clearInterval(this.relayPoll)
+    this.relayPoll = null
     this.code = null
     this.clearQR()
     if (this.channel?.state === "joined") this.channel.push("cancel_pairing", {})
@@ -146,7 +223,7 @@ export class HelmetControl {
           return
         }
         this.code = code
-        this.drawQR()
+        void this.prepareRelayQR(code)
       })
       .receive("error", ({reason}) => this.message(reason || "Could not open pairing."))
   }
@@ -162,8 +239,15 @@ export class HelmetControl {
     try {
       const url = new URL("/helmet", host)
       url.searchParams.set("pair", this.code)
-      await QRCode.toCanvas(canvas, url.toString(), {width: 220, margin: 2, errorCorrectionLevel: "M"})
-      this.message("Scan with your phone. Pairing stays open until this panel closes.")
+      const qr = relayQRUrl(url.toString(), this.relayUrl)
+      if (this.relayUrl && qr === url.toString()) {
+        this.relayStatus = "LOCAL LINK / HTTPS 4443 LAN ADDRESS REQUIRED"
+        this.renderRelayStatus()
+      }
+      await QRCode.toCanvas(canvas, qr, {width: 250, margin: 2, errorCorrectionLevel: "M"})
+      this.message(qr !== url.toString()
+        ? "Scan once. Phone pairing and the secure local-link test happen automatically."
+        : "Scan to pair through Phoenix. Secure relay is not configured for this address.")
     } catch (_error) {
       this.message("Unable to draw QR code. Check the laptop address.")
     }
@@ -196,6 +280,8 @@ export class HelmetControl {
       this.code = null
       this.clearQR()
     }
+    this.renderRelayStatus()
+    if (this.open && status.connected) void this.checkRelay()
   }
 
   forget() {

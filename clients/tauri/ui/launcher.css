@@ -164,12 +164,3 @@ footer {
 .networking-note[data-error="true"] {color:#ffb3ad}
 #networking-override {color:#ffdf9d}
 
-/* Native-only secure LAN headset probe (not yet a game relay). */
-#sbs-relay-panel {z-index: 120;}
-#sbs-relay-panel input[readonly] {
-  width: 100%; box-sizing: border-box; margin: .55rem 0;
-  padding: .75rem; border: 1px solid #477d87; border-radius: .4rem;
-  color: #d4ffed; background: #041522; font: .78rem ui-monospace, monospace;
-}
-#sbs-relay-panel .actions {display:flex;flex-wrap:wrap;gap:.7rem;margin:.8rem 0;}
-#sbs-relay-status {overflow-wrap:anywhere;}
