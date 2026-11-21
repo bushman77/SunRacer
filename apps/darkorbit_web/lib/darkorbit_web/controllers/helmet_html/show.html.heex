@@ -76,65 +76,49 @@
        class="pointer-events-none absolute inset-x-0 top-1/2 z-20 mx-auto max-w-md -translate-y-1/2 px-6 text-center text-sm text-cyan-100"
        role="status"></div>
 
-  <%!-- Browsers require a real tap to enter fullscreen. One tap is sufficient,
-       and after it the phone stays black until the laptop enters combat view. --%>
+  <%!-- Minimal setup screen: the one Enter VR gesture starts head tracking
+       and requests fullscreen. The relay button validates a ONE-TIME Tauri
+       invitation, not the ordinary Phoenix connection. --%>
   <div id="helmet-setup"
        class="absolute inset-0 z-30 flex items-center justify-center bg-black/95 px-5 py-6">
     <div class="w-full max-w-sm space-y-4 rounded-xl border border-cyan-700/60 bg-slate-950 px-5 py-6 text-center">
       <h1 class="text-lg font-bold tracking-widest text-cyan-200">PILOT HMD</h1>
-      <p class="text-sm text-slate-300">
-        Rotate the phone to landscape. Tap Enter VR for fullscreen headset mode.
-        The display stays black until the cockpit opens on your laptop.
-        The phone will request screen-on protection when you enter VR.
-        For gaze controls, enable head tracking before entering VR.
-      </p>
-      <p class="text-xs text-amber-200">
-        Android screen-on protection requires a supported browser and a secure
-        HTTPS connection. On an HTTP LAN connection, adjust the phone's screen
-        timeout and battery optimization settings if the screen sleeps.
-      </p>
-      <%!-- Sensor permission requires a direct tap on some mobile browsers.
-           Head tracking is optional and never controls ship flight. --%>
-      <button id="helmet-enable-tracking" type="button"
-              class="w-full rounded-lg border border-emerald-400/80 bg-emerald-950 px-5 py-3 text-sm font-bold tracking-wide text-emerald-100">
-        ENABLE HEAD TRACKING
-      </button>
-      <p id="helmet-tracking-status" class="text-xs text-emerald-200" role="status">
-        Head tracking is optional; your phone browser may require HTTPS.
-      </p>
-      <button id="helmet-recenter-tracking" type="button"
-              class="w-full rounded-md border border-cyan-700/70 px-4 py-2 text-xs text-cyan-100">
-        RECENTER VIEW
-      </button>
-      <p class="text-xs text-slate-300">
-        In the cockpit, look right and slightly down toward the NAV control.
-        Hold for one second, then wait for the circular ring to fill.
-        Use gaze on CLOSE or RECENTER in the navigation panel.
-        Head movement never steers your ship or fires weapons.
-        In the active cockpit, press the physical headset screen-click button
-        to center the view while facing straight ahead.
-      </p>
+      <p class="text-sm text-slate-300">Head tracking starts when you enter VR.</p>
+
       <button id="helmet-fullscreen" type="button"
               class="w-full rounded-lg border border-cyan-300 bg-cyan-800 px-5 py-3 text-sm font-bold tracking-wide text-white">
-        ENTER FULLSCREEN VR
+        ENTER VR
       </button>
-      <p id="helmet-fullscreen-hint" class="text-xs text-slate-400" role="status">
-        Android requires one tap before a page can enter fullscreen.
-      </p>
-      <p class="rounded-md border border-slate-700 p-3 text-left text-xs text-slate-300">
-        Lens calibration uses the laptop keyboard while the cockpit is active:
-        ← / → adjusts image spacing; F6 / Ctrl+F6 adjusts eye separation.
-        Tap once per adjustment. Settings save automatically on the phone.
-        With the headset on, look straight ahead and press C on the laptop
-        to center the cockpit (no need to remove the phone).
-      </p>
-      <%!-- Read this while out of the headset; never overlay the SBS eyes. --%>
-      <details data-bandwidth-panel class="rounded-lg border border-cyan-600/70 p-2 text-left font-mono text-xs text-cyan-100">
-        <summary class="cursor-pointer px-2 py-1 font-bold tracking-widest">NET · BANDWIDTH</summary>
-        <pre data-bandwidth-readout class="mt-2 max-h-44 overflow-auto whitespace-pre-wrap break-words p-2 text-[0.65rem] leading-relaxed">Open to view estimated traffic.</pre>
-      </details>
 
-      <button id="helmet-windowed" type="button"
+      <button id="helmet-relay-test" type="button"
+              class="w-full rounded-lg border border-emerald-400/80 bg-emerald-950 px-5 py-3 text-sm font-bold tracking-wide text-emerald-100">
+        TEST LOCAL RELAY
+      </button>
+      <p id="helmet-relay-result" hidden role="status" aria-live="polite"
+         class="rounded-lg border border-cyan-700/70 p-3 font-mono text-sm font-bold tracking-wide text-cyan-100"></p>
+
+      <%!-- Only shown if Android cannot read the copied one-time Tauri URL. --%>
+      <div id="helmet-relay-entry" hidden class="space-y-2 text-left">
+        <label for="helmet-relay-url" class="block text-xs text-slate-300">
+          Paste one-time link from the Tauri launcher
+        </label>
+        <input id="helmet-relay-url" type="url" inputmode="url" autocomplete="off"
+               autocapitalize="off" spellcheck="false"
+               placeholder="https://LAN-IP:4455/relay-check#..."
+               class="w-full rounded-md border border-cyan-700/70 bg-slate-900 px-3 py-2 text-xs text-cyan-100" />
+        <button id="helmet-relay-submit" type="button"
+                class="w-full rounded-md border border-cyan-700/70 px-3 py-2 text-xs font-bold text-cyan-100">
+          RUN TEST
+        </button>
+      </div>
+
+      <p id="helmet-tracking-status" hidden role="status"
+         class="text-xs text-amber-200"></p>
+      <p id="helmet-fullscreen-hint" hidden role="status"
+         class="text-xs text-amber-200"></p>
+
+      <%!-- Emergency browser fallback: only exposed after a fullscreen error. --%>
+      <button id="helmet-windowed" hidden type="button"
               class="text-xs text-slate-400 underline underline-offset-4">
         Continue without fullscreen
       </button>

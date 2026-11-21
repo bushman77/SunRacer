@@ -18,9 +18,11 @@ test("cockpit remains anchored to ship rather than following the HMD head", () =
 })
 
 test("helmet has explicit sensor permission, read-only local controls and recenter", () => {
-  assert.match(phone, /id="helmet-enable-tracking"/)
-  assert.match(phone, /id="helmet-recenter-tracking"/)
+  assert.match(phone, /id="helmet-fullscreen"/)
+  assert.match(phone, /id="helmet-relay-test"/)
   assert.match(phone, /id="helmet-tracking-status"/)
+  assert.doesNotMatch(phone, /id="helmet-enable-tracking"|id="helmet-recenter-tracking"/)
+  assert.match(helmet, /void this\.headTracking\.startFromGesture\(\)/)
   assert.match(helmet, /new HelmetHeadTracking\(/)
   assert.match(helmet, /new HelmetGazeDwell\(/)
   assert.match(helmet, /this\.view\.setHelmetHeadRotation\(this\.headTracking\.rotation\(time\)\)/)
@@ -138,4 +140,20 @@ test("compact SBS geometry reduces telemetry and never blocks the NAV hitbox", (
   assert.match(view, /new THREE\.PlaneGeometry\(1\.52, 0\.55\)/)
   assert.match(view, /new THREE\.PlaneGeometry\(0\.44, 0\.22\)/)
   assert.match(view, /this\.raycaster\.intersectObjects\(/)
+})
+
+test("phone has two main actions and requests gyro and fullscreen from the Enter VR tap", () => {
+  assert.match(phone, /ENTER VR/)
+  assert.match(phone, /TEST LOCAL RELAY/)
+  assert.match(phone, /id="helmet-relay-entry" hidden/)
+  assert.match(phone, /id="helmet-relay-result" hidden/)
+  assert.match(phone, /id="helmet-windowed" hidden/)
+  assert.doesNotMatch(phone, /ENABLE HEAD TRACKING|RECENTER VIEW|NET · BANDWIDTH/)
+  assert.doesNotMatch(phone, /Lens calibration uses|In the cockpit, look right/)
+  const controls = helmet.slice(helmet.indexOf("setupImmersiveControls() {"),
+    helmet.indexOf("  recenterFromPilot() {"))
+  assert.ok(controls.indexOf("this.headTracking.startFromGesture()") >= 0)
+  assert.ok(controls.indexOf("this.headTracking.startFromGesture()") <
+    controls.indexOf("await this.root.requestFullscreen()"))
+  assert.match(helmet, /attachHelmetRelayTest\(this\.root\)/)
 })

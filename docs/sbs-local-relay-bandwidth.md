@@ -129,3 +129,30 @@ scoped LAN state relay, local static asset manifest, and isolation tests pass.
 The next implementation step should use the established trusted LAN channel
 and migrate the phone to the filtered state stream, not copy or multiplex
 another full Phoenix connection.
+
+## Minimal S21 setup and in-place relay result
+
+The Phoenix `/helmet` landing page displays only **Enter VR** and
+**Test Local Relay** as its primary controls. Enter VR requests sensor access
+and fullscreen from the same user gesture, avoiding a separate head-tracking
+button. Head tracking still requires a secure browser context and browser
+permission if prompted; if unavailable, the phone may continue rendering
+without head pose. Advanced calibration remains controlled from the laptop;
+recenter remains available via the headset screen button and gaze.
+
+The headset **Test Local Relay** control checks the opt-in Tauri Stage 1
+TLS listener. Copy the ten-minute invitation using the Tauri launcher; tap
+the phone's relay button. It first tries the clipboard from the tap, or
+displays a small link-paste field only if clipboard access is unavailable.
+Only HTTPS on port 4455, the `/relay-check` path, the same private
+IPv4 as the current `https://<laptop-ip>:4443/helmet` page, and a
+48-character one-time token are accepted. A hidden iframe loads that TLS
+proof page, whose **same-origin authenticated POST** consumes the token.
+
+The Tauri proof page sends a boolean message to its same-laptop port-4443
+parent. The headset checks both the expected source window and exact
+origin; **only a successful authenticated proof** turns the button into
+**PASSED**. A failed, expired, or unreachable test shows **NOT CONNECTED**
+and permits retry; merely loading the page or pressing a button never
+counts as success. No pilot credentials, game state, or token appear in the
+message. This is still only the link test—not a working world-state relay.

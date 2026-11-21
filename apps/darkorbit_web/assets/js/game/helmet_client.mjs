@@ -15,6 +15,7 @@ import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
 import {HelmetScreenWake} from "./helmet_screen_wake.mjs"
 import {HelmetHeadTracking} from "./helmet_head_tracking.mjs"
+import {attachHelmetRelayTest} from "./helmet_relay_test.mjs"
 import {HelmetGazeDwell} from "./helmet_gaze_dwell.mjs"
 import {
   HELMET_BANDWIDTH_HUD, renderHelmetBandwidth,
@@ -84,6 +85,7 @@ export class HelmetClient {
 
   async start() {
     this.setupImmersiveControls()
+    attachHelmetRelayTest(this.root)
     attachBandwidthPanel(this.root, this.bandwidth)
 
     if (this.credential) {
@@ -342,28 +344,22 @@ export class HelmetClient {
     this.root.addEventListener("pointerdown", recenterFromScreenTap, true)
     this.root.addEventListener("click", recenterFromScreenTap, true)
 
-    // Dedicated gesture ensures sensor permission and fullscreen each get
-    // their own user activation on restrictive mobile browsers.
-    this.root.querySelector("#helmet-enable-tracking")?.addEventListener(
-      "click", () => this.headTracking.startFromGesture())
-    this.root.querySelector("#helmet-recenter-tracking")?.addEventListener(
-      "click", () => {
-        if (this.headTracking.recenter()) {
-          this.showHeadTrackingStatus("recentered")
-          this.gaze.reset()
-        }
-      })
     fullscreen?.addEventListener("click", async () => {
       if (!this.root.requestFullscreen) {
-        if (hint) hint.textContent = "Fullscreen is unavailable in this browser. Try Chrome or Samsung Internet, or continue windowed."
+        if (hint) {
+          hint.textContent = "Fullscreen unavailable. Try Chrome or Samsung Internet."
+          hint.hidden = false
+        }
+        if (windowed) windowed.hidden = false
         return
       }
       try {
-        // Request wake lock within the same explicit tap as fullscreen. The
-        // browser may reject it on insecure LAN HTTP or low battery.
+        // One tap starts the sensor subscription automatically. DO NOT await
+        // this permission request before requestFullscreen: awaiting can
+        // consume the gesture required by Android/iOS fullscreen browsers.
+        // Some platforms may still ask permission on the first tap.
+        void this.headTracking.startFromGesture()
         this.screenWake.enable()
-        // Must execute within the direct tap: mobile browsers do not grant
-        // fullscreen automatically when a QR navigation loads the page.
         await this.root.requestFullscreen()
         this.windowed = false
         this.immersiveReady = true
@@ -373,10 +369,16 @@ export class HelmetClient {
         if (this.mode === "combat") this.startRendering()
       } catch (_error) {
         this.screenWake.disable()
-        if (hint) hint.textContent = "Fullscreen was blocked. Open in Chrome/Samsung Internet, or use Continue without fullscreen."
+        if (hint) {
+          hint.textContent = "Fullscreen blocked. Try Chrome or Samsung Internet."
+          hint.hidden = false
+        }
+        if (windowed) windowed.hidden = false
       }
     })
     windowed?.addEventListener("click", () => {
+      // The fallback also starts sensors from the same physical tap.
+      void this.headTracking.startFromGesture()
       this.screenWake.enable()
       this.windowed = true
       this.immersiveReady = true
@@ -759,6 +761,8 @@ export class HelmetClient {
       "https-required": "Head tracking needs HTTPS on the phone. SBS still works on HTTP.",
     }
     label.textContent = descriptions[status] || "Head tracking unavailable."
+    // The main setup remains barebones; only sensor errors need explaining.
+    label.hidden = !["denied", "unsupported", "https-required"].includes(status)
   }
 
   report(rendering) {
@@ -773,7 +777,10 @@ export class HelmetClient {
     this.messageNode.hidden = !value
     const setup = this.root.querySelector("#helmet-setup")
     const hint = this.root.querySelector("#helmet-fullscreen-hint")
-    if (value && setup && !setup.hidden && hint) hint.textContent = value
+    if (value && setup && !setup.hidden && hint) {
+      hint.textContent = value
+      hint.hidden = false
+    }
   }
 }
 

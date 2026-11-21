@@ -32,6 +32,11 @@ test("phone proof uses one-use bearer over HTTPS, with no game or asset routes",
   assert.match(native, /Cache-Control: no-store/)
   assert.match(native, /Content-Security-Policy:/)
   assert.match(native, /history\.replaceState\(null,"","\/relay-check"\)/)
+  assert.match(native, /window\.parent\.postMessage/)
+  assert.match(native, /"space-nova:relay-proof",passed/)
+  assert.match(native, /"https:\/\/"\+location\.hostname\+":4443"/)
+  assert.match(native, /report\(result\.ok\)/)
+  assert.doesNotMatch(native, /postMessage\(\{[^}]*token/)
   assert.doesNotMatch(native, /world_state|world_delta|\/api\/native|\/game\/assets/)
 })
 

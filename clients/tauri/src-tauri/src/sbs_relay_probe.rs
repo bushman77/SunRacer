@@ -36,10 +36,20 @@ h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
 </main><script>
 (async()=>{
   const status=document.querySelector("#status");
+  // Only the same laptop's existing HTTPS headset page can receive this
+  // boolean confirmation. Never post the invitation or game credentials.
+  const report=(passed)=>{
+    if(window.parent!==window){
+      window.parent.postMessage(
+        {type:"space-nova:relay-proof",passed},
+        "https://"+location.hostname+":4443");
+    }
+  };
   const token=location.hash.startsWith("#")?location.hash.slice(1):"";
   history.replaceState(null,"","/relay-check");
   if(!/^[0-9a-f]{48}$/.test(token)){
     status.textContent="Invalid invitation. Open the fresh link shown by the Tauri launcher.";
+    report(false);
     return;
   }
   try{
@@ -49,8 +59,10 @@ h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
     status.textContent=result.ok
       ?"SECURE LAN LINK CONFIRMED. The phone reached your Tauri client directly over trusted HTTPS."
       :"Invitation expired, already used, or rejected. Restart the test from the laptop.";
+    report(result.ok);
   }catch{
     status.textContent="Connection failed. Check LAN reachability and the trusted TLS certificate.";
+    report(false);
   }
 })();
 </script></body></html>"##;
