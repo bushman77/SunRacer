@@ -201,14 +201,35 @@ retroactively and instantly rather than from that point onward.
   their rates.
 - `reverse_factor` — does not exist.
 
-### F10. NPCs have no physics
+### F10. NPCs have no physics, and should not have any
 
 `Core.World.MapServer` advances an NPC with
 `advance_entity(decided_npc, decided_npc.speed * distance_factor)`: a
 kinematic bee-line at a fixed scalar. No inertia, no acceleration, no
-momentum. It cannot flip and coast, overshoot, or extend and re-engage. The
-player has a physics model and the opposition has arithmetic, and that
-asymmetry — not any single stat — is what makes kiting unbeatable.
+momentum.
+
+An earlier draft of this document called giving NPCs inertia "the deep fix"
+and blamed the player/NPC asymmetry for making kiting unbeatable. **That was
+wrong, and it is corrected here (Brad, 2026-11-21).** A kinematic chaser is
+*better* at pursuit than an inertial one: it turns instantly, never
+overshoots, never drifts wide on a turn, never has to decelerate, and holds
+exactly its top speed while always pointing at its target. That is optimal
+pursuit. Give it momentum and it becomes easier to escape, because it then
+fights its own inertia exactly as the player does. What made kiting
+unbeatable was only ever the speed differential in F11.
+
+There is a design argument for the asymmetry as well, not merely a
+convenience one. Newtonian flight is the *player's* skill tool: in the
+original, pivoting while coasting to shoot down a pursuer is a manoeuvre the
+pilot learns, and it is rewarding because the ship fights them and the enemy
+does not have to. Granting every raider the same trick removes the mastery
+rather than deepening it.
+
+What the Dart lacks is not physics but **tactics**. A kinematic mover can
+execute a firing pass perfectly well — approach, fire inside its range, break
+off, extend, turn, re-engage — as AI states layered on `advance_entity`. That
+reads as a fighter rather than a homing missile, mirrors the lesson step 6
+should teach, and costs a fraction of a momentum model.
 
 ### F11. The player is simply faster than the opposition
 
@@ -376,8 +397,12 @@ Status: **not built** — see Q6.
   about three times slower again, on the grounds that the assist cannot flip
   the hull to brake on the main drive. This is a feel decision rather than a
   correctness one, and it affects station approaches most.
-- **Q8. NPC inertia.** The deep fix for F10, and much larger work. Until it
-  exists, every tuning decision is tuning a player against a chase function.
+- **Q8. NPC tactical states.** Replaces the earlier "NPC inertia" question,
+  which F10 now argues against. Should the Dart gain approach / fire / break /
+  extend / re-engage states on top of the existing kinematic mover, so it
+  flies a firing pass instead of homing? This is the mirror of the lesson step
+  6 should teach, and it is the honest reason the current encounter feels flat.
+  NPCs keep no momentum model, deliberately.
 
 ## Build order
 
