@@ -236,6 +236,15 @@ export class HelmetControl {
     this.clearQR()
     const reconnect = this.root.querySelector("#helmet-relay-reconnect")
     if (reconnect) reconnect.hidden = true
+    // Closing the HMD setup cancels the temporary LAN invitation too.
+    // A new visit gets a fresh, independently randomized challenge.
+    const invoke = this.nativeRelayInvoke()
+    if (invoke) {
+      void invoke("stop_sbs_relay_probe").catch(() => {})
+    }
+    this.relayUrl = null
+    this.relayVerified = false
+    this.relayStatus = "LOCAL LINK / NOT TESTED"
     if (this.channel?.state === "joined") this.channel.push("cancel_pairing", {})
   }
 
