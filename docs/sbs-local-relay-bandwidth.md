@@ -1,0 +1,51 @@
+# Space Nova — SBS Local Relay and Bandwidth Budget
+
+**Status:** Stage 0 instrumentation implemented; secure LAN relay NOT implemented.
+**Branch:** `star_base`. No new branches, automatic EC2 deployment or `mix format`.
+**Rule:** EC2/Phoenix remains authoritative for all player identity, navigation, movement, combat, damage, inventory and persistence.
+
+## Architecture audit
+
+- The Tauri client ships a locally built Three.js renderer, JS modules, CSS and graphic assets.
+- The desktop world Channel joins with `stream: "delta_v1"`, applying sparse state deltas after a full join/resync.
+- The current phone `/helmet` page separately opens the Phoenix `helmet:viewer` Channel and receives full `world_state` snapshots and a full initial snapshot. This creates redundant remote traffic when the server is EC2.
+- The paired phone downloads its own renderer assets from the web origin serving `/helmet`. Those are LAN transfers only when using local Phoenix.
+- Existing Tauri Rust `native_loopback` is a narrow whitelist for local login/refresh/logout requests, NOT a LAN file server or unrestricted proxy.
+
+## Stage 0 — in-client bandwidth probes (implemented)
+
+The desktop and phone expose `window.spaceNovaBandwidth.snapshot()` in their respective browser consoles.
+The probe records only event names, message counts and UTF-8 JSON PAYLOAD byte estimates, not credentials, game-state objects, raw messages or player IDs.
+Capture at least 30 seconds in each situation: idle Atlas, cruise, asteroid-belt free flight, combat, and disconnect/reconnect.
+Inspect `receivedBytesPerSecond`, `sentBytesPerSecond`, `window`, `total` and `byEvent`. The phone's `helmet_control/world_state` count reveals duplicated snapshots.
+
+**Important:** These are diagnostic estimates, NOT actual EC2 egress numbers. They omit WebSocket framing, TLS, compression, heartbeat frames, HTTP assets and TCP retransmissions.
+Compare against the real proxy/network counters or EC2 CloudWatch egress using the same test interval.
+
+## Stage 1 — secure local asset distribution (not yet implemented)
+
+A native, explicitly enabled laptop-hosted LAN endpoint should serve only the immutable, bundled headset asset manifest (hashes, strict file allowlist, MIME types and cache headers).
+Do not permit arbitrary filesystem reads, arbitrary URL forwarding, dynamic command execution, or bearer token exposure.
+Phone browser motion sensors require a secure context. Investigate trusted LAN HTTPS certificate provisioning; never silently fall back to plain HTTP, disable TLS validation, or ship an unauthenticated listener.
+Use a versioned manifest and offline cache. A locally authenticated WebRTC transport may be an alternative if trusted browser HTTPS cannot be provisioned cleanly.
+
+## Stage 2 — authenticated read-only state relay (not yet implemented)
+
+The laptop will keep a single authoritative Phoenix world connection and apply the existing `WorldStreamDelta` pipeline.
+The LAN relay sends only a whitelisted view for the current pilot: pose, relevant visible entity transforms, collision warning presentation, docking visuals, laser effects, and the environment profile.
+Never forward the full game snapshot, other pilots' private data, commerce/inventory, service tokens or arbitrary server events.
+The S21 runs its own stereo renderer and head tracking; it must not submit combat or motion authority through this relay.
+Use ordered sequence numbers, bounded queues, dropped stale updates, explicit resync after gaps, authenticated device pairing, per-session revocation, and fail-closed disconnection.
+Pair tokens must be random, short-lived, single-use and separate from the pilot's EC2 credentials. LAN binding is explicit opt-in.
+
+## Stage 3 — pre-EC2 release gate
+
+1. One remote game connection per pilot in normal local-relay mode.
+2. Phone makes zero direct EC2 game/asset requests; verify with network isolation, not merely static code inspection.
+3. Phone obtains all game JS/models/textures from the local authenticated manifest; no refetch on Atlas/cockpit toggling.
+4. Reconnect/region transition recovers state without duplicates or stale collisions.
+5. Phone sees no private cargo, credentials, arbitrary server contacts or mutation commands.
+6. Benchmarks include idle, cruise, dense asteroid belt, combat and a 30-minute session with realistic NPC count.
+7. Define numeric bandwidth budgets from the measured results, including peak and sustained bytes per pilot; fail CI/performance checks on regression.
+
+Do not move this milestone to EC2 production until the local secure relay and network acceptance tests pass. Keep the old direct helmet path as an explicit development fallback only during migration.

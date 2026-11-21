@@ -1,5 +1,6 @@
 import {Socket} from "phoenix"
 import {StereoSpaceView} from "./stereo_view.js"
+import {BandwidthProbe, instrumentPhoenixSocket} from "./bandwidth_probe.mjs"
 import {visualLaserRays} from "./laser_burst.mjs"
 import {laserFeedback} from "./laser_feedback.mjs"
 import {helmetSocketParams} from "./helmet_auth.mjs"
@@ -44,6 +45,8 @@ export class HelmetClient {
     this.calibrationSaveTimer = null
     this.calibrationSaveInFlight = false
     this.entities = new Map()
+    // Baseline for the legacy direct server-to-headset channel.
+    this.bandwidth = new BandwidthProbe("headset-server")
     this.selfId = null
     this.selectedTargetId = null
     this.helmetSurrender = null
@@ -92,9 +95,10 @@ export class HelmetClient {
       return
     }
 
-    this.socket = new Socket("/socket", {
+    this.socket = instrumentPhoenixSocket(new Socket("/socket", {
       params: () => helmetSocketParams({credential: this.credential}),
-    })
+    }), this.bandwidth)
+    window.spaceNovaBandwidth = this.bandwidth
     this.socket.connect()
     this.channel = this.socket.channel("helmet:viewer", {device_name: "Android VR headset"})
     this.channel.on("helmet_mode", ({mode}) => this.setMode(mode))
@@ -157,6 +161,8 @@ export class HelmetClient {
     })
     this.channel.join()
       .receive("ok", ({mode, player_id, calibration}) => {
+        this.bandwidth.record("in", "helmet_control", "join_ack",
+          {mode, player_id, calibration})
         this.selfId = key(player_id)
         // Restore BEFORE starting the SBS frame loop; never flash a default
         // separation in the headset when PostgreSQL already has a setting.

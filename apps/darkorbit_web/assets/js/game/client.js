@@ -23,6 +23,7 @@ import {NavigationComputer} from "./navigation_computer.mjs"
 import {FlightControls} from "./flight_controls.mjs"
 import {flightInputState, FLIGHT_INPUT_LABELS} from "./flight_input_state.mjs"
 import {WorldStreamDelta} from "./world_stream_delta.mjs"
+import {BandwidthProbe, instrumentPhoenixSocket} from "./bandwidth_probe.mjs"
 import {gameSocketEndpoint} from "./socket_endpoint.mjs"
 import {
   MouseSteering, validMouseSensitivity, enabledMouseSteering, MOUSE_STEERING_IDLE_MS,
@@ -104,6 +105,8 @@ class SpaceClient {
     this.beams = []
     this.lastLaserFeedback = null
     this.lastFrame = performance.now()
+    // Read-only transport estimate; never records credentials or game state.
+    this.bandwidth = new BandwidthProbe("desktop-server")
     this.docked = false
     this.stationPosition = null
     this.stationAttendants = []
@@ -418,7 +421,11 @@ class SpaceClient {
     // For native installed builds the game document is local but the
     // authoritative Channel socket lives at the chosen HTTPS server.
     const endpoint = gameSocketEndpoint(this.root.dataset.serverOrigin)
-    this.socket = new Socket(endpoint, {params: () => ({token: this.root.dataset.socketToken})})
+    this.socket = instrumentPhoenixSocket(
+      new Socket(endpoint, {params: () => ({token: this.root.dataset.socketToken})}),
+      this.bandwidth,
+    )
+    window.spaceNovaBandwidth = this.bandwidth
     this.socket.onOpen(() => this.setConnection("Relay connected", "online"))
     this.socket.onError(() => this.setConnection("Relay interrupted", "error"))
     this.socket.onClose(() => this.setConnection("Relay offline", "error"))
@@ -608,6 +615,8 @@ class SpaceClient {
   }
 
   joined(response) {
+    // Join replies are not delivered to channel.on listeners.
+    this.bandwidth.record("in", "world", "join_ack", response)
     this.mapId = response.map.map_id
     this.worldStream = response.stream === "delta_v1"
       ? new WorldStreamDelta(response.map) : null
@@ -664,6 +673,7 @@ class SpaceClient {
       .receive("ok", response => {
         if (this.channel !== channel) return
         this.worldResyncInFlight = false
+        this.bandwidth.record("in", "world", "resync_ack", response)
         if (response.map && this.worldStream) {
           this.worldStream.reset(response.map)
           this.applyWorldState(response.map)
