@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+### Green Starbase launch faced back into the hangar (2026-11-21)
+
+#### Fixed
+
+- Launching from the Green Starbase placed the ship 350 km in front of the
+  bay mouth but with `launch_attitude` yaw pi, which points south, back into
+  the hangar. Full throttle flew through the open bay and hit the solid rear
+  wall after about 4 s; the swept collision then set throttle, speed and
+  velocity to 0 and applied impact damage ("accelerates, then drops to 0").
+  Launch now faces out of the bay (yaw 0, north).
+
+#### Verification
+
+- New regression test in `green_starbase_docking_test.exs` steps the real
+  `FlightDynamics` at full throttle from the launch pose for 10 s and asserts
+  no hull contact. Run standalone against the real world modules (with
+  `Core.Universe.Sol` and `Core.Combat` stubbed): 4/4 pass with the fix; on
+  the old code the new test fails at `:hangar_rear_wall`.
+- Full `mix test` not run (the sandbox cannot reach hex.pm).
+- Not verified in game yet.
+
 ### HMD: stop the "HEAD TRACKING UNAVAILABLE" flash in the cockpit (2026-11-21)
 
 #### Fixed

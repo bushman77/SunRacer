@@ -2,7 +2,8 @@ defmodule Core.World.GreenStarbaseDockingTest do
   use ExUnit.Case, async: true
 
   alias Core.Universe.GreenStarbase
-  alias Core.World.{Entity, GreenStarbaseDocking, GreenStarbaseSafety, Position}
+  alias Core.World.{Entity, FlightDynamics, GreenStarbaseDocking, GreenStarbaseSafety,
+                    MapDefinition, Orientation, Position}
 
   defp at(x, y, z) do
     origin = GreenStarbase.local_site()
@@ -63,6 +64,31 @@ defmodule Core.World.GreenStarbaseDockingTest do
     launch = GreenStarbaseDocking.launch_position()
     refute GreenStarbaseSafety.inside?(launch)
     assert launch.y < GreenStarbase.bay_mouth().y
-    assert_in_delta GreenStarbaseDocking.launch_attitude().yaw, :math.pi(), 0.001
+    # Nose points away from the station (north, -Y).
+    nose = Orientation.forward(Orientation.from_angles(GreenStarbaseDocking.launch_attitude()))
+    assert nose.y < -0.99
+  end
+
+  test "full throttle straight after launch flies clear without touching the hull" do
+    map = %MapDefinition{id: "sol:free_13", name: "SOL Deep Space",
+      width: 24_000, height: 24_000, altitude_min: -12_000, altitude_max: 12_000,
+      spawn: %Position{x: 12_000.0, y: 12_000.0, z: 0.0}}
+    attitude = GreenStarbaseDocking.launch_attitude()
+    launched = %{ship(GreenStarbaseDocking.launch_position()) |
+      attitude: attitude, orientation: Orientation.from_angles(attitude)}
+    {:ok, ship} = FlightDynamics.controls(launched, %{"throttle" => 1.0}, 0)
+
+    final =
+      Enum.reduce(1..100, ship, fn tick, current ->
+        moved = FlightDynamics.step(current, map, 0.1, tick)
+        # Regression: the old yaw-pi launch hit :hangar_rear_wall at ~4 s.
+        assert :clear == GreenStarbaseSafety.first_contact(current.position, moved.position)
+        moved
+      end)
+
+    assert final.cruise_speed > 300.0
+    assert final.position.y < GreenStarbaseDocking.launch_position().y - 2_000.0
+    assert GreenStarbaseSafety.warning(final.position, true) == nil or
+      GreenStarbaseSafety.warning(final.position, true).level != :critical
   end
 end

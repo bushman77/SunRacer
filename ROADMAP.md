@@ -1288,3 +1288,9 @@ See `docs/space-nova-release.md` for the distribution procedure.
 - [ ] Verify on the S21: hold still >2 s, tap-recenter, gaze RECENTER — no
   panel and no view snap.
 
+### Green Starbase launch direction (2026-11-21)
+
+- [x] Launch faces out of the bay; regression test flies 10 s at full
+  throttle from launch without hull contact.
+- [ ] `mix test` and an in-game launch check (laptop and headset).
+

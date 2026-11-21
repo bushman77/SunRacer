@@ -53,7 +53,11 @@ defmodule Core.World.GreenStarbaseDocking do
     %Position{x: mouth.x, y: mouth.y - 350.0, z: mouth.z}
   end
 
-  def launch_attitude, do: %{yaw: :math.pi(), pitch: 0.0, roll: 0.0}
+  # Nose OUT of the bay. Heading zero is north (-Y) and the bay mouth faces
+  # north of the hub, so yaw 0 points away from the station. The previous
+  # yaw pi pointed back into the hangar: full throttle flew through the open
+  # bay and hit the rear wall, which stops the ship and applies damage.
+  def launch_attitude, do: %{yaw: 0.0, pitch: 0.0, roll: 0.0}
 
   def park(%Entity{} = ship), do: %{ship |
     docked: true, destination: nil, target_id: nil, engaged_target_id: nil,
