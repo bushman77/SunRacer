@@ -10,6 +10,7 @@ on:
       - "apps/sunracer_web/lib/sunracer_web/controllers/game_html/show.html.heex"
       - "apps/sunracer_web/assets/css/app.css"
       - "config/config.exs"
+      - "config/dev.exs"
       - "apps/sunracer_web/assets/package-lock.json"
       - "apps/sunracer_web/priv/static/images/game/**"
       - ".github/workflows/sbs-tauri-linux.yml"
