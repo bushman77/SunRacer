@@ -182,9 +182,16 @@ pub fn sbs_relay_probe_status(window: WebviewWindow) -> Result<ProbeStatus, Stri
 }
 
 #[tauri::command]
-pub fn stop_sbs_relay_probe(window: WebviewWindow) -> Result<(), String> {
+pub async fn stop_sbs_relay_probe(window: WebviewWindow) -> Result<(), String> {
     crate::network::require_local(&window)?;
-    if let Some(p) = active().lock().map_err(|_| "Relay state locked.")?.take() {
+    // Drop the synchronous guard BEFORE awaiting the async challenge lock.
+    // Existing accepted connections may still be mid-request after the
+    // listener task stops. Revoke their one-time token as well.
+    let probe = {
+        active().lock().map_err(|_| "Relay state locked.")?.take()
+    };
+    if let Some(p) = probe {
+        *p.shared.token.lock().await = None;
         p.task.abort();
     }
     Ok(())
