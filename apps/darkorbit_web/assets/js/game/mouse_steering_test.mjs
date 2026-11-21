@@ -29,95 +29,114 @@ test("mouse yaw/pitch control remains bounded and sensitivity remains 0.4x-6x", 
   assert.equal(validMouseSensitivity(0.39), false)
 })
 
-test("rapid small movements still accumulate during continuous movement", () => {
+test("irregular small movements accumulate smoothly without turn-rate spikes", () => {
   let time = 1000
   const mouse = new MouseSteering({now: () => time})
-  assert.ok(mouse.move(1, 0).yaw > 0.08)
-  time += 8
-  const two = mouse.move(1, 0).yaw
-  assert.ok(two > 0.12)
-  time += 8
-  const three = mouse.move(1, 0).yaw
-  assert.ok(three > two)
-  assert.ok(three <= 1)
+  const steps = [8, 31, 12, 38, 17, 8]
+  const values = [mouse.move(1, 0).yaw]
+  for (const elapsed of steps) {
+    time += elapsed
+    values.push(mouse.move(1, 0).yaw)
+  }
+  assert.ok(values.every(v => v > 0 && v < 0.3))
+  assert.ok(values[1] > values[0])
+  assert.ok(values.every((v, i) => i === 0 || Math.abs(v - values[i - 1]) < 0.075),
+    "uneven browser events should not create abrupt yaw changes")
 })
 
-test("stopping mouse motion snaps the command to neutral after 25ms, with no fade", () => {
+test("normal mouse event gaps do not alternate turning and neutral", () => {
   let time = 1000
   const mouse = new MouseSteering({now: () => time})
-  assert.deepEqual(mouse.move(11, -5.5), {yaw: 1, pitch: 0.5})
-  time += MOUSE_STEERING_IDLE_MS - 1
+  const started = mouse.move(11, -5.5)
+  assert.ok(started.yaw > 0 && started.pitch > 0)
+  time += 35
+  assert.equal(mouse.expire(time), null, "35ms event gap stays active")
+  time += 25
+  assert.equal(mouse.expire(time), null, "60ms event gap stays active")
+  time += MOUSE_STEERING_IDLE_MS - 61
   assert.equal(mouse.expire(time), null)
   time += 1
-  assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
+  assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0},
+    "at idle cutoff, issue one immediate neutral command")
   time += 1000
   assert.equal(mouse.expire(time), null)
   assert.deepEqual(mouse.axes(), {yaw: 0, pitch: 0})
 })
 
-test("zero-delta browser events cannot extend turning beyond the short stop window", () => {
+test("zero-delta browser events do not extend the idle timer", () => {
   let time = 1000
   const mouse = new MouseSteering({now: () => time})
-  assert.deepEqual(mouse.move(11, -5.5), {yaw: 1, pitch: 0.5})
+  mouse.move(11, -5.5)
   time += MOUSE_STEERING_IDLE_MS - 1
-  assert.deepEqual(mouse.move(0, 0), {yaw: 1, pitch: 0.5})
+  assert.deepEqual(mouse.move(0, 0), mouse.axes())
   assert.equal(mouse.expire(time), null)
   time += 1
   assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
 })
 
-test("moving only one axis immediately clears carry from the other axis", () => {
+test("one-axis motion clears the other steering axis immediately", () => {
   let time = 1000
   const mouse = new MouseSteering({now: () => time})
   mouse.move(11, -5.5)
   time += 8
-  assert.deepEqual(mouse.move(0, -5.5), {yaw: 0, pitch: 0.75})
+  const vertical = mouse.move(0, -5.5)
+  assert.equal(vertical.yaw, 0)
+  assert.ok(vertical.pitch > 0)
   time += 8
-  assert.deepEqual(mouse.move(-5.5, 0), {yaw: -0.5, pitch: 0})
+  const horizontal = mouse.move(-5.5, 0)
+  assert.ok(horizontal.yaw < 0)
+  assert.equal(horizontal.pitch, 0)
 })
 
-test("reversing direction immediately obeys new mouse movement", () => {
+test("direction reversal never waits for the low-pass filter", () => {
   let time = 1000
   const mouse = new MouseSteering({now: () => time})
   mouse.move(11, -11)
   time += 8
-  assert.deepEqual(mouse.move(-5.5, 5.5), {yaw: -0.5, pitch: -0.5})
+  const reversed = mouse.move(-5.5, 5.5)
+  assert.ok(reversed.yaw < 0 && reversed.pitch < 0)
+  assert.equal(reversed.yaw, -0.5)
+  assert.equal(reversed.pitch, -0.5)
   time += MOUSE_STEERING_IDLE_MS
   assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
-  time += 1
-  assert.deepEqual(mouse.move(-11, 11), {yaw: -1, pitch: -1})
 })
 
-test("release clears input immediately and retains chosen sensitivity", () => {
+test("release neutralizes steering instantly, keeping chosen sensitivity", () => {
   let time = 1000
   const mouse = new MouseSteering({now: () => time, sensitivity: 1.5})
   mouse.move(5.5, 0)
-  assert.equal(mouse.axes().yaw, 0.75)
+  assert.ok(mouse.axes().yaw > 0 && mouse.axes().yaw < 0.75)
   assert.deepEqual(mouse.release(), {yaw: 0, pitch: 0})
   assert.equal(mouse.sensitivity, 1.5)
+  assert.equal(mouse.expire(time + 500), null)
 })
 
-test("same-direction carry never survives a mouse pause longer than the idle cutoff", () => {
+test("a delayed event cannot resurrect an old steering impulse", () => {
   let time = 1000
   const mouse = new MouseSteering({now: () => time})
-  mouse.move(5.5, 0)
+  const initial = mouse.move(5.5, 0)
   time += 8
-  assert.equal(mouse.move(5.5, 0).yaw, 0.75)
-  // A delayed event must represent fresh movement rather than dragging a
-  // previous steering rate along for another 120ms.
+  const adjacent = mouse.move(5.5, 0)
+  assert.ok(adjacent.yaw > initial.yaw)
   time += MOUSE_STEERING_IDLE_MS + 1
-  assert.equal(mouse.move(5.5, 0).yaw, 0.5)
-  time += MOUSE_STEERING_IDLE_MS
-  assert.deepEqual(mouse.expire(), {yaw: 0, pitch: 0})
-})
-
-test("idle detection stays below two 60Hz frames, and no fade is emitted", () => {
-  assert.ok(MOUSE_STEERING_IDLE_MS < 34)
-  let time = 2000
-  const mouse = new MouseSteering({now: () => time})
-  mouse.move(10, 0)
+  const fresh = mouse.move(5.5, 0)
+  assert.ok(fresh.yaw < adjacent.yaw)
+  assert.ok(fresh.yaw > 0)
   time += MOUSE_STEERING_IDLE_MS
   assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
-  time += 5
-  assert.equal(mouse.expire(time), null)
+})
+
+test("stop window spans normal 30–60Hz mouse event intervals, never coasts after expiry", () => {
+  assert.ok(MOUSE_STEERING_IDLE_MS >= 50)
+  assert.ok(MOUSE_STEERING_IDLE_MS <= 100)
+  let time = 2000
+  const mouse = new MouseSteering({now: () => time})
+  for (const gap of [16, 33, 32, 16]) {
+    mouse.move(8, 0)
+    time += gap
+    assert.equal(mouse.expire(time), null, "active turn should not chatter")
+  }
+  time += MOUSE_STEERING_IDLE_MS
+  assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
+  assert.equal(mouse.expire(time + 5), null)
 })

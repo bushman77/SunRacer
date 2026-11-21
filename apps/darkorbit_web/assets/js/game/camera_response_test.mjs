@@ -9,8 +9,8 @@ import {smoothOrientation} from "./orientation_interpolation.mjs"
 
 test("pointer-locked local camera catches up faster, other pilots and keyboard unchanged", () => {
   assert.equal(STANDARD_CAMERA_SETTLE_SECONDS, 0.085)
-  assert.equal(POINTER_LOCK_CAMERA_SETTLE_SECONDS, 0.025)
-  assert.equal(cameraSettleSeconds({ownShip: true, pointerLocked: true}), 0.025)
+  assert.equal(POINTER_LOCK_CAMERA_SETTLE_SECONDS, 0.05)
+  assert.equal(cameraSettleSeconds({ownShip: true, pointerLocked: true}), 0.05)
   assert.equal(cameraSettleSeconds({ownShip: true, pointerLocked: false}), 0.085)
   assert.equal(cameraSettleSeconds({ownShip: false, pointerLocked: true}), 0.085)
   assert.equal(cameraSettleSeconds({ownShip: false, pointerLocked: false}), 0.085)

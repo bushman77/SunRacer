@@ -2,7 +2,9 @@
 // of ship orientation; this only controls how quickly frames catch up to the
 // latest authoritative quaternion after input updates.
 export const STANDARD_CAMERA_SETTLE_SECONDS = 0.085
-export const POINTER_LOCK_CAMERA_SETTLE_SECONDS = 0.025
+// Fast enough to follow the server's ship heading without exposing every
+// 100ms network tick or 25ms command update as visible camera vibration.
+export const POINTER_LOCK_CAMERA_SETTLE_SECONDS = 0.05
 
 export const cameraSettleSeconds = ({ownShip = false, pointerLocked = false} = {}) =>
   ownShip && pointerLocked

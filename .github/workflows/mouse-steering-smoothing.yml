@@ -1,0 +1,33 @@
+name: Mouse flight steering smoothing
+
+on:
+  push:
+    branches: [star_base]
+    paths:
+      - "apps/darkorbit_web/assets/js/game/mouse_steering.mjs"
+      - "apps/darkorbit_web/assets/js/game/mouse_steering_test.mjs"
+      - "apps/darkorbit_web/assets/js/game/camera_response.mjs"
+      - "apps/darkorbit_web/assets/js/game/camera_response_test.mjs"
+      - "apps/darkorbit_web/assets/js/game/flight_controls.mjs"
+      - "apps/darkorbit_web/assets/js/game/flight_controls_test.mjs"
+      - ".github/workflows/mouse-steering-smoothing.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify native mouse flight smoothing and immediate safety stops
+        run: |
+          node --check apps/darkorbit_web/assets/js/game/mouse_steering.mjs
+          node --check apps/darkorbit_web/assets/js/game/camera_response.mjs
+          node --test apps/darkorbit_web/assets/js/game/mouse_steering_test.mjs
+          node --test apps/darkorbit_web/assets/js/game/camera_response_test.mjs
+          node --test apps/darkorbit_web/assets/js/game/flight_controls_test.mjs
