@@ -1,6 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import {projectSbsRelayWorld, SbsRelayWorldPublisher} from "./sbs_relay_world.mjs"
+import {projectSbsRelayWorld, SbsRelayWorldPublisher, WORLD_INTERVAL_MS} from "./sbs_relay_world.mjs"
 
 const map = () => ({
   map_id: "sol:free_earth", tick: 102, tick_ms: 100,
@@ -18,6 +18,13 @@ const map = () => ({
     id: 18, kind: "npc", display_name: "Scow",
     position_3d: {x: 12, y: 3, z: 4},
   }],
+})
+
+test("LAN snapshot updates favor responsiveness without altering EC2 subscription", () => {
+  assert.equal(WORLD_INTERVAL_MS, 60)
+  const publisher = new SbsRelayWorldPublisher({invoke: () => null})
+  assert.equal(publisher.delay, WORLD_INTERVAL_MS)
+  publisher.clear()
 })
 
 test("passes only a tightly bounded visual world projection", () => {

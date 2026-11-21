@@ -3,7 +3,10 @@
 // currency, station dialogue or full navigation/contact data to the S21.
 const MAX_ENTITIES = 256
 const MAX_BYTES = 256 * 1024
-const WORLD_INTERVAL_MS = 180
+// This delay applies only to the laptop -> S21 LAN publisher. It does not
+// change the authoritative Phoenix/EC2 tick or create new remote traffic.
+// Keep one latest map instead of a queue; prioritize timely HMD frames.
+export const WORLD_INTERVAL_MS = 60
 const entityScalar = [
   "id", "kind", "npc_type_id", "ship_class", "display_name", "status",
   "angle", "throttle", "flight_mode", "target_id", "hull", "max_hull",
