@@ -20,6 +20,7 @@ fn main() {
             sbs_relay_probe::start_sbs_relay_probe,
             sbs_relay_probe::sbs_relay_probe_status,
             sbs_relay_probe::stop_sbs_relay_probe,
+            sbs_relay_probe::publish_sbs_relay_world,
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

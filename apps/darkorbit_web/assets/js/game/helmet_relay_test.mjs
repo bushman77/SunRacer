@@ -63,7 +63,10 @@ export function authenticatedRelayResult(event, expectedWindow, expectedOrigin) 
 
 // The phone has no relay controls; the pilot sees verification in the laptop's
 // HMD panel. The hidden iframe is needed only for HTTPS origin isolation.
-export function attachHelmetRelayTest(root, {win = window} = {}) {
+export function attachHelmetRelayTest(root, {
+  win = window, onWorld = () => {}, onHeartbeat = () => {},
+  onOffline = () => {}, onVerified = () => {},
+} = {}) {
   const result = root.querySelector("#helmet-relay-result")
   let frame = null
   let expectedOrigin = null
@@ -75,17 +78,41 @@ export function attachHelmetRelayTest(root, {win = window} = {}) {
     frame = null
     expectedOrigin = null
   }
-  const show = (message, passed = false) => {
-    clear()
+  const show = (message, passed = false, keepFrame = false) => {
+    if (!keepFrame) clear()
     if (!result) return
     result.hidden = false
     result.textContent = message
     result.dataset.passed = String(passed)
   }
   const onMessage = event => {
-    const passed = authenticatedRelayResult(event, frame?.contentWindow, expectedOrigin)
-    if (passed === true) show("LOCAL LINK VERIFIED", true)
-    if (passed === false) show("Local link unavailable; SBS still works through Phoenix.")
+    // Both the sending window and exact HTTPS origin must match the single
+    // verified iframe. Never honor messages from other pages or windows.
+    if (!frame || event.source !== frame.contentWindow ||
+        event.origin !== expectedOrigin) return
+    const passed = authenticatedRelayResult(event, frame.contentWindow, expectedOrigin)
+    if (passed === true) {
+      show("LOCAL LINK VERIFIED", true, true)
+      onVerified()
+      return
+    }
+    if (passed === false) {
+      show("Local link unavailable; SBS still works through Phoenix.")
+      onOffline()
+      return
+    }
+    if (event.data?.type === "space-nova:relay-heartbeat") {
+      onHeartbeat()
+      return
+    }
+    if (event.data?.type === "space-nova:relay-world") {
+      const {seq, map} = event.data.frame || {}
+      if (!Number.isSafeInteger(seq) || seq <= 0 ||
+          !map || !Number.isSafeInteger(map.tick) ||
+          typeof map.map_id !== "string" ||
+          !Array.isArray(map.entities)) return
+      onWorld({seq, map})
+    }
   }
   win.addEventListener("message", onMessage)
   return {
@@ -111,7 +138,10 @@ export function attachHelmetRelayTest(root, {win = window} = {}) {
       frame.src = link.href
       root.appendChild(frame)
       timer = win.setTimeout(() => {
-        if (frame) show("Local link timed out; SBS still works through Phoenix.")
+        if (frame && result?.dataset.passed !== "true") {
+          show("Local link timed out; SBS still works through Phoenix.")
+          onOffline()
+        }
       }, 15_000)
     },
     dispose() {

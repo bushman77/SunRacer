@@ -58,6 +58,7 @@ on:
       - "apps/darkorbit_web/test/darkorbit_web/channels/helmet_channel_test.exs"
       - "apps/darkorbit_web/assets/js/game/helmet_client.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_relay_test*.mjs"
+      - "apps/darkorbit_web/assets/js/game/sbs_relay_world*.mjs"
       - "apps/darkorbit_web/lib/darkorbit_web/controllers/helmet_html/show.html.heex"
       - "apps/darkorbit_web/assets/js/game/bandwidth_probe*.mjs"
       - "apps/darkorbit_web/assets/js/game/bandwidth_panel*.mjs"
@@ -179,6 +180,7 @@ jobs:
           node --check apps/darkorbit_web/assets/js/game/helmet_client.mjs
           node --check apps/darkorbit_web/assets/js/game/helmet_relay_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_relay_test_test.mjs
+          node --test apps/darkorbit_web/assets/js/game/sbs_relay_world_test.mjs
           node --test clients/tauri/tests/native_game_markup.test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_network_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_head_tracking_test.mjs

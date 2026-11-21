@@ -226,3 +226,51 @@ an additional source-level check to prevent reintroducing the ambiguous
 builder. To apply the fix, pull `star_base` and restart/rebuild Tauri;
 restarting Phoenix or refreshing the S21 page alone cannot fix a Rust
 process panic. Normal Hex advisory warnings are separate from this panic.
+
+
+## Stage 2 — Authenticated local world snapshots (flight-only cutover)
+
+The compiled Tauri client now uses the **existing authoritative
+`delta_v1` world stream** to publish a bounded, read-only visual world
+projection through the already verified LAN listener. It does not open
+another upstream world subscription. The native IPC command
+`publish_sbs_relay_world` is limited to the local Tauri main webview and
+performs an independent field allowlist, entity-count cap (256) and payload
+cap (256 KiB). A single latest snapshot replaces the previous one; slow
+phones do not cause a growing queue.
+
+After the one-time HTTPS proof on port 4455, the trusted relay iframe gets
+a **separate ephemeral session bearer** in its response body. This bearer
+never appears in a URL, QR, a Phoenix payload, the parent page, logs or
+any `postMessage`. The iframe long-polls `GET /relay/state?since=N`
+over LAN HTTPS with that bearer, and sends only the filtered map and
+sequence number to its verified `https://<laptop-IP>:4443` parent.
+The parent checks the iframe's exact `Window` and `Origin` before
+accepting state. Empty periods receive a 204 heartbeat; the session
+expires and can be revoked when the local service stops.
+
+The HMD stays connected to `helmet:viewer` for pairing/mode changes,
+navigation hints, encounters, surrender and laser effects. **Only after**
+a valid LAN snapshot containing the authenticated player's ship is
+rendered does the headset request
+`relay_stream_mode: local` from Phoenix, suppressing its separate
+`world_delta`/snapshot feed. On LAN failure or missing heartbeat the
+phone requests `relay_stream_mode: phoenix`, receiving a fresh
+server-authoritative snapshot and resuming the normal delta baseline.
+The opt-in LAN stream continues after the pilot closes the HMD setup
+panel, but an unverified temporary invitation is revoked on close.
+
+**Pilot scope for this first cutover:** while docked and walking inside
+Green Starbase, remain on the established Phoenix world feed until
+station-specific pose and interaction visuals have equivalent LAN
+coverage. World simulation and all flight/combat commands still belong
+to the laptop's authenticated Phoenix session; the headset cannot
+control anything on the game server.
+
+This first cutover removes the redundant **phone world-state feed**,
+not all phone internet usage. The phone still downloads the current
+headset JS, CSS and static imagery from Phoenix and keeps a lightweight
+control WebSocket. Moving versioned assets to the local Tauri relay is
+a separate, subsequent milestone. Do not deploy to EC2 before the
+Galaxy S21 on-device test confirms fallback, restart, region switches
+and traffic measurements.

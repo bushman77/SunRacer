@@ -2,9 +2,10 @@
 //! assets, remote Phoenix bridge or control commands. The proof is single-use.
 use ring::{constant_time, rand::{SecureRandom, SystemRandom}};
 use serde::Serialize;
+use serde_json::{Value, Map};
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
-    sync::{atomic::{AtomicBool, Ordering}, Arc, Mutex, OnceLock},
+    sync::{atomic::{AtomicBool, AtomicU64, Ordering}, Arc, Mutex, OnceLock},
     time::{Duration, Instant},
 };
 use tauri::WebviewWindow;
@@ -22,6 +23,9 @@ use tokio_rustls::{
 const TTL: Duration = Duration::from_secs(600);
 const MAX_HEADERS: usize = 8192;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(8);
+const SESSION_TTL: Duration = Duration::from_secs(60 * 60);
+const MAX_WORLD_BYTES: usize = 256 * 1024;
+const MAX_RELAY_ENTITIES: usize = 256;
 
 const PROOF_PAGE: &str = r##"<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
@@ -32,19 +36,19 @@ main{max-width:26rem;border:1px solid #56d3c2;border-radius:12px;padding:1.5rem;
 h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
 </style></head><body><main><h1>SPACE NOVA - LOCAL LINK</h1>
 <p id="status" role="status">Checking secure laptop connection...</p>
-<small>Stage 1 test only: no game state or graphics transfer.</small>
+<small>Encrypted LAN world-state relay. Flight and combat remain laptop-only.</small>
 </main><script>
 (async()=>{
   const status=document.querySelector("#status");
   // Only the same laptop's existing HTTPS headset page can receive this
   // boolean confirmation. Never post the invitation or game credentials.
-  const report=(passed)=>{
+  const postParent=(message)=>{
     if(window.parent!==window){
-      window.parent.postMessage(
-        {type:"space-nova:relay-proof",passed},
-        "https://"+location.hostname+":4443");
+      window.parent.postMessage(message,"https://"+location.hostname+":4443");
     }
   };
+  const report=(passed)=>postParent({type:"space-nova:relay-proof",passed});
+  const reportHeartbeat=()=>postParent({type:"space-nova:relay-heartbeat"});
   const token=location.hash.startsWith("#")?location.hash.slice(1):"";
   history.replaceState(null,"","/relay-check");
   if(!/^[0-9a-f]{48}$/.test(token)){
@@ -56,10 +60,34 @@ h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
     const result=await fetch("/relay/prove",{method:"POST",
       headers:{"Authorization":"Bearer "+token},
       cache:"no-store",credentials:"omit",referrerPolicy:"no-referrer"});
-    status.textContent=result.ok
-      ?"SECURE LAN LINK CONFIRMED. The phone reached your Tauri client directly over trusted HTTPS."
-      :"Invitation expired, already used, or rejected. Restart the test from the laptop.";
-    report(result.ok);
+    if(!result.ok){
+      status.textContent="Invitation expired, already used or rejected.";
+      report(false);
+      return;
+    }
+    const proof=await result.json();
+    if(!/^[0-9a-f]{48}$/.test(proof.stream_token||""))throw new Error("Invalid LAN session");
+    status.textContent="SECURE LAN LINK CONFIRMED. Receiving world state...";
+    report(true);
+    let since=0;
+    while(true){
+      // The stream token stays inside this isolated, TLS-only document.
+      // Parent receives ONLY filtered visual world maps.
+      const response=await fetch("/relay/state?since="+since,{
+        method:"GET",headers:{"Authorization":"Bearer "+proof.stream_token},
+        cache:"no-store",credentials:"omit",referrerPolicy:"no-referrer"
+      });
+      if(response.status===204){
+        reportHeartbeat();
+        continue;
+      }
+      if(!response.ok)throw new Error("Local world stream unavailable");
+      const frame=await response.json();
+      if(!Number.isSafeInteger(frame.seq)||frame.seq<=since||
+         !frame.map||!Array.isArray(frame.map.entities))throw new Error("Invalid LAN world");
+      since=frame.seq;
+      postParent({type:"space-nova:relay-world",frame});
+    }
   }catch{
     status.textContent="Connection failed. Check LAN reachability and the trusted TLS certificate.";
     report(false);
@@ -77,12 +105,20 @@ pub struct ProbeInfo {
 pub struct ProbeStatus {
     pub running: bool,
     pub verified: bool,
+    pub frames_served: u64,
+    pub bytes_served: u64,
 }
 
+struct RelayFrame { seq: u64, body: String }
 struct Shared {
     token: AsyncMutex<Option<String>>,
+    session: AsyncMutex<Option<String>>,
+    latest: AsyncMutex<Option<RelayFrame>>,
     expires: Instant,
+    session_expires: Instant,
     verified: AtomicBool,
+    frames_served: AtomicU64,
+    bytes_served: AtomicU64,
 }
 struct Active {
     task: tauri::async_runtime::JoinHandle<()>,
@@ -160,8 +196,13 @@ pub async fn start_sbs_relay_probe(window: WebviewWindow) -> Result<ProbeInfo, S
         .map_err(|error| format!("Unable to bind secure SBS listener: {error}"))?;
     let shared = Arc::new(Shared {
         token: AsyncMutex::new(Some(token.clone())),
+        session: AsyncMutex::new(None),
+        latest: AsyncMutex::new(None),
         expires: Instant::now() + TTL,
+        session_expires: Instant::now() + SESSION_TTL,
         verified: AtomicBool::new(false),
+        frames_served: AtomicU64::new(0),
+        bytes_served: AtomicU64::new(0),
     });
     let task_shared = Arc::clone(&shared);
     let task = tauri::async_runtime::spawn(async move {
@@ -186,8 +227,14 @@ pub fn sbs_relay_probe_status(window: WebviewWindow) -> Result<ProbeStatus, Stri
     crate::network::require_local(&window)?;
     let state = active().lock().map_err(|_| "Relay state locked.")?;
     Ok(match state.as_ref() {
-        Some(p) => ProbeStatus {running: true, verified: p.shared.verified.load(Ordering::Acquire)},
-        None => ProbeStatus {running: false, verified: false},
+        Some(p) => ProbeStatus {
+            running: true,
+            verified: p.shared.verified.load(Ordering::Acquire),
+            frames_served: p.shared.frames_served.load(Ordering::Relaxed),
+            bytes_served: p.shared.bytes_served.load(Ordering::Relaxed),
+        },
+        None => ProbeStatus {running: false, verified: false,
+                             frames_served: 0, bytes_served: 0},
     })
 }
 
@@ -202,9 +249,151 @@ pub async fn stop_sbs_relay_probe(window: WebviewWindow) -> Result<(), String> {
     };
     if let Some(p) = probe {
         *p.shared.token.lock().await = None;
+        *p.shared.session.lock().await = None;
+        *p.shared.latest.lock().await = None;
         p.task.abort();
     }
     Ok(())
+}
+
+// The desktop is the ONLY producer. Its main Webview's native-only Tauri
+// capability is enforced before accepting a visual world projection.
+#[tauri::command]
+pub async fn publish_sbs_relay_world(window: WebviewWindow, world: Value) -> Result<(), String> {
+    crate::network::require_local(&window)?;
+    let shared = {
+        active().lock().map_err(|_| "Relay state locked.")?
+            .as_ref().map(|p| Arc::clone(&p.shared))
+    };
+    let Some(shared) = shared else { return Ok(()); };
+    let filtered = sanitize_world(&world)?;
+    let mut latest = shared.latest.lock().await;
+    let seq = latest.as_ref().map_or(1, |v| v.seq.saturating_add(1));
+    let body = serde_json::to_string(&serde_json::json!({"seq":seq,"map":filtered}))
+        .map_err(|_| "Cannot encode relay world.")?;
+    if body.len() > MAX_WORLD_BYTES {
+        return Err("Relay world exceeds maximum LAN payload.".into());
+    }
+    *latest = Some(RelayFrame { seq, body });
+    Ok(())
+}
+
+// Native allowlists are a second security boundary: never trust even a
+// bundled JavaScript publisher to forward arbitrary nested world objects.
+fn pick_scalars(input: &Value, keys: &[&str]) -> Value {
+    let mut clean = Map::new();
+    for key in keys {
+        if let Some(value) = input.get(*key) {
+            let allowed = match value {
+                Value::Null | Value::Bool(_) | Value::Number(_) => true,
+                Value::String(text) => text.len() <= 96,
+                _ => false,
+            };
+            if allowed { clean.insert((*key).to_owned(), value.clone()); }
+        }
+    }
+    Value::Object(clean)
+}
+fn picked_vector(input: &Value) -> Value {
+    pick_scalars(input, &["x","y","z","w","pitch","roll","yaw","room_id"])
+}
+fn picked_array(input: &Value, max: usize, allowed: &[&str]) -> Value {
+    Value::Array(input.as_array().map(|items| items.iter().take(max)
+        .map(|item| pick_scalars(item, allowed)).collect()).unwrap_or_default())
+}
+
+fn sanitize_world(raw: &Value) -> Result<Value, String> {
+    let tick = raw.get("tick").and_then(Value::as_u64)
+        .ok_or("Missing authoritative tick.")?;
+    let map_id = raw.get("map_id").and_then(Value::as_str)
+        .filter(|id| !id.is_empty() && id.len() <= 96)
+        .ok_or("Invalid map identity.")?;
+    let entities = raw.get("entities").and_then(Value::as_array)
+        .filter(|rows| rows.len() <= MAX_RELAY_ENTITIES)
+        .ok_or("Invalid or oversized entity list.")?;
+    let scalars = [
+        "id","kind","npc_type_id","ship_class","display_name","status",
+        "angle","throttle","flight_mode","target_id","hull","max_hull",
+        "shields","max_shields","attack_range",
+    ];
+    let vectors = ["position","position_3d","destination","destination_3d",
+                   "orientation","attitude","velocity","angular_velocity"];
+    let mut clean_entities = Vec::with_capacity(entities.len());
+    for entity in entities {
+        let mut clean = pick_scalars(entity, &scalars);
+        if entity.get("id").is_none() || entity.get("kind").is_none() {
+            return Err("Relay entity missing id or kind.".into());
+        }
+        for field in vectors {
+            if let Some(value) = entity.get(field) {
+                if let Some(out) = clean.as_object_mut() {
+                    out.insert(field.into(), picked_vector(value));
+                }
+            }
+        }
+        clean_entities.push(clean);
+    }
+    let mut clean = Map::new();
+    clean.insert("map_id".into(), Value::String(map_id.into()));
+    clean.insert("tick".into(), Value::Number(tick.into()));
+    clean.insert("entities".into(), Value::Array(clean_entities));
+    if let Some(value) = raw.get("tick_ms") {
+        if value.is_number() {clean.insert("tick_ms".into(), value.clone());}
+    }
+    if let Some(value) = raw.get("boundaries") {
+        clean.insert("boundaries".into(),
+            pick_scalars(value, &["width","height","radius"]));
+    }
+    if let Some(value) = raw.get("volume") {
+        clean.insert("volume".into(),
+            pick_scalars(value, &["altitude_min","altitude_max"]));
+    }
+    if let Some(base) = raw.get("orbital_base") {
+        let mut visual = pick_scalars(base, &[
+            "id","body_id","refinery_id","model","berth_count",
+        ]);
+        if let Some(position) = base.get("position_3d") {
+            visual.as_object_mut().unwrap().insert(
+                "position_3d".into(), picked_vector(position));
+        }
+        clean.insert("orbital_base".into(), visual);
+    }
+    if let Some(ids) = raw.get("docked_pilots").and_then(Value::as_array) {
+        let limited = ids.iter().take(64).filter(|id| id.is_string() || id.is_number())
+            .cloned().collect();
+        clean.insert("docked_pilots".into(), Value::Array(limited));
+    }
+    if let Some(attendants) = raw.get("station_attendants") {
+        clean.insert("station_attendants".into(), picked_array(attendants, 64, &[
+            "id","name","display_name","room_id","x","y","z","role","station_id",
+        ]));
+    }
+    if let Some(avatars) = raw.get("station_avatars").and_then(Value::as_array) {
+        let limited = avatars.iter().take(64).map(|avatar| {
+            let mut item = pick_scalars(avatar, &[
+                "player_id","heading","room_id","x","y","z",
+            ]);
+            if let Some(position) = avatar.get("position") {
+                item.as_object_mut().unwrap().insert(
+                    "position".into(), picked_vector(position));
+            }
+            item
+        }).collect();
+        clean.insert("station_avatars".into(), Value::Array(limited));
+    }
+    let map = Value::Object(clean);
+    if serde_json::to_vec(&map).map_err(|_| "Cannot encode world.")?.len() > MAX_WORLD_BYTES {
+        return Err("Relay world exceeds 256 KiB.".into());
+    }
+    Ok(map)
+}
+
+async fn authorized_session(shared: &Shared, candidate: Option<&str>) -> bool {
+    if !shared.verified.load(Ordering::Acquire) {return false}
+    let expected = shared.session.lock().await;
+    expected.as_deref().is_some_and(|secret| candidate.is_some_and(|value|
+        constant_time::verify_slices_are_equal(
+            secret.as_bytes(), value.as_bytes()).is_ok()))
 }
 
 async fn serve(listener: TcpListener, tls: TlsAcceptor, shared: Arc<Shared>, address: SocketAddr) {
@@ -255,16 +444,57 @@ async fn serve_one(socket: TcpStream, acceptor: TlsAcceptor,
                     bearer.is_some_and(|candidate|
                         constant_time::verify_slices_are_equal(
                             expected.as_bytes(), candidate.as_bytes()).is_ok()));
-            if correct {
-                *secret = None;
-                shared.verified.store(true, Ordering::Release);
-            }
+            if correct { *secret = None; }
             drop(secret);
             if correct {
-                respond(&mut stream, 200, "application/json",
-                    r#"{"ok":true,"scope":"one_time_tls_proof","game_state":false}"#).await
+                // This newly issued session token stays inside the HTTPS
+                // iframe and is never passed to the parent/QR/Phoenix.
+                match random_token() {
+                    Ok(session) => {
+                        *shared.session.lock().await = Some(session.clone());
+                        shared.verified.store(true, Ordering::Release);
+                        let result = format!(
+                            r#"{{"ok":true,"stream_token":"{session}"}}"#,
+                        );
+                        respond(&mut stream, 200, "application/json", &result).await
+                    }
+                    Err(_) => respond(&mut stream, 503, "text/plain", "Unavailable.").await,
+                }
             } else {
                 respond(&mut stream, 401, "application/json", r#"{"ok":false}"#).await
+            }
+        }
+        ("GET", requested) if requested.starts_with("/relay/state?since=") => {
+            let since = requested.strip_prefix("/relay/state?since=")
+                .filter(|s| !s.is_empty() && s.len() <= 19 &&
+                    s.bytes().all(|c| c.is_ascii_digit()))
+                .and_then(|s| s.parse::<u64>().ok());
+            if since.is_none() || Instant::now() >= shared.session_expires ||
+                !authorized_session(&shared, bearer).await {
+                return respond(&mut stream, 401, "text/plain", "Unauthorized.").await;
+            }
+            let since = since.unwrap_or(0);
+            let started = Instant::now();
+            loop {
+                // A single current-state buffer; slow phones do not queue
+                // an unbounded backlog of world snapshots.
+                let response = {
+                    let frame = shared.latest.lock().await;
+                    frame.as_ref().filter(|f| f.seq > since)
+                        .map(|f| f.body.clone())
+                };
+                if let Some(response) = response {
+                    let outcome = respond(&mut stream, 200, "application/json", &response).await;
+                    if outcome.is_ok() {
+                        shared.frames_served.fetch_add(1, Ordering::Relaxed);
+                        shared.bytes_served.fetch_add(response.len() as u64, Ordering::Relaxed);
+                    }
+                    return outcome;
+                }
+                if started.elapsed() >= Duration::from_secs(4) {
+                    return respond(&mut stream, 204, "text/plain", "").await;
+                }
+                tokio::time::sleep(Duration::from_millis(100)).await;
             }
         }
         _ => respond(&mut stream, 404, "text/plain", "Not found.").await,
@@ -303,8 +533,10 @@ async fn respond<S: AsyncWrite + Unpin>(
     stream: &mut S, code: u16, content_type: &str, body: &str,
 ) -> std::io::Result<()> {
     let status = match code {
-        200 => "OK", 400 => "Bad Request", 401 => "Unauthorized",
-        404 => "Not Found", 431 => "Request Header Fields Too Large", _ => "Error",
+        200 => "OK", 204 => "No Content", 400 => "Bad Request",
+        401 => "Unauthorized", 404 => "Not Found",
+        431 => "Request Header Fields Too Large",
+        503 => "Service Unavailable", _ => "Error",
     };
     let head = format!(
         "HTTP/1.1 {code} {status}\r\nContent-Type: {content_type}\r\n\
@@ -332,6 +564,25 @@ mod tests {
         ))
         .with_safe_default_protocol_versions();
         assert!(config.is_ok(), "explicit ring TLS provider must be usable");
+    }
+
+    #[test]
+    fn projection_removes_credentials_cargo_and_unlisted_fields() {
+        let original = serde_json::json!({
+            "map_id":"sol:free_earth","tick":7,"account_token":"secret",
+            "entities":[{"id":3,"kind":"pilot","position_3d":{"x":1,"y":2,"z":3},
+                        "cargo":{"parts":12},"credentials":"secret"}]
+        });
+        let map = sanitize_world(&original).unwrap();
+        assert!(map.get("account_token").is_none());
+        assert_eq!(map["entities"][0]["position_3d"]["x"], 1);
+        assert!(map["entities"][0].get("cargo").is_none());
+        assert!(map["entities"][0].get("credentials").is_none());
+        let many: Vec<Value> = (0..=MAX_RELAY_ENTITIES)
+            .map(|i|serde_json::json!({"id":i,"kind":"npc"})).collect();
+        assert!(sanitize_world(&serde_json::json!({
+            "map_id":"sol","tick":8,"entities":many
+        })).is_err());
     }
 
     #[test]

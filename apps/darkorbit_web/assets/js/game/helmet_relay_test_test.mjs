@@ -60,7 +60,7 @@ test("proof message requires the exact iframe window and TLS origin", () => {
   assert.equal(authenticatedRelayResult({...event, data: {...event.data, passed: "true"}}, frameWindow, event.origin), null)
 })
 
-function domHarness() {
+function domHarness(callbacks = {}) {
   const result = {hidden: true, textContent: "", dataset: {}}
   const frame = {contentWindow: {}, setAttribute() {}, remove() {this.removed = true}, style: {}}
   const listeners = new Map()
@@ -77,7 +77,7 @@ function domHarness() {
     querySelector: selector => selector === "#helmet-relay-result" ? result : null,
     appendChild(x) {this.frame = x},
   }
-  const link = attachHelmetRelayTest(root, {win})
+  const link = attachHelmetRelayTest(root, {win, ...callbacks})
   return {link, win, root, frame, result, listeners, timeout: () => timeoutHandler?.()}
 }
 
@@ -94,10 +94,12 @@ test("automatic post-pair proof reports only authenticated success", () => {
     data: {type: "space-nova:relay-proof", passed: true}})
   assert.equal(h.result.textContent, "LOCAL LINK VERIFIED")
   assert.equal(h.result.dataset.passed, "true")
-  assert.equal(h.frame.removed, true)
+  assert.equal(h.frame.removed, undefined,
+    "keep the authenticated iframe alive for the local world stream")
   h.timeout()
   assert.equal(h.result.textContent, "LOCAL LINK VERIFIED")
   h.link.dispose()
+  assert.equal(h.frame.removed, true)
 })
 
 test("timeout or false proof never shows verified", () => {
@@ -111,5 +113,40 @@ test("timeout or false proof never shows verified", () => {
     data: {type: "space-nova:relay-proof", passed: false}})
   assert.match(h.result.textContent, /unavailable/)
   assert.equal(h.result.dataset.passed, "false")
+  h.link.dispose()
+})
+
+test("world messages are accepted only from the paired TLS iframe", () => {
+  const frames = []
+  let beats = 0, offline = 0
+  const h = domHarness({
+    onWorld: x => frames.push(x),
+    onHeartbeat: () => beats++,
+    onOffline: () => offline++,
+  })
+  h.link.prove(invite)
+  h.listeners.get("message")({source: h.frame.contentWindow,
+    origin: "https://192.168.0.48:4455",
+    data: {type: "space-nova:relay-proof", passed: true}})
+  const frame = {seq: 8, map: {map_id: "sol:free_earth", tick: 3,
+    entities: [{id: 1, kind: "pilot"}]}}
+  const publish = (source, origin, payload) =>
+    h.listeners.get("message")({source, origin, data: payload})
+  publish({}, "https://192.168.0.48:4455",
+    {type: "space-nova:relay-world", frame})
+  publish(h.frame.contentWindow, "https://wrong.example",
+    {type: "space-nova:relay-world", frame})
+  assert.equal(frames.length, 0)
+  publish(h.frame.contentWindow, "https://192.168.0.48:4455",
+    {type: "space-nova:relay-world", frame})
+  assert.equal(frames.length, 1)
+  assert.equal(frames[0].map.tick, 3)
+  publish(h.frame.contentWindow, "https://192.168.0.48:4455",
+    {type: "space-nova:relay-heartbeat"})
+  assert.equal(beats, 1)
+  publish(h.frame.contentWindow, "https://192.168.0.48:4455",
+    {type: "space-nova:relay-proof", passed: false})
+  assert.equal(offline, 1)
+  assert.equal(h.frame.removed, true)
   h.link.dispose()
 })

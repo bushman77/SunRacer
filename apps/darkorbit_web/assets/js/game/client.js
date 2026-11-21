@@ -18,6 +18,7 @@ import {MinimapRenderer} from "./minimap_renderer.mjs"
 import {PointerNavigation} from "./pointer_navigation.mjs"
 import {StereoSpaceView} from "./stereo_view.js"
 import {HelmetControl} from "./helmet_control.mjs"
+import {SbsRelayWorldPublisher} from "./sbs_relay_world.mjs"
 import {HelmetAlignmentKeyGate} from "./helmet_alignment_keys.mjs"
 import {NavigationComputer} from "./navigation_computer.mjs"
 import {FlightControls} from "./flight_controls.mjs"
@@ -108,6 +109,10 @@ class SpaceClient {
     this.lastFrame = performance.now()
     // Read-only transport estimate; never records credentials or game state.
     this.bandwidth = new BandwidthProbe("desktop-server")
+    this.sbsRelayWorld = new SbsRelayWorldPublisher({
+      invoke: () => this.root.dataset.nativeClient === "true"
+        ? window.__TAURI__?.core?.invoke : null,
+    })
     this.docked = false
     this.stationPosition = null
     this.stationAttendants = []
@@ -437,6 +442,7 @@ class SpaceClient {
       socket: this.socket,
       playerId: this.root.dataset.layoutPlayerId,
       combatActive: !this.navComputer.isOpen,
+      publishRelayWorld: () => this.sbsRelayWorld.publish(this.worldStream?.map, true),
     }).start()
 
     this.joinSector(this.mapId)
@@ -622,6 +628,7 @@ class SpaceClient {
     this.mapId = response.map.map_id
     this.worldStream = response.stream === "delta_v1"
       ? new WorldStreamDelta(response.map) : null
+    this.sbsRelayWorld.publish(response.map, true)
     this.worldResyncInFlight = false
     this.root.dataset.mapId = this.mapId
     this.entities.clear()
@@ -686,6 +693,7 @@ class SpaceClient {
   }
 
   applyWorldState(state) {
+    this.sbsRelayWorld.publish(state)
     this.orbitalBase = state.orbital_base || null
     this.boundaries = state.boundaries || this.boundaries
     this.volume = state.volume || this.volume

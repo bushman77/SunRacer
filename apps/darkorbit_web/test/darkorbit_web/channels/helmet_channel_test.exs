@@ -84,6 +84,21 @@ defmodule DarkorbitWeb.HelmetChannelTest do
     assert_reply ref, :ok, %{mode: "combat"}
     assert_push "helmet_mode", %{mode: "combat"}
     assert_push "helmet_snapshot", %{player_id: ^id, map: %{entities: _}}
+
+    # The phone can opt out of its redundant Phoenix WORLD feed only after
+    # receiving a valid, native-authenticated LAN snapshot. All other HMD
+    # controls remain read-only, and fallback must send a fresh authoritative
+    # snapshot without trusting the phone's map_id or player_id.
+    ref = push(viewer, "relay_stream_mode", %{"mode" => "local"})
+    assert_reply ref, :ok, %{mode: "local"}
+    ref = push(viewer, "relay_stream_mode",
+      %{"mode" => "invented", "player_id" => id + 7})
+    assert_reply ref, :error, %{reason: "read_only_or_invalid_command"}
+    ref = push(viewer, "relay_stream_mode",
+      %{"mode" => "phoenix", "map_id" => "sol:forged"})
+    assert_reply ref, :ok, %{mode: "phoenix"}
+    assert_push "helmet_snapshot", %{player_id: ^id, map: %{entities: _}}
+
     # Resync must use the authenticated pilot's real map regardless of any
     # forged viewer-supplied map/player IDs, and full snapshot requests must
     # be rate-limited to avoid amplifying EC2 egress.

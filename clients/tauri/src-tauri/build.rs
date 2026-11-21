@@ -9,6 +9,7 @@ fn main() {
                 "start_sbs_relay_probe",
                 "sbs_relay_probe_status",
                 "stop_sbs_relay_probe",
+                "publish_sbs_relay_world",
             ]),
         ),
     )

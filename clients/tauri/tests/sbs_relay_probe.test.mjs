@@ -47,7 +47,13 @@ test("phone proof uses one-use bearer over HTTPS, with no game or asset routes",
   assert.match(native, /window\.parent\.postMessage/)
   assert.match(native, /"space-nova:relay-proof",passed/)
   assert.match(native, /"https:\/\/"\+location\.hostname\+":4443"/)
-  assert.match(native, /report\(result\.ok\)/)
+  assert.match(native, /report\(true\)/)
+  assert.match(native, /"space-nova:relay-world"/)
+  assert.match(native, /"space-nova:relay-heartbeat"/)
+  assert.match(native, /\/relay\/state\?since=/)
+  assert.match(native, /MAX_WORLD_BYTES: usize = 256 \* 1024/)
+  assert.match(native, /sanitize_world\(&world\)/)
+  assert.match(native, /\*p\.shared\.session\.lock\(\)\.await = None/)
   assert.doesNotMatch(native, /postMessage\(\{[^}]*token/)
   assert.doesNotMatch(native, /world_state|world_delta|\/api\/native|\/game\/assets/)
 })
@@ -57,7 +63,8 @@ test("native IPC capabilities are strictly local and explicit", () => {
   assert.equal(capability.local, true)
   assert.deepEqual(capability.windows, ["main"])
   for (const command of [
-    "start_sbs_relay_probe", "sbs_relay_probe_status", "stop_sbs_relay_probe"
+    "start_sbs_relay_probe", "sbs_relay_probe_status", "stop_sbs_relay_probe",
+    "publish_sbs_relay_world"
   ]) {
     assert.match(main, new RegExp("sbs_relay_probe::" + command))
     assert.ok(build.includes('"' + command + '"'))
@@ -95,6 +102,9 @@ test("QR initiates phone handshake after Phoenix authentication, with no copied 
   assert.match(phoneJS, /relayInvitationFromQR\(window\.location\.href\)/)
   assert.match(phoneJS, /this\.localLink\.prove\(relayInvitation\)/)
   assert.match(phoneJS, /if \(!this\.credential\)/)
+  assert.match(phoneJS, /this\.localRelayActive/)
+  assert.match(phoneJS, /"relay_stream_mode"/)
+  assert.match(phoneJS, /this\.disableLocalRelay\(\)/)
   assert.match(relayJS, /new URLSearchParams\(\{relay: valid\.href\}\)/)
   assert.match(relayJS, /frame\.src = link\.href/)
   assert.match(relayJS, /authenticatedRelayResult/)

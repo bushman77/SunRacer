@@ -81,6 +81,11 @@ export class HelmetClient {
     this.frameCount = 0
     this.lastScreenRecenterAt = -Infinity
     this.lastSbsBandwidthUpdateAt = -Infinity
+    this.localRelayActive = false
+    this.localRelaySeq = 0
+    this.localRelayLastSeen = -Infinity
+    this.latestRelayMap = null
+    this.localRelayCheckTimer = null
   }
 
   async start() {
@@ -91,7 +96,12 @@ export class HelmetClient {
       window.history.replaceState({}, "", window.location.pathname + window.location.search)
     }
     this.setupImmersiveControls()
-    this.localLink = attachHelmetRelayTest(this.root)
+    this.localLink = attachHelmetRelayTest(this.root, {
+      onWorld: frame => this.acceptLocalWorld(frame),
+      onHeartbeat: () => {this.localRelayLastSeen = performance.now()},
+      onOffline: () => this.disableLocalRelay(),
+      onVerified: () => {this.localRelayLastSeen = performance.now()},
+    })
     attachBandwidthPanel(this.root, this.bandwidth)
 
     if (this.credential) {
@@ -130,6 +140,7 @@ export class HelmetClient {
     })
     this.channel.on("helmet_recenter", () => this.recenterFromPilot())
     this.channel.on("helmet_snapshot", ({map, player_id}) => {
+      if (this.localRelayActive) return
       this.selfId = key(player_id)
       // A snapshot replaces the complete local delta baseline, including
       // after changing orbital regions or reconnecting the headset.
@@ -138,7 +149,7 @@ export class HelmetClient {
       this.applyWorld(map)
     })
     this.channel.on("world_delta", delta => {
-      if (this.mode !== "combat") return
+      if (this.mode !== "combat" || this.localRelayActive) return
       if (!this.worldStream) {
         this.requestHelmetResync()
         return
@@ -150,7 +161,7 @@ export class HelmetClient {
     // Compatibility with an older local development server. New servers
     // should send a full snapshot only on initial join/resynchronization.
     this.channel.on("world_state", map => {
-      if (this.mode !== "combat") return
+      if (this.mode !== "combat" || this.localRelayActive) return
       this.worldStream = new WorldStreamDelta(map)
       this.applyWorld(map)
     })
@@ -185,6 +196,7 @@ export class HelmetClient {
     this.channel.on("helmet_error", ({reason}) => this.message(reason))
     this.channel.onError(() => {
       this.calibrationSaveInFlight = false
+      this.disableLocalRelay()
       this.stop()
       this.message("Helmet link interrupted. Reconnecting…")
     })
@@ -209,6 +221,14 @@ export class HelmetClient {
         // separation in the headset when PostgreSQL already has a setting.
         this.restoreServerCalibration(calibration)
         this.setMode(mode)
+        if (this.localRelayCheckTimer === null) {
+          this.localRelayCheckTimer = setInterval(() => {
+            if (this.localRelayActive &&
+                performance.now() - this.localRelayLastSeen > 10_000) {
+              this.disableLocalRelay()
+            }
+          }, 2_000)
+        }
       })
       .receive("error", ({reason}) => {
         this.message("Helmet viewer connection refused: " + (reason || "unknown"))
@@ -529,10 +549,60 @@ export class HelmetClient {
     this.mode = mode === "combat" ? "combat" : "standby"
     if (this.mode !== "combat") renderHelmetEncounter(this.encounterNode, null)
     if (this.mode === "combat") {
+      if (this.latestRelayMap &&
+          performance.now() - this.localRelayLastSeen < 10_000) {
+        this.applyLocalMap(this.latestRelayMap)
+      }
       if (this.immersiveReady) this.startRendering()
     } else {
+      this.disableLocalRelay()
       this.stop()
       this.message("")
+    }
+  }
+
+  // Local map frames originate ONLY from the one-time authenticated,
+  // same-host TLS iframe. Phoenix remains the pilot's source of identity.
+  acceptLocalWorld({seq, map}) {
+    if (!Number.isSafeInteger(seq) || seq <= this.localRelaySeq ||
+        !Number.isSafeInteger(map?.tick) ||
+        !Array.isArray(map?.entities) || map.entities.length > 256 ||
+        typeof map.map_id !== "string") return
+    this.localRelaySeq = seq
+    this.localRelayLastSeen = performance.now()
+    this.latestRelayMap = map
+    if (this.mode === "combat") this.applyLocalMap(map)
+  }
+
+  applyLocalMap(map) {
+    if (this.channel?.state !== "joined" || !this.selfId ||
+        !map.entities.some(e => key(e.id) === this.selfId)) return
+    // The first cutover covers flight. Keep Phoenix world delivery while
+    // the pilot is walking through the Green Starbase's interior.
+    if (pilotDockedInWorld(map, this.selfId)) {
+      this.disableLocalRelay()
+      return
+    }
+    this.worldStream = new WorldStreamDelta(map)
+    this.applyWorld(map)
+    this.bandwidth.record("in", "headset_lan", "world_snapshot", map)
+    if (!this.localRelayActive) {
+      this.localRelayActive = true
+      this.channel.push("relay_stream_mode", {mode: "local"}, 5000)
+        .receive("error", () => this.disableLocalRelay())
+        .receive("timeout", () => this.disableLocalRelay())
+    }
+  }
+
+  disableLocalRelay() {
+    if (!this.localRelayActive) return
+    this.localRelayActive = false
+    // Phoenix responds with its current authoritative snapshot to establish
+    // a fresh delta baseline; LAN ticks never become a server baseline.
+    if (this.channel?.state === "joined") {
+      this.channel.push("relay_stream_mode", {mode: "phoenix"}, 5000)
+        .receive("error", () => this.requestHelmetResync())
+        .receive("timeout", () => this.requestHelmetResync())
     }
   }
 

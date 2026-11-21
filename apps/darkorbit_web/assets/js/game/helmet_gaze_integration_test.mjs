@@ -157,5 +157,17 @@ test("phone has one main VR action; local link tests automatically after QR pair
   assert.ok(controls.indexOf("this.headTracking.startFromGesture()") >= 0)
   assert.ok(controls.indexOf("this.headTracking.startFromGesture()") <
     controls.indexOf("await this.root.requestFullscreen()"))
-  assert.match(helmet, /attachHelmetRelayTest\(this\.root\)/)
+  assert.match(helmet, /attachHelmetRelayTest\(this\.root, \{/)
+  assert.match(helmet, /onWorld: frame => this\.acceptLocalWorld\(frame\)/)
+  assert.match(helmet, /onOffline: \(\) => this\.disableLocalRelay\(\)/)
+})
+
+test("LAN world cutover is contingent on valid world state and supports Phoenix fallback", () => {
+  assert.match(helmet, /if \(!this\.localRelayActive\)/)
+  assert.match(helmet, /this\.channel\.push\("relay_stream_mode", \{mode: "local"\}/)
+  assert.match(helmet, /this\.channel\.push\("relay_stream_mode", \{mode: "phoenix"\}/)
+  assert.match(helmet, /map\.entities\.some\(e => key\(e\.id\) === this\.selfId\)/)
+  assert.match(helmet, /this\.localRelayLastSeen > 10_000/)
+  assert.match(helmet, /pilotDockedInWorld\(map, this\.selfId\)/)
+  assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"|"station_talk"/)
 })

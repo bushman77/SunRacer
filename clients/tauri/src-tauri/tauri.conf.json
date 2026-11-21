@@ -39,7 +39,8 @@
             "allow-native-loopback-post",
             "allow-start-sbs-relay-probe",
             "allow-sbs-relay-probe-status",
-            "allow-stop-sbs-relay-probe"
+            "allow-stop-sbs-relay-probe",
+            "allow-publish-sbs-relay-world"
           ]
         }
       ]

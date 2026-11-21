@@ -4,11 +4,12 @@ import {relayQRUrl} from "./helmet_relay_test.mjs"
 
 // The Atlas owns enrollment; the cockpit owns the headset's operating mode.
 export class HelmetControl {
-  constructor({root, socket, playerId, combatActive}) {
+  constructor({root, socket, playerId, combatActive, publishRelayWorld = () => {}}) {
     this.root = root
     this.socket = socket
     this.playerId = playerId
     this.combatActive = combatActive
+    this.publishRelayWorld = publishRelayWorld
     this.panel = root.querySelector("#helmet-panel")
     this.status = {paired: false, connected: false, rendering: false}
     this.code = null
@@ -49,7 +50,10 @@ export class HelmetControl {
       const state = await invoke("sbs_relay_probe_status")
       if (state.verified) {
         this.relayVerified = true
-        this.relayStatus = "LOCAL LINK / VERIFIED"
+        const kib = Math.round((state.bytes_served || 0) / 1024)
+        this.relayStatus = state.frames_served > 0
+          ? "LOCAL LINK / STREAMING · " + kib + " KiB LAN"
+          : "LOCAL LINK / VERIFIED"
       } else if (state.running) {
         this.relayStatus = "LOCAL LINK / AWAITING PHONE"
       } else if (this.relayUrl) {
@@ -79,6 +83,9 @@ export class HelmetControl {
         return
       }
       this.relayUrl = invitation.url
+      // Seed the current authoritative desktop snapshot immediately. A
+      // stationary pilot must not wait for another changing delta tick.
+      this.publishRelayWorld()
       this.relayStatus = "LOCAL LINK / AWAITING PHONE"
     } catch (error) {
       // Never break the existing authenticated Phoenix QR enrollment.
@@ -227,7 +234,9 @@ export class HelmetControl {
       void this.checkRelay()
     }
     if (!this.status.paired) this.requestPairing()
-    else if (this.nativeRelayInvoke()) void this.prepareRelayQR(null)
+    else if (this.nativeRelayInvoke() && !this.relayVerified) {
+      void this.prepareRelayQR(null)
+    }
   }
 
   closePanel() {
@@ -240,16 +249,16 @@ export class HelmetControl {
     this.clearQR()
     const reconnect = this.root.querySelector("#helmet-relay-reconnect")
     if (reconnect) reconnect.hidden = true
-    // Closing the HMD setup cancels the temporary LAN invitation too.
-    // A new visit gets a fresh, independently randomized challenge.
-    const invoke = this.nativeRelayInvoke()
-    if (invoke) {
-      void invoke("stop_sbs_relay_probe").catch(() => {})
+    // Once verified, the read-only LAN stream must continue while the
+    // user leaves Atlas and flies in the cockpit. Only unverified QR
+    // challenges are revoked when the setup panel closes.
+    if (!this.relayVerified) {
+      const invoke = this.nativeRelayInvoke()
+      if (invoke) void invoke("stop_sbs_relay_probe").catch(() => {})
+      this.relayUrl = null
+      this.relayReconnectQRReady = false
+      this.relayStatus = "LOCAL LINK / NOT TESTED"
     }
-    this.relayUrl = null
-    this.relayVerified = false
-    this.relayReconnectQRReady = false
-    this.relayStatus = "LOCAL LINK / NOT TESTED"
     if (this.channel?.state === "joined") this.channel.push("cancel_pairing", {})
   }
 

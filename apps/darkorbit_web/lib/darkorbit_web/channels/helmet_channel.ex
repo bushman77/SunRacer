@@ -36,7 +36,8 @@ defmodule DarkorbitWeb.HelmetChannel do
         send(self(), {:helmet_mode, mode})
         {:ok, %{mode: mode, player_id: player_id, calibration: Helmets.calibration(device_id)},
          socket |> assign(:helmet_role, :viewer)
-                |> assign(:helmet_active, false)}
+                |> assign(:helmet_active, false)
+                |> assign(:helmet_delivery, :phoenix)}
       {:error, reason} -> {:error, %{reason: Atom.to_string(reason)}}
     end
   end
@@ -117,6 +118,36 @@ defmodule DarkorbitWeb.HelmetChannel do
       when is_boolean(rendering) do
     :ok = HelmetManager.rendering(self(), rendering)
     {:reply, {:ok, %{}}, socket}
+  end
+
+  # A verified local visual stream can replace only world-state delivery.
+  # The Phoenix viewer still handles pairing, control status, navigation
+  # hints, encounters and laser events. The phone can opt back into the
+  # server stream immediately after a LAN timeout or disconnect.
+  def handle_in("relay_stream_mode", %{"mode" => "local"},
+                %{assigns: %{helmet_role: :viewer}} = socket) do
+    {:reply, {:ok, %{mode: "local"}}, assign(socket, :helmet_delivery, :local)}
+  end
+
+  def handle_in("relay_stream_mode", %{"mode" => "phoenix"},
+                %{assigns: %{helmet_role: :viewer}} = socket) do
+    socket = assign(socket, :helmet_delivery, :phoenix)
+    socket =
+      if socket.assigns[:helmet_active] && socket.assigns[:helmet_map_id] do
+        case World.snapshot(socket.assigns.helmet_map_id) do
+          {:ok, map} ->
+            push(socket, "helmet_snapshot",
+              %{map: map, player_id: socket.assigns.helmet_player_id})
+            assign(socket, :helmet_baseline, map)
+
+          {:error, _} ->
+            assign(socket, :helmet_baseline, nil)
+        end
+      else
+        socket
+      end
+
+    {:reply, {:ok, %{mode: "phoenix"}}, socket}
   end
 
   # An authenticated headset may repair its OWN stream after a dropped
@@ -218,7 +249,20 @@ defmodule DarkorbitWeb.HelmetChannel do
     push(socket, "helmet_mode", %{mode: "standby"})
     {:noreply, socket |> assign(:helmet_active, false)
                       |> assign(:helmet_baseline, nil)
+                      |> assign(:helmet_delivery, :phoenix)
                       |> assign(:helmet_last_surrender, nil)}
+  end
+
+  # When the verified LAN link is delivering visual world snapshots, this
+  # separate EC2 headset subscription must NOT emit duplicate world deltas.
+  # Keep tiny authoritative surrender/mode/event messages on Phoenix.
+  def handle_info({:world_state, %{map_id: map_id} = map},
+                  %{assigns: %{helmet_active: true, helmet_map_id: subscribed_map_id,
+                               helmet_delivery: :local}} = socket)
+      when map_id == subscribed_map_id do
+    {:noreply, socket
+      |> assign(:helmet_baseline, map)
+      |> push_surrender_if_changed(map)}
   end
 
   # Use the same sparse, authoritative delta protocol as the Tauri world
@@ -349,15 +393,19 @@ defmodule DarkorbitWeb.HelmetChannel do
         end
 
         socket =
-          case World.snapshot(map_id) do
-            {:ok, map} ->
-              push(socket, "helmet_snapshot", %{map: map, player_id: player_id})
-              socket
-              |> assign(:helmet_baseline, map)
-              |> push_surrender_if_changed(map, true)
+          if socket.assigns[:helmet_delivery] == :local do
+            assign(socket, :helmet_baseline, nil)
+          else
+            case World.snapshot(map_id) do
+              {:ok, map} ->
+                push(socket, "helmet_snapshot", %{map: map, player_id: player_id})
+                socket
+                |> assign(:helmet_baseline, map)
+                |> push_surrender_if_changed(map, true)
 
-            {:error, _} ->
-              assign(socket, :helmet_baseline, nil)
+              {:error, _} ->
+                assign(socket, :helmet_baseline, nil)
+            end
           end
 
         assign(socket, :helmet_map_id, map_id)
