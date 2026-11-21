@@ -58,82 +58,87 @@ end
 # laptop's active private Wi-Fi/LAN IP, prioritizing Wi-Fi over wired/VPN.
 # This is intentionally restricted to the dev config: production TLS is
 # terminated independently by Caddy.
-lan_host =
-  case System.get_env("SUNRACER_DEV_LAN_HOST") do
-    host when is_binary(host) and host != "" ->
-      String.trim(host)
+# CI compiles the desktop assets without launching the headset listener. Only
+# interactive local development requires locally trusted HMD certificates.
+if System.get_env("CI") != "true" do
+  lan_host =
+    case System.get_env("SUNRACER_DEV_LAN_HOST") do
+      host when is_binary(host) and host != "" ->
+        String.trim(host)
+
+      _ ->
+        interfaces =
+          case :inet.getifaddrs() do
+            {:ok, found} -> found
+            {:error, reason} -> raise "Could not discover headset LAN IP: #{inspect(reason)}"
+          end
+
+        candidates =
+          for {interface, attrs} <- interfaces,
+              :up in Keyword.get(attrs, :flags, []),
+              {:addr, {a, b, c, d}} <- attrs,
+              a == 10 or (a == 172 and b in 16..31) or
+                (a == 192 and b == 168) or (a == 100 and b in 64..127) do
+            name = to_string(interface)
+            priority =
+              cond do
+                String.match?(name, ~r/^(wl|wlan|wifi)/i) -> 0
+                String.match?(name, ~r/^(en|eth)/i) -> 1
+                String.match?(name, ~r/^(usb|rndis)/i) -> 2
+                String.match?(name, ~r/^(tailscale|wg|tun|tap)/i) -> 3
+                String.match?(name, ~r/^(docker|veth|br-|virbr|podman)/i) -> 9
+                true -> 4
+              end
+
+            {priority, {a, b, c, d}}
+          end
+
+        case candidates |> Enum.sort_by(&elem(&1, 0)) |> List.first() do
+          {_, address} -> address |> :inet.ntoa() |> to_string()
+          nil ->
+            raise "No active private LAN IPv4 for the headset. " <>
+                    "Connect Wi-Fi or set SUNRACER_DEV_LAN_HOST to the laptop's LAN IP."
+        end
+    end
+
+  case :inet.parse_address(String.to_charlist(lan_host)) do
+    {:ok, {a, b, c, d}}
+        when b in 0..255 and c in 0..255 and d in 1..254 and
+               (a == 10 or (a == 172 and b in 16..31) or
+                  (a == 192 and b == 168) or (a == 100 and b in 64..127)) ->
+      :ok
 
     _ ->
-      interfaces =
-        case :inet.getifaddrs() do
-          {:ok, found} -> found
-          {:error, reason} -> raise "Could not discover headset LAN IP: #{inspect(reason)}"
-        end
-
-      candidates =
-        for {interface, attrs} <- interfaces,
-            :up in Keyword.get(attrs, :flags, []),
-            {:addr, {a, b, c, d}} <- attrs,
-            a == 10 or (a == 172 and b in 16..31) or
-              (a == 192 and b == 168) or (a == 100 and b in 64..127) do
-          name = to_string(interface)
-          priority =
-            cond do
-              String.match?(name, ~r/^(wl|wlan|wifi)/i) -> 0
-              String.match?(name, ~r/^(en|eth)/i) -> 1
-              String.match?(name, ~r/^(usb|rndis)/i) -> 2
-              String.match?(name, ~r/^(tailscale|wg|tun|tap)/i) -> 3
-              String.match?(name, ~r/^(docker|veth|br-|virbr|podman)/i) -> 9
-              true -> 4
-            end
-
-          {priority, {a, b, c, d}}
-        end
-
-      case candidates |> Enum.sort_by(&elem(&1, 0)) |> List.first() do
-        {_, address} -> address |> :inet.ntoa() |> to_string()
-        nil ->
-          raise "No active private LAN IPv4 for the headset. " <>
-                  "Connect Wi-Fi or set SUNRACER_DEV_LAN_HOST to the laptop's LAN IP."
-      end
+      raise "Headset HTTPS needs a private LAN IPv4 address; got #{inspect(lan_host)}"
   end
 
-case :inet.parse_address(String.to_charlist(lan_host)) do
-  {:ok, {a, b, c, d}}
-      when b in 0..255 and c in 0..255 and d in 1..254 and
-             (a == 10 or (a == 172 and b in 16..31) or
-                (a == 192 and b == 168) or (a == 100 and b in 64..127)) ->
-    :ok
+  cert_dir = Path.expand("../apps/sunracer_web/priv/cert", __DIR__)
+  certfile = Path.join(cert_dir, "localhost.pem")
+  keyfile = Path.join(cert_dir, "localhost-key.pem")
 
-  _ ->
-    raise "Headset HTTPS needs a private LAN IPv4 address; got #{inspect(lan_host)}"
+  unless File.regular?(certfile) and File.regular?(keyfile) do
+    raise """
+    Headset HTTPS is mandatory in local development, but the TLS certificate
+    or key is missing from #{cert_dir}.
+    Generate a locally trusted certificate with mkcert containing localhost,
+    127.0.0.1 and #{lan_host}; trust the issuing CA on the phone.
+    Never commit certificate private keys.
+    """
+  end
+
+  config :sunracer_web, SunracerWeb.Endpoint,
+    https: [
+      ip: {0, 0, 0, 0},
+      port: 4443,
+      cipher_suite: :strong,
+      certfile: certfile,
+      keyfile: keyfile
+    ]
+
+  config :sunracer_web, :helmet_dev_lan_https_origin,
+    "https://" <> lan_host <> ":4443"
+
 end
-
-cert_dir = Path.expand("../apps/sunracer_web/priv/cert", __DIR__)
-certfile = Path.join(cert_dir, "localhost.pem")
-keyfile = Path.join(cert_dir, "localhost-key.pem")
-
-unless File.regular?(certfile) and File.regular?(keyfile) do
-  raise """
-  Headset HTTPS is mandatory in local development, but the TLS certificate
-  or key is missing from #{cert_dir}.
-  Generate a locally trusted certificate with mkcert containing localhost,
-  127.0.0.1 and #{lan_host}; trust the issuing CA on the phone.
-  Never commit certificate private keys.
-  """
-end
-
-config :sunracer_web, SunracerWeb.Endpoint,
-  https: [
-    ip: {0, 0, 0, 0},
-    port: 4443,
-    cipher_suite: :strong,
-    certfile: certfile,
-    keyfile: keyfile
-  ]
-
-config :sunracer_web, :helmet_dev_lan_https_origin,
-  "https://" <> lan_host <> ":4443"
 
 # Reload browser tabs when matching files change.
 config :sunracer_web, SunracerWeb.Endpoint,

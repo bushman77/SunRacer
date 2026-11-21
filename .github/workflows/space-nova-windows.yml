@@ -12,7 +12,7 @@ on:
       - "config/config.exs"
       - "apps/sunracer_web/assets/package-lock.json"
       - "apps/sunracer_web/priv/static/images/game/**"
-      - ".github/workflows/sunracer-windows.yml"
+      - ".github/workflows/space-nova-windows.yml"
   workflow_dispatch:
 
 permissions:

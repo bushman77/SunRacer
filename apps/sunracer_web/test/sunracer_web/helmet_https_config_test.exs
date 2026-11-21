@@ -7,6 +7,7 @@ defmodule SunracerWeb.HelmetHttpsConfigTest do
     source = File.read!(@dev_config)
     assert {:ok, _ast} = Code.string_to_quoted(source)
     assert source =~ ~s(port: 4443)
+    assert source =~ ~s(if System.get_env("CI") != "true" do)
     assert source =~ ~s(https: [)
     assert source =~ ~s(:helmet_dev_lan_https_origin)
     refute source =~ "SUNRACER_DEV_LAN_HTTPS"
