@@ -18,6 +18,7 @@ export class HelmetControl {
     this.relayStatus = "LOCAL LINK / NOT TESTED"
     this.relayPoll = null
     this.relayVerified = false
+    this.relayReconnectQRReady = false
   }
 
   nativeRelayInvoke() {
@@ -37,7 +38,8 @@ export class HelmetControl {
     if (check) check.hidden = !available || !this.status.connected
     const reconnect = this.root.querySelector("#helmet-relay-reconnect")
     if (reconnect) reconnect.hidden =
-      !available || !this.status.paired || !this.relayUrl || this.relayVerified
+      !available || !this.status.paired || !this.relayUrl ||
+      !this.relayReconnectQRReady || this.relayVerified
   }
 
   async checkRelay() {
@@ -63,6 +65,7 @@ export class HelmetControl {
     const invoke = this.nativeRelayInvoke()
     this.relayUrl = null
     this.relayVerified = false
+    this.relayReconnectQRReady = false
     if (!invoke) return this.drawQR() // Browser-only game retains Phoenix QR.
     this.relayStatus = "LOCAL LINK / PREPARING"
     this.renderRelayStatus()
@@ -101,6 +104,7 @@ export class HelmetControl {
         return this.renderRelayStatus()
       }
       await QRCode.toCanvas(canvas, qr, {width: 190, margin: 2, errorCorrectionLevel: "M"})
+      this.relayReconnectQRReady = true
       this.renderRelayStatus()
     } catch {
       this.relayStatus = "LOCAL LINK / UNABLE TO DRAW RECONNECT QR"
@@ -244,6 +248,7 @@ export class HelmetControl {
     }
     this.relayUrl = null
     this.relayVerified = false
+    this.relayReconnectQRReady = false
     this.relayStatus = "LOCAL LINK / NOT TESTED"
     if (this.channel?.state === "joined") this.channel.push("cancel_pairing", {})
   }
