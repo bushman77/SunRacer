@@ -1,3 +1,37 @@
+## Flight model and combat balance (2026-11-21)
+
+Design settled and recorded in `docs/flight-combat-balance.md` with the
+derivations. Balance is a hard requirement for this game; the figures there
+were measured against the code, not estimated. No code has changed yet.
+
+- [x] Measure the combat baseline and establish where the current numbers break
+      (shield gains cap at 4.8x, the LF laser line runs to 20x, reverse equals
+      forward in both flight modes, Newtonian is dominant on every axis).
+- [ ] Envelope parity: drop the Newtonian ceiling from `speed * 1.5` to
+      `speed * 1.0`, and slow acceleration below 240 u/s^2 so the nose leads the
+      velocity vector. Above that threshold Newtonian is indistinguishable from
+      cruise. Honour the unused `acceleration_g` field while here.
+- [ ] Fix the mode-switch handbrake: entering cruise currently discards lateral
+      momentum instantly and for free, deleting up to 320 units/s in one tick.
+      Bleed it off at `cruise_braking` instead.
+- [ ] Add `reverse_factor` to `Core.Ships.Ship`, per hull, around 1/3, applied
+      in cruise only. Reverse is not a meaningful quantity in Newtonian.
+- [ ] Raise the Dart above the Sunracer's 320 movement speed, per the project's
+      own Space Rogue source data (Dart 0.30 g against the Sunracer's 0.20 g),
+      then re-tune prologue step 6 around a firing pass rather than a static
+      band hold.
+- [ ] Add a CI balance band property test: every purchasable fit on a hull must
+      need 5 to 20 s to kill its tier-appropriate opposition, and must still be
+      killable within 60 s. Hang it on `mix precommit`.
+- [ ] Gate the legacy LF and SG equipment lines on hull class rather than
+      rescaling or retiring them.
+- [ ] Wire up `cargo_pods`, which is currently display-only: the equipment page
+      promises a hold expanding from 4 to 8 and nothing can act on it.
+- [ ] Equipment unlocks (two gates: a story-granted authorization token, then a
+      credit purchase) and the Ilya Quill outfitter transaction.
+- [ ] Open numbers before building: time to top speed, the Dart's speed, and the
+      long-run credits per delivery run that the price curve scales from.
+
 ## SunRacer rename validation (2026-11-21)
 
 - [x] Remove remaining Space Nova references from docs, CI workflow files,
