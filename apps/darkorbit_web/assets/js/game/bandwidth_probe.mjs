@@ -48,7 +48,7 @@ export class BandwidthProbe {
       Number.isFinite(windowMs) && windowMs > 0 ? windowMs : WINDOW_MS,
       now - this.startedAt,
     ))
-    const recent = this.samples.filter(item => item.time > now - duration)
+    const recent = this.samples.filter(item => item.time >= now - duration)
     const windowBytes = {in: 0, out: 0, messagesIn: 0, messagesOut: 0}
     for (const item of recent) {
       windowBytes[item.direction] += item.bytes
