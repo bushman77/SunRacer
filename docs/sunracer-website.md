@@ -68,7 +68,7 @@ REGISTRATION_FROM_EMAIL=pilots@your-verified-domain.example
 Both variables are required for production registration to become available.
 Registration email is then sent through `Swoosh.Adapters.Resend`.
 Use your real provider credentials and a sender you control; the sample
-address is a placeholder. The default `spacenova.ddns.net` hostname does not
+address is a placeholder. The default `sunracer.ddns.net` hostname does not
 automatically prove domain ownership for outbound mail.
 
 Verify sender-domain DNS records, delivery and link redirects before opening

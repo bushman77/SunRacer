@@ -1,9 +1,18 @@
 ## SunRacer rename validation (2026-11-21)
 
-- [ ] Run mix compile --warnings-as-errors, mix test, and mix assets.deploy.
-- [ ] Run existing JavaScript and Tauri tests.
+- [x] Remove remaining Space Nova references from docs, CI workflow files,
+      scripts, Tauri client and config; rename workflow/doc/script filenames.
+- [x] Run existing JavaScript and Tauri tests (401 and 42 passing), plus the
+      Python release/deploy script tests (7 passing).
+- [ ] Run mix compile --warnings-as-errors, mix test, and mix assets.deploy
+      (not run: no Elixir toolchain in the rename environment).
 - [ ] Back up/migrate development databases; verify production DATABASE_URL.
-- [ ] Update external environment variables and running server/service configuration.
+- [ ] Point `sunracer.ddns.net` DNS at the EC2 host and issue its TLS
+      certificate before the next production cutover; `spacenova.ddns.net`
+      is no longer referenced anywhere in the tree.
+- [ ] Rename `SPACE_NOVA_*` to `SUNRACER_*` in the EC2 systemd environment and
+      in the local deploy shell environment; there is no fallback to the old
+      names, so deploys and TLS startup fail until this is done.
 
 ## Green Starbase modular graphics pass (2026-11-08)
 
@@ -1195,7 +1204,7 @@ Source: [Symbrella `symbolic_generation`](https://github.com/bushman77/Symbrella
 - [ ] Verify installer upgrades on real Windows/Linux systems and Android SBS phone pairing.
 - [ ] Add separate EC2 deployment automation with backups, migrations and rollback controls.
 
-See `docs/space-nova-release.md` for the distribution procedure.
+See `docs/sunracer-release.md` for the distribution procedure.
 
 ### Release diagnostic packaging safeguard (2026-11-06)
 
@@ -1206,7 +1215,7 @@ See `docs/space-nova-release.md` for the distribution procedure.
 
 - [x] Align production runtime with observed working EC2 Caddy TLS on 443 and loopback-only Phoenix HTTP on 4000; preserve optional direct TLS.
 - [x] Align Tauri default launcher URL with public HTTPS 443, migrate saved old production origin and revise tests/docs.
-- [ ] Rebuild and stage server release from updated source; configure `SPACE_NOVA_PROXY_MODE=true` only in private EC2 systemd environment.
+- [ ] Rebuild and stage server release from updated source; configure `SUNRACER_PROXY_MODE=true` only in private EC2 systemd environment.
 - [ ] Run production migration and controlled cutover after verifying database backup, then confirm public HTTPS and websocket operation.
 - [ ] Publish/install new signed client version so existing Tauri installations adopt port 443 by default.
 

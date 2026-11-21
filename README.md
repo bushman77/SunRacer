@@ -18,11 +18,11 @@ client for sector 1-1.
   development and test configuration, or equivalent local config overrides
 
 The existing production EC2 deployment uses Caddy HTTPS on port 443 with
-Phoenix bound privately to 127.0.0.1:4000 (`SPACE_NOVA_PROXY_MODE=true`).
+Phoenix bound privately to 127.0.0.1:4000 (`SUNRACER_PROXY_MODE=true`).
 Direct Phoenix TLS on port 4000 is an optional separate deployment mode.
 Production requires `DATABASE_URL` and `SECRET_KEY_BASE`.
-See [the networking guide](docs/space-nova-port-4000.md) and
-[the email registration guide](docs/space-nova-registration.md).
+See [the networking guide](docs/sunracer-port-4000.md) and
+[the email registration guide](docs/sunracer-registration.md).
 Never commit production secrets or certificate private keys.
 
 ## Development

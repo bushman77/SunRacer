@@ -39,12 +39,12 @@ test("strictly same private laptop and HTTPS port 4455, never a public or arbitr
     "https://someone@192.168.0.48:4455/relay-check#" + secret,
     "https://192.168.0.48:4455/relay-check#short",
     "https://localhost:4455/relay-check#" + secret,
-    "https://spacenova.ddns.net:4455/relay-check#" + secret,
+    "https://sunracer.ddns.net:4455/relay-check#" + secret,
   ]) {
     assert.equal(validRelayInvitation(candidate, page), null, candidate)
   }
   assert.equal(validRelayInvitation(invite, "http://192.168.0.48:4000/helmet"), null)
-  assert.equal(validRelayInvitation(invite, "https://spacenova.ddns.net/helmet"), null)
+  assert.equal(validRelayInvitation(invite, "https://sunracer.ddns.net/helmet"), null)
   assert.equal(relayInvitationFromQR(page + "#relay=" + encodeURIComponent(
     "https://192.168.0.49:4455/relay-check#" + secret)), null)
 })
@@ -52,7 +52,7 @@ test("strictly same private laptop and HTTPS port 4455, never a public or arbitr
 test("proof message requires the exact iframe window and TLS origin", () => {
   const frameWindow = {}
   const event = {source: frameWindow, origin: "https://192.168.0.48:4455",
-    data: {type: "space-nova:relay-proof", passed: true}}
+    data: {type: "sunracer:relay-proof", passed: true}}
   assert.equal(authenticatedRelayResult(event, frameWindow, event.origin), true)
   assert.equal(authenticatedRelayResult({...event, source: {}}, frameWindow, event.origin), null)
   assert.equal(authenticatedRelayResult({...event, origin: "https://evil.test"}, frameWindow, event.origin), null)
@@ -88,10 +88,10 @@ test("automatic post-pair proof reports only authenticated success", () => {
   assert.equal(h.result.textContent, "Checking secure local link...")
   assert.equal(h.frame.referrerPolicy, "no-referrer")
   h.listeners.get("message")({source: {}, origin: "https://192.168.0.48:4455",
-    data: {type: "space-nova:relay-proof", passed: true}})
+    data: {type: "sunracer:relay-proof", passed: true}})
   assert.equal(h.result.dataset.passed, "false")
   h.listeners.get("message")({source: h.frame.contentWindow, origin: "https://192.168.0.48:4455",
-    data: {type: "space-nova:relay-proof", passed: true}})
+    data: {type: "sunracer:relay-proof", passed: true}})
   assert.equal(h.result.textContent, "LOCAL LINK VERIFIED")
   assert.equal(h.result.dataset.passed, "true")
   assert.equal(h.frame.removed, undefined,
@@ -110,7 +110,7 @@ test("timeout or false proof never shows verified", () => {
   assert.equal(h.result.dataset.passed, "false")
   h.link.prove(invite)
   h.listeners.get("message")({source: h.frame.contentWindow, origin: "https://192.168.0.48:4455",
-    data: {type: "space-nova:relay-proof", passed: false}})
+    data: {type: "sunracer:relay-proof", passed: false}})
   assert.match(h.result.textContent, /unavailable/)
   assert.equal(h.result.dataset.passed, "false")
   h.link.dispose()
@@ -127,25 +127,25 @@ test("world messages are accepted only from the paired TLS iframe", () => {
   h.link.prove(invite)
   h.listeners.get("message")({source: h.frame.contentWindow,
     origin: "https://192.168.0.48:4455",
-    data: {type: "space-nova:relay-proof", passed: true}})
+    data: {type: "sunracer:relay-proof", passed: true}})
   const frame = {seq: 8, map: {map_id: "sol:free_earth", tick: 3,
     entities: [{id: 1, kind: "pilot"}]}}
   const publish = (source, origin, payload) =>
     h.listeners.get("message")({source, origin, data: payload})
   publish({}, "https://192.168.0.48:4455",
-    {type: "space-nova:relay-world", frame})
+    {type: "sunracer:relay-world", frame})
   publish(h.frame.contentWindow, "https://wrong.example",
-    {type: "space-nova:relay-world", frame})
+    {type: "sunracer:relay-world", frame})
   assert.equal(frames.length, 0)
   publish(h.frame.contentWindow, "https://192.168.0.48:4455",
-    {type: "space-nova:relay-world", frame})
+    {type: "sunracer:relay-world", frame})
   assert.equal(frames.length, 1)
   assert.equal(frames[0].map.tick, 3)
   publish(h.frame.contentWindow, "https://192.168.0.48:4455",
-    {type: "space-nova:relay-heartbeat"})
+    {type: "sunracer:relay-heartbeat"})
   assert.equal(beats, 1)
   publish(h.frame.contentWindow, "https://192.168.0.48:4455",
-    {type: "space-nova:relay-proof", passed: false})
+    {type: "sunracer:relay-proof", passed: false})
   assert.equal(offline, 1)
   assert.equal(h.frame.removed, true)
   h.link.dispose()

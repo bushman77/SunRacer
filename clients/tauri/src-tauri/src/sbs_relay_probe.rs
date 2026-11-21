@@ -47,8 +47,8 @@ h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
       window.parent.postMessage(message,"https://"+location.hostname+":4443");
     }
   };
-  const report=(passed)=>postParent({type:"space-nova:relay-proof",passed});
-  const reportHeartbeat=()=>postParent({type:"space-nova:relay-heartbeat"});
+  const report=(passed)=>postParent({type:"sunracer:relay-proof",passed});
+  const reportHeartbeat=()=>postParent({type:"sunracer:relay-heartbeat"});
   const token=location.hash.startsWith("#")?location.hash.slice(1):"";
   history.replaceState(null,"","/relay-check");
   if(!/^[0-9a-f]{48}$/.test(token)){
@@ -86,7 +86,7 @@ h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
       if(!Number.isSafeInteger(frame.seq)||frame.seq<=since||
          !frame.map||!Array.isArray(frame.map.entities))throw new Error("Invalid LAN world");
       since=frame.seq;
-      postParent({type:"space-nova:relay-world",frame});
+      postParent({type:"sunracer:relay-world",frame});
     }
   }catch{
     status.textContent="Connection failed. Check LAN reachability and the trusted TLS certificate.";
@@ -136,20 +136,20 @@ fn private_lan(ip: Ipv4Addr) -> bool {
          (a == 192 && b == 168) || (a == 100 && (64..=127).contains(&b)))
 }
 fn bind_address() -> Result<SocketAddr, String> {
-    let raw = std::env::var("SPACE_NOVA_SBS_BIND")
-        .map_err(|_| "Set SPACE_NOVA_SBS_BIND=your-LAN-IP:4455 before launching Tauri.")?;
+    let raw = std::env::var("SUNRACER_SBS_BIND")
+        .map_err(|_| "Set SUNRACER_SBS_BIND=your-LAN-IP:4455 before launching Tauri.")?;
     let address: SocketAddr = raw.parse()
-        .map_err(|_| "SPACE_NOVA_SBS_BIND must be a private IPv4 address with a port.")?;
+        .map_err(|_| "SUNRACER_SBS_BIND must be a private IPv4 address with a port.")?;
     match address {
         SocketAddr::V4(a) if a.port() >= 1024 && private_lan(*a.ip()) => Ok(address),
         _ => Err("SBS requires an explicit private IPv4 address, not 0.0.0.0, loopback or a public address.".into()),
     }
 }
 fn tls_config() -> Result<Arc<ServerConfig>, String> {
-    let cert = std::env::var("SPACE_NOVA_SBS_CERT")
-        .map_err(|_| "Set SPACE_NOVA_SBS_CERT to your trusted PEM certificate.")?;
-    let key = std::env::var("SPACE_NOVA_SBS_KEY")
-        .map_err(|_| "Set SPACE_NOVA_SBS_KEY to your matching PEM private key.")?;
+    let cert = std::env::var("SUNRACER_SBS_CERT")
+        .map_err(|_| "Set SUNRACER_SBS_CERT to your trusted PEM certificate.")?;
+    let key = std::env::var("SUNRACER_SBS_KEY")
+        .map_err(|_| "Set SUNRACER_SBS_KEY to your matching PEM private key.")?;
     let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_file_iter(&cert)
         .map_err(|error| format!("SBS certificate cannot be read: {error}"))?
         .collect::<Result<_, _>>()

@@ -6,7 +6,7 @@ import Config
 # which you should run after static files are built and
 # before starting your production server.
 config :sunracer_web, SunracerWeb.Endpoint,
-  url: [host: "spacenova.ddns.net", scheme: "https", port: 443],
+  url: [host: "sunracer.ddns.net", scheme: "https", port: 443],
   cache_static_manifest: "priv/static/cache_manifest.json"
 
 # Caddy sets X-Forwarded-Proto and discards untrusted client values.

@@ -8,7 +8,7 @@ on:
       - "apps/sunracer_web/lib/sunracer_web/controllers/**/*.heex"
       - "apps/sunracer_web/test/sunracer_web/controllers/**/*.exs"
       - "clients/tauri/**"
-      - ".github/workflows/space-nova-hud.yml"
+      - ".github/workflows/sunracer-hud.yml"
   workflow_dispatch:
 
 permissions:

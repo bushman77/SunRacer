@@ -5,7 +5,7 @@ import subprocess
 import tempfile
 import unittest
 
-SCRIPT = Path(__file__).with_name("space-nova")
+SCRIPT = Path(__file__).with_name("sunracer")
 
 
 class DeploymentOptionTest(unittest.TestCase):
@@ -63,7 +63,7 @@ class DeploymentOptionTest(unittest.TestCase):
             env = os.environ.copy()
             env["PATH"] = str(fakebin) + os.pathsep + env["PATH"]
             env["MOCK_DATA"] = str(data)
-            env["SPACE_NOVA_DEPLOY_SSH_KEY"] = str(fakebin / "git")
+            env["SUNRACER_DEPLOY_SSH_KEY"] = str(fakebin / "git")
             result = subprocess.run(["bash", str(SCRIPT), "deploy"],
                                     input="NO\n", text=True, capture_output=True,
                                     env=env)

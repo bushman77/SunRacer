@@ -61,13 +61,13 @@ Configure the private environment file used by the running EC2 systemd
 service at /home/ubuntu/.config/space_mmo.env:
 
 ~~~dotenv
-SPACE_NOVA_EMAIL_PROVIDER=smtp
+SUNRACER_EMAIL_PROVIDER=smtp
 SMTP_HOST=smtp.your-mail-provider.example
 SMTP_PORT=587
 SMTP_USERNAME=your-smtp-username
 SMTP_PASSWORD=your-smtp-credential
 REGISTRATION_FROM_EMAIL=pilots@your-verified-domain.example
-SPACE_NOVA_REGISTRATION_OPEN=false
+SUNRACER_REGISTRATION_OPEN=false
 ~~~
 
 The SMTP transport requires a verified sender at your email provider.
@@ -82,18 +82,18 @@ The gen_smtp dependency is used by Swoosh's SMTP adapter.
 Resend remains supported as the HTTP API transport:
 
 ~~~dotenv
-SPACE_NOVA_EMAIL_PROVIDER=resend
+SUNRACER_EMAIL_PROVIDER=resend
 RESEND_API_KEY=your-private-resend-api-key
 REGISTRATION_FROM_EMAIL=pilots@your-verified-domain.example
-SPACE_NOVA_REGISTRATION_OPEN=false
+SUNRACER_REGISTRATION_OPEN=false
 ~~~
 
 The provider defaults to Resend only if RESEND_API_KEY exists and
-SPACE_NOVA_EMAIL_PROVIDER is omitted; otherwise email is disabled.
+SUNRACER_EMAIL_PROVIDER is omitted; otherwise email is disabled.
 Incomplete credentials or an invalid sender address disable email delivery.
 No credentials should ever be checked into Git.
 
-The additional SPACE_NOVA_REGISTRATION_OPEN setting is an independent
+The additional SUNRACER_REGISTRATION_OPEN setting is an independent
 fail-closed public signup switch. It is false by default, even if delivery
 credentials exist. After successful provider testing, set it to true
 to enable public registration. Existing account login is unaffected.
@@ -130,11 +130,11 @@ register users or affect game progress.
 The repository cannot create an external SMTP account, verify domain DNS,
 approve Amazon SES production access, or supply credentials. Those are
 provider-side actions. Once verified delivery succeeds, set
-SPACE_NOVA_REGISTRATION_OPEN=true, restart the service, then test actual
+SUNRACER_REGISTRATION_OPEN=true, restart the service, then test actual
 pilot onboarding through the installed Tauri production client. Keep the
 existing 24-hour verification expiry and resend throttles.
 
 Avoid putting secrets in chat, tickets, GitHub commits or shell history.
 An email provider will generally require a sender domain under your control.
-The existing spacenova.ddns.net game hostname does not itself demonstrate
+The existing sunracer.ddns.net game hostname does not itself demonstrate
 ownership of mail-related DNS records.

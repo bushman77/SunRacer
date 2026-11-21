@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" role="img" aria-labelledby="title desc">
-  <title id="title">Space Nova: Sol approach</title>
+  <title id="title">SunRacer: Sol approach</title>
   <desc id="desc">Illustrated spacecraft flying past a luminous planet within a star-filled solar system. Concept artwork, not a gameplay screenshot.</desc>
   <defs>
     <radialGradient id="space"><stop stop-color="#122842"/><stop offset=".54" stop-color="#081626"/><stop offset="1" stop-color="#030914"/></radialGradient>

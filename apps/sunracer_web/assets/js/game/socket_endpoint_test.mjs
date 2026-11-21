@@ -7,10 +7,10 @@ test("hosted browser game uses same-origin channel endpoint", () => {
 })
 
 test("native client maps HTTPS to secure remote WebSocket", () => {
-  assert.equal(gameSocketEndpoint("https://spacenova.ddns.net"),
-    "wss://spacenova.ddns.net/socket")
-  assert.equal(gameSocketEndpoint("https://spacenova.ddns.net:4000"),
-    "wss://spacenova.ddns.net:4000/socket")
+  assert.equal(gameSocketEndpoint("https://sunracer.ddns.net"),
+    "wss://sunracer.ddns.net/socket")
+  assert.equal(gameSocketEndpoint("https://sunracer.ddns.net:4000"),
+    "wss://sunracer.ddns.net:4000/socket")
 })
 
 test("localhost development maps HTTP to ws", () => {

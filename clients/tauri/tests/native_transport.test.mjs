@@ -5,7 +5,7 @@ import {isLocalNativeServer, nativePostJson, nativeErrorMessage} from "../ui/nat
 test("native transport recognizes only loopback HTTP port 4000", () => {
   assert.equal(isLocalNativeServer("http://127.0.0.1:4000"), true)
   assert.equal(isLocalNativeServer("http://localhost:4000"), true)
-  assert.equal(isLocalNativeServer("https://spacenova.ddns.net"), false)
+  assert.equal(isLocalNativeServer("https://sunracer.ddns.net"), false)
   assert.throws(() => isLocalNativeServer("http://192.168.0.20:4000"), /HTTPS/)
 })
 
@@ -42,10 +42,10 @@ test("native refresh and logout accept bearer token without persistence", async 
 })
 
 test("remote server continues to use HTTPS fetch, never IPC", async () => {
-  const result = await nativePostJson("https://spacenova.ddns.net",
+  const result = await nativePostJson("https://sunracer.ddns.net",
     "/api/native/probe", {}, null, {
       request: async (url, opts) => {
-        assert.equal(url, "https://spacenova.ddns.net/api/native/probe")
+        assert.equal(url, "https://sunracer.ddns.net/api/native/probe")
         assert.equal(opts.credentials, "omit")
         return {ok: true, status: 200, json: async () => ({status: "ok"})}
       },

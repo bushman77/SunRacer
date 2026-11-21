@@ -43,11 +43,11 @@ if config_env() == :prod do
   # Explicitly opt into Caddy TLS termination on EC2. In proxy mode,
   # Phoenix listens on loopback only and generates public HTTPS:443 URLs.
   # Other deployments can continue terminating TLS directly on port 4000.
-  behind_proxy? = System.get_env("SPACE_NOVA_PROXY_MODE") in ~w(1 true)
+  behind_proxy? = System.get_env("SUNRACER_PROXY_MODE") in ~w(1 true)
 
   config :sunracer_web, SunracerWeb.Endpoint,
     url: [
-      host: System.get_env("PHX_HOST", "spacenova.ddns.net"),
+      host: System.get_env("PHX_HOST", "sunracer.ddns.net"),
       scheme: "https",
       port: if(behind_proxy?, do: 443, else: 4000)
     ],
@@ -61,12 +61,12 @@ if config_env() == :prod do
       https: false
   else
     tls_certfile =
-      System.get_env("SPACE_NOVA_TLS_CERTFILE") ||
-        raise "SPACE_NOVA_TLS_CERTFILE must point to the production TLS certificate PEM"
+      System.get_env("SUNRACER_TLS_CERTFILE") ||
+        raise "SUNRACER_TLS_CERTFILE must point to the production TLS certificate PEM"
 
     tls_keyfile =
-      System.get_env("SPACE_NOVA_TLS_KEYFILE") ||
-        raise "SPACE_NOVA_TLS_KEYFILE must point to the production TLS private key PEM"
+      System.get_env("SUNRACER_TLS_KEYFILE") ||
+        raise "SUNRACER_TLS_KEYFILE must point to the production TLS private key PEM"
 
     config :sunracer_web, SunracerWeb.Endpoint,
       http: false,
@@ -84,7 +84,7 @@ if config_env() == :prod do
   # Email provider is independent from the registration switch. Configure and
   # smoke-test a real transport before opening public registrations.
   email_provider =
-    System.get_env("SPACE_NOVA_EMAIL_PROVIDER") ||
+    System.get_env("SUNRACER_EMAIL_PROVIDER") ||
       if(System.get_env("RESEND_API_KEY"), do: "resend", else: "none")
 
   registration_from = System.get_env("REGISTRATION_FROM_EMAIL")
@@ -121,7 +121,7 @@ if config_env() == :prod do
     end
 
   registration_open? =
-    System.get_env("SPACE_NOVA_REGISTRATION_OPEN") in ~w(1 true)
+    System.get_env("SUNRACER_REGISTRATION_OPEN") in ~w(1 true)
 
   config :sunracer_web,
     registration_email_enabled: transport_ready? and registration_open?,

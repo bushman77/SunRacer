@@ -14,7 +14,7 @@
 
 ## Stage 0 — in-client bandwidth probes (implemented)
 
-The desktop and phone expose `window.spaceNovaBandwidth.snapshot()` in their respective browser consoles.
+The desktop and phone expose `window.sunRacerBandwidth.snapshot()` in their respective browser consoles.
 The probe records only event names, message counts and UTF-8 JSON PAYLOAD byte estimates, not credentials, game-state objects, raw messages or player IDs.
 Capture at least 30 seconds in each situation: idle Atlas, cruise, asteroid-belt free flight, combat, and disconnect/reconnect.
 Inspect `receivedBytesPerSecond`, `sentBytesPerSecond`, `window`, `total` and `byEvent`. The phone's `helmet_control/world_state` count reveals duplicated snapshots.
@@ -55,7 +55,7 @@ Do not move this milestone to EC2 production until the local secure relay and ne
 - **Laptop / Tauri:** In the game window, open the small **NET** disclosure at the bottom-right. It updates once per second while expanded.
 - **Galaxy S21:** Leave fullscreen VR and open **NET · BANDWIDTH** on the headset setup screen to review the counters accumulated during play.
 - Watch `Server -> device` (incoming) and `Device -> server` (outgoing), plus the largest event totals. The readout is diagnostic JSON payload only; it is not an EC2 transfer-rate or billing meter.
-- The original `window.spaceNovaBandwidth.snapshot()` remains available for optional browser debugging, but neither game UI requires a console.
+- The original `window.sunRacerBandwidth.snapshot()` remains available for optional browser debugging, but neither game UI requires a console.
 
 ## Live headset SBS bandwidth display
 
@@ -102,7 +102,7 @@ The S21 showed ~19.4 KiB/s incoming JSON while stationary. The existing headset 
 
 The native Tauri launcher has a new opt-in **SBS relay test**. It starts a
 restricted HTTPS listener **only** after a local user clicks Start, and only
-on a single explicit private LAN IPv4 address (`SPACE_NOVA_SBS_BIND`, port
+on a single explicit private LAN IPv4 address (`SUNRACER_SBS_BIND`, port
 4455 in the developer script). It reuses the phone-trusted mkcert certificate
 and never falls back to plaintext. The existing login bridge, Phoenix stream,
 and HMD rendering are untouched.

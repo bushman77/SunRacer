@@ -57,8 +57,8 @@ jobs:
           [[ "$GITHUB_REF" == refs/heads/story_line ]]
           [[ "$EXPECTED_SHA" =~ ^[0-9a-f]{40}$ ]]
           [[ "$GITHUB_SHA" == "$EXPECTED_SHA" ]]
-          python3 -m py_compile scripts/space-nova-version.py
-          python3 scripts/space-nova-version.py check "$RELEASE_VERSION"
+          python3 -m py_compile scripts/sunracer-version.py
+          python3 scripts/sunracer-version.py check "$RELEASE_VERSION"
           if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$RELEASE_VERSION" >/dev/null 2>&1; then
             echo "Tag already exists" >&2; exit 1
           fi
@@ -89,7 +89,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: space_nova_release_ci
+          POSTGRES_DB: sunracer_release_ci
         ports:
           - 5432:5432
         options: >-
@@ -111,7 +111,7 @@ jobs:
           MIX_ENV: prod
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          python3 scripts/space-nova-version.py check "$RELEASE_VERSION"
+          python3 scripts/sunracer-version.py check "$RELEASE_VERSION"
           test "$(uname -m)" = x86_64
           npm ci --prefix apps/sunracer_web/assets
           mix deps.get --only prod
@@ -122,15 +122,15 @@ jobs:
           test -x _build/prod/rel/space_mmo/bin/space_mmo
       - name: Exercise release migration and HTTPS startup
         env:
-          DATABASE_URL: ecto://postgres:postgres@127.0.0.1/space_nova_release_ci
+          DATABASE_URL: ecto://postgres:postgres@127.0.0.1/sunracer_release_ci
           PHX_HOST: localhost
-          SPACE_NOVA_TLS_CERTFILE: ${{ runner.temp }}/space-nova-cert.pem
-          SPACE_NOVA_TLS_KEYFILE: ${{ runner.temp }}/space-nova-key.pem
+          SUNRACER_TLS_CERTFILE: ${{ runner.temp }}/sunracer-cert.pem
+          SUNRACER_TLS_KEYFILE: ${{ runner.temp }}/sunracer-key.pem
         shell: bash
         run: |
           export SECRET_KEY_BASE="$(openssl rand -hex 48)"
           openssl req -x509 -nodes -newkey rsa:2048 -days 1 \
-            -keyout "$SPACE_NOVA_TLS_KEYFILE" -out "$SPACE_NOVA_TLS_CERTFILE" \
+            -keyout "$SUNRACER_TLS_KEYFILE" -out "$SUNRACER_TLS_CERTFILE" \
             -subj '/CN=localhost' >/dev/null 2>&1
           bin=_build/prod/rel/space_mmo/bin/space_mmo
           "$bin" eval 'Sunracer.Release.migrate()'
@@ -168,7 +168,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: space_nova_proxy_ci
+          POSTGRES_DB: sunracer_proxy_ci
         ports:
           - 5432:5432
         options: >-
@@ -184,9 +184,9 @@ jobs:
       - name: Verify loopback-only Caddy proxy mode
         shell: bash
         env:
-          DATABASE_URL: ecto://postgres:postgres@127.0.0.1/space_nova_proxy_ci
-          PHX_HOST: spacenova.ddns.net
-          SPACE_NOVA_PROXY_MODE: 'true'
+          DATABASE_URL: ecto://postgres:postgres@127.0.0.1/sunracer_proxy_ci
+          PHX_HOST: sunracer.ddns.net
+          SUNRACER_PROXY_MODE: 'true'
         run: |
           export SECRET_KEY_BASE="$(openssl rand -hex 48)"
           mkdir -p "$RUNNER_TEMP/server"
@@ -198,7 +198,7 @@ jobs:
           trap 'kill "$pid" 2>/dev/null || true' EXIT
           ready=0
           for _ in $(seq 1 45); do
-            if curl -sSf -H 'Host: spacenova.ddns.net' -H 'X-Forwarded-Proto: https' \
+            if curl -sSf -H 'Host: sunracer.ddns.net' -H 'X-Forwarded-Proto: https' \
               --max-time 2 http://127.0.0.1:4000/login -o /dev/null; then
               ready=1
               break
@@ -211,7 +211,7 @@ jobs:
             exit 1
           fi
           curl -sSf -D "$RUNNER_TEMP/headers" \
-            -H 'Host: spacenova.ddns.net' -H 'X-Forwarded-Proto: https' \
+            -H 'Host: sunracer.ddns.net' -H 'X-Forwarded-Proto: https' \
             http://127.0.0.1:4000/login -o /dev/null
           grep -qi '^strict-transport-security:' "$RUNNER_TEMP/headers"
           ss -lnt | grep -Eq '127\.0\.0\.1:4000\b'
@@ -234,9 +234,9 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          python scripts/space-nova-version.py check $env:RELEASE_VERSION
+          python scripts/sunracer-version.py check $env:RELEASE_VERSION
           if ($LASTEXITCODE -ne 0) { throw 'Version mismatch' }
-          python scripts/space-nova-version.py sync $env:RELEASE_VERSION
+          python scripts/sunracer-version.py sync $env:RELEASE_VERSION
           if ($LASTEXITCODE -ne 0) { throw 'Version generation failed' }
       - name: Validate signing configuration
         shell: pwsh
@@ -305,8 +305,8 @@ jobs:
         env:
           RELEASE_VERSION: ${{ inputs.version }}
         run: |
-          python3 scripts/space-nova-version.py check "$RELEASE_VERSION"
-          python3 scripts/space-nova-version.py sync "$RELEASE_VERSION"
+          python3 scripts/sunracer-version.py check "$RELEASE_VERSION"
+          python3 scripts/sunracer-version.py sync "$RELEASE_VERSION"
       - name: Validate signing configuration
         shell: bash
         run: |
@@ -419,7 +419,7 @@ jobs:
       - name: Validate all packages and produce SHA-256 checksums
         shell: bash
         run: |
-          python3 scripts/space-nova-version.py check "$RELEASE_VERSION"
+          python3 scripts/sunracer-version.py check "$RELEASE_VERSION"
           files=(
             dist/server/sunracer-server-linux-x64.tar.gz
             dist/windows/sunracer-windows-x64-setup.exe

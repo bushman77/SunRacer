@@ -32,7 +32,7 @@
             <label for="proxy-port">Proxy port</label>
             <input id="proxy-port" type="number" value="1080" min="1" max="65535" required>
           </div>
-          <p id="networking-override" class="networking-note" hidden>The SPACE_NOVA_USE_SOCKS_TUNNEL=1 launch option currently forces 127.0.0.1:1080. Restart without that option to apply your saved preference.</p>
+          <p id="networking-override" class="networking-note" hidden>The SUNRACER_USE_SOCKS_TUNNEL=1 launch option currently forces 127.0.0.1:1080. Restart without that option to apply your saved preference.</p>
           <p id="networking-status" role="status" class="networking-note"></p>
           <button class="primary" type="submit">Save and restart client</button>
         </form>
@@ -61,8 +61,8 @@
           <p class="console-subtitle">The cockpit, HUD and graphics run locally; select the authoritative multiplayer server.</p>
           <form id="connect-form" novalidate>
             <label for="server-url">Game server address</label>
-            <input id="server-url" type="url" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://spacenova.ddns.net" required>
-            <p class="hint">Secure public server: <code>https://spacenova.ddns.net</code>. For local Phoenix development, use <code>http://127.0.0.1:4000</code>.</p>
+            <input id="server-url" type="url" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://sunracer.ddns.net" required>
+            <p class="hint">Secure public server: <code>https://sunracer.ddns.net</code>. For local Phoenix development, use <code>http://127.0.0.1:4000</code>.</p>
             <div class="actions">
               <button type="submit" class="primary">Launch standalone game <span aria-hidden="true">→</span></button>
               <button type="button" id="register-pilot" class="secondary">Create pilot account</button>

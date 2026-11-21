@@ -16,7 +16,7 @@ test("game source module imports use bundled Three.js, not a CDN", () => {
 })
 
 test("desktop packaging stages renderer and assets without build-time network access", async () => {
-  const temp = await mkdtemp(path.join(tmpdir(), "space-nova-stage-"))
+  const temp = await mkdtemp(path.join(tmpdir(), "sunracer-stage-"))
   const client = path.join(temp, "clients/tauri")
   const game = path.join(temp, "apps/sunracer_web/assets/js/game")
   const vendor = path.join(temp, "apps/sunracer_web/assets/node_modules/three")

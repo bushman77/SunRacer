@@ -22,7 +22,7 @@ jobs:
         env:
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
-          POSTGRES_DB: space_nova_server_ci
+          POSTGRES_DB: sunracer_server_ci
         ports:
           - 5432:5432
         options: >-
@@ -42,7 +42,7 @@ jobs:
         with:
           node-version: "22"
       - name: Validate deployment menu and safety checks
-        run: python3 -m unittest discover -s scripts -p 'test_space_nova_deploy.py'
+        run: python3 -m unittest discover -s scripts -p 'test_sunracer_deploy.py'
       - name: Build production Elixir release with bundled assets
         run: |
           npm ci --prefix apps/sunracer_web/assets
@@ -54,11 +54,11 @@ jobs:
           test -x _build/prod/rel/space_mmo/bin/space_mmo
       - name: Smoke-test Caddy proxy mode and migrations
         env:
-          DATABASE_URL: ecto://postgres:postgres@127.0.0.1/space_nova_server_ci
-          PHX_HOST: spacenova.ddns.net
-          SPACE_NOVA_PROXY_MODE: "true"
-          SPACE_NOVA_EMAIL_PROVIDER: none
-          SPACE_NOVA_REGISTRATION_OPEN: "false"
+          DATABASE_URL: ecto://postgres:postgres@127.0.0.1/sunracer_server_ci
+          PHX_HOST: sunracer.ddns.net
+          SUNRACER_PROXY_MODE: "true"
+          SUNRACER_EMAIL_PROVIDER: none
+          SUNRACER_REGISTRATION_OPEN: "false"
         run: |
           export SECRET_KEY_BASE="$(openssl rand -hex 48)"
           bin=_build/prod/rel/space_mmo/bin/space_mmo
@@ -69,7 +69,7 @@ jobs:
           ready=0
           for _ in $(seq 1 45); do
             if curl --fail --silent --show-error --max-time 2 \
-                -H "Host: spacenova.ddns.net" \
+                -H "Host: sunracer.ddns.net" \
                 -H "X-Forwarded-Proto: https" \
                 http://127.0.0.1:4000/login -o /dev/null; then
               ready=1

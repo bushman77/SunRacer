@@ -5,8 +5,8 @@ import pathlib
 import tempfile
 import unittest
 
-SCRIPT = pathlib.Path(__file__).with_name("space-nova-version.py")
-SPEC = importlib.util.spec_from_file_location("space_nova_version", SCRIPT)
+SCRIPT = pathlib.Path(__file__).with_name("sunracer-version.py")
+SPEC = importlib.util.spec_from_file_location("sunracer_version", SCRIPT)
 MODULE = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(MODULE)
 

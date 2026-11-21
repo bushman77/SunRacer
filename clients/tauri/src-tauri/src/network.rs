@@ -105,7 +105,7 @@ pub(crate) fn require_local(window: &WebviewWindow) -> Result<(), String> {
 
 pub fn startup_proxy(app: &AppHandle) -> Option<String> {
     // Keep the pre-existing launch flag working exactly as before.
-    if std::env::var("SPACE_NOVA_USE_SOCKS_TUNNEL").as_deref() == Ok("1") {
+    if std::env::var("SUNRACER_USE_SOCKS_TUNNEL").as_deref() == Ok("1") {
         return Some("socks5://127.0.0.1:1080".into());
     }
     match load(app) {
@@ -128,7 +128,7 @@ pub fn get_network_settings(
     require_local(&window)?;
     Ok(NetworkView {
         saved: load(&app)?,
-        forced_ssh_tunnel: std::env::var("SPACE_NOVA_USE_SOCKS_TUNNEL").as_deref()
+        forced_ssh_tunnel: std::env::var("SUNRACER_USE_SOCKS_TUNNEL").as_deref()
             == Ok("1"),
     })
 }

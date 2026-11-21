@@ -3,8 +3,8 @@
 set -euo pipefail
 
 repo="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
-cert="${SPACE_NOVA_SBS_CERT:-$repo/apps/sunracer_web/priv/cert/localhost.pem}"
-key="${SPACE_NOVA_SBS_KEY:-$repo/apps/sunracer_web/priv/cert/localhost-key.pem}"
+cert="${SUNRACER_SBS_CERT:-$repo/apps/sunracer_web/priv/cert/localhost.pem}"
+key="${SUNRACER_SBS_KEY:-$repo/apps/sunracer_web/priv/cert/localhost-key.pem}"
 host="${SUNRACER_DEV_LAN_HOST:-}"
 if [[ -z "$host" ]]; then
   host="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i=="src") {print $(i+1); exit}}')"
@@ -22,10 +22,10 @@ if ! openssl x509 -in "$cert" -noout -checkip "$host" | grep -q "does match cert
   echo "Certificate does not cover LAN IP $host. Recreate the mkcert cert." >&2
   exit 1
 fi
-export SPACE_NOVA_SBS_BIND="${SPACE_NOVA_SBS_BIND:-$host:4455}"
-export SPACE_NOVA_SBS_CERT="$cert"
-export SPACE_NOVA_SBS_KEY="$key"
-echo "Space Nova: opt-in HTTPS relay proof configured at ${SPACE_NOVA_SBS_BIND}"
+export SUNRACER_SBS_BIND="${SUNRACER_SBS_BIND:-$host:4455}"
+export SUNRACER_SBS_CERT="$cert"
+export SUNRACER_SBS_KEY="$key"
+echo "SunRacer: opt-in HTTPS relay proof configured at ${SUNRACER_SBS_BIND}"
 echo "In the native game: open PILOT HMD, then scan its single QR with the S21."
 echo "No world-state relay or asset server is enabled by this stage."
 cd "$repo/clients/tauri"

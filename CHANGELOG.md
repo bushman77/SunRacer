@@ -8,6 +8,38 @@
 
 ## Unreleased
 
+### SunRacer rename completed across docs, CI, scripts and config (2026-11-21, branch `story_line`)
+
+#### Changed
+
+- Removed the last 163 Space Nova references in 40 files. Renamed 6 workflow
+  files (`.github/workflows/sunracer-*.yml`), 6 docs (`docs/sunracer-*.md`) and
+  5 scripts; `scripts/sunracer` and `scripts/sunracer-tunnel` are now the real
+  scripts rather than wrappers delegating to `scripts/space-nova`.
+- `scripts/sunracer-version.py` renamed from `space-nova-version.py`, which
+  fixes `scripts/sunracer`: it already called the new name, so version, release
+  and deploy commands were broken against the missing file.
+- Production host is now `sunracer.ddns.net` (`config/prod.exs`, the
+  `PHX_HOST` default in `config/runtime.exs`, registration email resend link,
+  Tauri launcher defaults, SBS relay probe and docs).
+- All `SPACE_NOVA_*` environment variables renamed to `SUNRACER_*` with no
+  fallback to the old names.
+- `window.spaceNovaBandwidth` renamed to `window.sunRacerBandwidth`.
+- Atlas HUD branding guard now asserts the markup does not contain the old
+  name, rather than asserting against the new name it also requires.
+
+#### Verification
+
+- Ran `node --test` in `apps/sunracer_web/assets` (401 pass, 0 fail) and in
+  `clients/tauri` (42 pass, 0 fail), and `pytest scripts/test_sunracer_*.py`
+  (7 pass).
+- `mix precommit`, `mix test` and `mix assets.deploy` were NOT run: no Elixir
+  toolchain in the environment used for this change. Elixir edits were limited
+  to `config/prod.exs`, `config/runtime.exs` and one URL string in
+  `registration_email.ex`; no module names changed.
+- Not performed: DNS for `sunracer.ddns.net`, EC2 systemd environment rename,
+  local deploy shell environment rename, TLS certificate for the new host.
+
 ### Player beam range synced with NPC weapons (2026-11-21, branch `story_line`)
 
 #### Changed
@@ -1057,7 +1089,7 @@
 
 - Aligned the umbrella release version to 0.3.1, the existing Tauri client version. Subsequent release bumps edit only root `mix.exs`.
 - Added a version-generation helper for Windows/Linux build-time Tauri, Cargo and npm metadata, with offline regression tests.
-- Extended the Linux `scripts/space-nova` menu with a unified server and signed desktop release command.
+- Extended the Linux `scripts/sunracer` menu with a unified server and signed desktop release command.
 - Expanded the signed GitHub Actions release to validate Elixir and JavaScript suites, build an Ubuntu OTP server archive, package stable-name Windows/Linux installers, generate checksums and publish a complete release after signing.
 - Added an OTP database-migration entry point, release validation CI and the release runbook. Publication, EC2 deployment and device smoke tests have not been performed.
 
@@ -1069,9 +1101,9 @@
 
 ### Restore existing EC2 Caddy proxy topology (2026-11-06)
 
-- Reconciled the release's production runtime with the verified existing EC2 architecture: Caddy public TLS on 443 → loopback Phoenix HTTP on 4000; explicit `SPACE_NOVA_PROXY_MODE=true` opt-in retains optional direct Phoenix TLS.
+- Reconciled the release's production runtime with the verified existing EC2 architecture: Caddy public TLS on 443 → loopback Phoenix HTTP on 4000; explicit `SUNRACER_PROXY_MODE=true` opt-in retains optional direct Phoenix TLS.
 - Updated SSL forwarded-protocol handling for trusted Caddy connections and preserved HSTS; no direct internet listener is opened by the proxied Phoenix endpoint.
-- Fixed the Tauri launcher default to `https://spacenova.ddns.net`, migrated saved `:4000` production origin, retained local port-4000 development and optional direct-TLS mode, and expanded launcher regression coverage.
+- Fixed the Tauri launcher default to `https://sunracer.ddns.net`, migrated saved `:4000` production origin, retained local port-4000 development and optional direct-TLS mode, and expanded launcher regression coverage.
 - Replaced obsolete port-4000-only deployment guidance. No EC2 runtime or Caddy service was changed by the repository commit; production needs a newly built server archive.
 
 ### Pilot registration verification recovery (2026-11-06)
@@ -1086,7 +1118,7 @@
 
 - Added gen_smtp as Swoosh's SMTP dependency, supporting authenticated TLS-only SMTP on ports 587/465/2525 with certificate and hostname validation.
 - Retained Resend API delivery as an alternative; missing or incomplete provider credentials fail closed.
-- Added independent SPACE_NOVA_REGISTRATION_OPEN flag to keep public signup disabled while testing delivery.
+- Added independent SUNRACER_REGISTRATION_OPEN flag to keep public signup disabled while testing delivery.
 - Added operator-only Sunracer.Email.Probe.send_test/1 and tests; no email admin HTTP route or automatic production deployment.
 
 

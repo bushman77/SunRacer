@@ -6,10 +6,10 @@ import {
 } from "../ui/server_url.mjs"
 
 test("default launches the live SunRacer server", () => {
-  assert.equal(DEFAULT_SERVER_URL, "https://spacenova.ddns.net")
-  assert.equal(gameUrl(DEFAULT_SERVER_URL), "https://spacenova.ddns.net/play")
-  assert.equal(registrationUrl(DEFAULT_SERVER_URL), "https://spacenova.ddns.net/register")
-  assert.equal(homeUrl(DEFAULT_SERVER_URL), "https://spacenova.ddns.net/")
+  assert.equal(DEFAULT_SERVER_URL, "https://sunracer.ddns.net")
+  assert.equal(gameUrl(DEFAULT_SERVER_URL), "https://sunracer.ddns.net/play")
+  assert.equal(registrationUrl(DEFAULT_SERVER_URL), "https://sunracer.ddns.net/register")
+  assert.equal(homeUrl(DEFAULT_SERVER_URL), "https://sunracer.ddns.net/")
 })
 
 test("the local development server supports registration and gameplay", () => {
@@ -41,17 +41,17 @@ test("rejects schemes, embedded credentials and arbitrary routes", () => {
 
 test("migrates launcher origins saved by older builds", () => {
   assert.equal(initialServerOrigin(null), DEFAULT_SERVER_URL)
-  assert.equal(initialServerOrigin("https://spacenova.ddns.net"), DEFAULT_SERVER_URL)
-  assert.equal(initialServerOrigin("https://spacenova.ddns.net:4000"), DEFAULT_SERVER_URL)
+  assert.equal(initialServerOrigin("https://sunracer.ddns.net"), DEFAULT_SERVER_URL)
+  assert.equal(initialServerOrigin("https://sunracer.ddns.net:4000"), DEFAULT_SERVER_URL)
   assert.equal(initialServerOrigin("http://127.0.0.1"), LOCAL_SERVER_URL)
   assert.equal(initialServerOrigin("http://localhost"), "http://localhost:4000")
   assert.equal(initialServerOrigin("https://example.org:4000"), "https://example.org:4000")
 })
 
 test("permits Caddy HTTPS on 443 and direct TLS on 4000", () => {
-  assert.equal(gameUrl("https://spacenova.ddns.net"), "https://spacenova.ddns.net/play")
-  assert.equal(gameUrl("https://spacenova.ddns.net:443"), "https://spacenova.ddns.net/play")
-  assert.equal(gameUrl("https://spacenova.ddns.net:4000"), "https://spacenova.ddns.net:4000/play")
+  assert.equal(gameUrl("https://sunracer.ddns.net"), "https://sunracer.ddns.net/play")
+  assert.equal(gameUrl("https://sunracer.ddns.net:443"), "https://sunracer.ddns.net/play")
+  assert.equal(gameUrl("https://sunracer.ddns.net:4000"), "https://sunracer.ddns.net:4000/play")
   assert.throws(() => gameUrl("https://game.example.org:4500"), /443 or direct TLS/)
   assert.throws(() => gameUrl("http://127.0.0.1"), /port 4000/)
   assert.throws(() => gameUrl("http://localhost:80"), /port 4000/)

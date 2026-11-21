@@ -153,7 +153,7 @@ export class HelmetClient {
     this.socket = instrumentPhoenixSocket(new Socket("/socket", {
       params: () => helmetSocketParams({credential: this.credential}),
     }), this.bandwidth)
-    window.spaceNovaBandwidth = this.bandwidth
+    window.sunRacerBandwidth = this.bandwidth
     this.socket.connect()
     this.channel = this.socket.channel("helmet:viewer", {device_name: "Android VR headset"})
     this.channel.on("helmet_mode", ({mode}) => this.setMode(mode))

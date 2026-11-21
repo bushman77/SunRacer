@@ -54,7 +54,7 @@ form.addEventListener("submit", event => {
   error.hidden = true
   try {
     const origin = serverOrigin(input.value)
-    sessionStorage.setItem("space-nova-native-server", origin)
+    sessionStorage.setItem("sunracer-native-server", origin)
     localStorage.setItem(storageKey, origin)
     window.location.assign("./game.html")
   } catch (cause) {

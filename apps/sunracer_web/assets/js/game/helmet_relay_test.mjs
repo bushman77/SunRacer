@@ -1,7 +1,7 @@
 // Stage 1: the existing QR carries a fragment-only one-time TLS challenge.
 // The phone proves the local path to the compiled Tauri client after Phoenix
 // authenticates its existing helmet pairing. This carries NO world state.
-const PROOF_TYPE = "space-nova:relay-proof"
+const PROOF_TYPE = "sunracer:relay-proof"
 
 function privateIPv4(host) {
   const parts = host.split(".")
@@ -101,11 +101,11 @@ export function attachHelmetRelayTest(root, {
       onOffline()
       return
     }
-    if (event.data?.type === "space-nova:relay-heartbeat") {
+    if (event.data?.type === "sunracer:relay-heartbeat") {
       onHeartbeat()
       return
     }
-    if (event.data?.type === "space-nova:relay-world") {
+    if (event.data?.type === "sunracer:relay-world") {
       const {seq, map} = event.data.frame || {}
       if (!Number.isSafeInteger(seq) || seq <= 0 ||
           !map || !Number.isSafeInteger(map.tick) ||

@@ -1,4 +1,4 @@
-export const DEFAULT_SERVER_URL = "https://spacenova.ddns.net"
+export const DEFAULT_SERVER_URL = "https://sunracer.ddns.net"
 export const LOCAL_SERVER_URL = "http://127.0.0.1:4000"
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"])
@@ -6,7 +6,7 @@ const LAUNCH_ROUTES = new Set(["/", "/play", "/register"])
 
 // Migrate the old direct-4000 origin to Caddy's public HTTPS:443 origin.
 export function initialServerOrigin(saved) {
-  if (saved === "https://spacenova.ddns.net:4000" || saved === DEFAULT_SERVER_URL) return DEFAULT_SERVER_URL
+  if (saved === "https://sunracer.ddns.net:4000" || saved === DEFAULT_SERVER_URL) return DEFAULT_SERVER_URL
   if (saved === "http://127.0.0.1") return LOCAL_SERVER_URL
   if (saved === "http://localhost") return "http://localhost:4000"
   return saved || DEFAULT_SERVER_URL

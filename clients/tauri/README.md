@@ -4,7 +4,7 @@ This is the first, server-hosted SunRacer desktop client for Pop!_OS and
 other supported Linux desktops. The launcher UI is bundled in the app, but
 the game remains served over HTTPS from the authoritative Phoenix server.
 
-By default, the launcher connects to `https://spacenova.ddns.net`.
+By default, the launcher connects to `https://sunracer.ddns.net`.
 It offers **Launch game** (`/play`), **Create pilot account** (`/register`),
 and **Visit homepage** (`/`). A previous server origin saved inside the
 client's local storage takes precedence; edit the server field to switch
@@ -54,7 +54,7 @@ verification email is displayed in the development mailbox at
 `http://127.0.0.1:4000/dev/mailbox`. Follow its link and sign in. The
 browser-login session is separate from a normal Firefox profile.
 
-You can also enter `https://spacenova.ddns.net` to access the deployed site.
+You can also enter `https://sunracer.ddns.net` to access the deployed site.
 Registration there is disabled until production email delivery is configured.
 
 For local TLS, set up mkcert as documented in the umbrella project and run
@@ -136,7 +136,7 @@ try `WEBKIT_DISABLE_DMABUF_RENDERER=1 npm run dev` as a diagnostic only.
 To keep Rust build output outside the Phoenix watcher scope:
 
 ```sh
-export CARGO_TARGET_DIR="$HOME/.cache/space-nova-tauri-target"
+export CARGO_TARGET_DIR="$HOME/.cache/sunracer-tauri-target"
 ```
 
 Setting `CARGO_TARGET_DIR` changes the binary and installer output
@@ -206,7 +206,7 @@ these GitHub Actions repository secrets privately in Settings → Secrets and
 variables → Actions:
 
 - `TAURI_SIGNING_PRIVATE_KEY`: exact private key contents from
-  `~/.tauri/space-nova.key` (not the public key)
+  `~/.tauri/sunracer.key` (not the public key)
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`: the passphrase chosen when generating
   the signing key
 
@@ -246,17 +246,17 @@ The Tauri launcher now uses a full-window flight-deck treatment rather than
 an isolated centered web card. The Phoenix game, registration, login, and
 Solar Atlas use the same dark/cyan UI language. All real input state, session
 handling and server authority remain unchanged. This is a visual milestone,
-not local asset bundling or an offline mode. See `docs/space-nova-ui.md`.
+not local asset bundling or an offline mode. See `docs/sunracer-ui.md`.
 
 ## Unified server and client releases
 
-The public release version now comes exclusively from the umbrella root `mix.exs`. For future versions, use `./scripts/sunracer version X.Y.Z` rather than editing Tauri, npm or Cargo version fields manually. The unified release workflow derives those mandatory internal version fields in its build workspaces, publishes version-free public asset names, and includes the Linux dedicated server alongside the signed desktop installers. See `docs/space-nova-release.md`. The original `./scripts/sunracer publish` command remains as an alias for `release`.
+The public release version now comes exclusively from the umbrella root `mix.exs`. For future versions, use `./scripts/sunracer version X.Y.Z` rather than editing Tauri, npm or Cargo version fields manually. The unified release workflow derives those mandatory internal version fields in its build workspaces, publishes version-free public asset names, and includes the Linux dedicated server alongside the signed desktop installers. See `docs/sunracer-release.md`. The original `./scripts/sunracer publish` command remains as an alias for `release`.
 
 ## Installed production client through an SSH tunnel (Fortinet-filtered networks)
 
 The **installed** Linux client has an explicit native WebKitGTK SOCKS5 mode
 that is disabled by default. It is only activated when the process is launched
-with `SPACE_NOVA_USE_SOCKS_TUNNEL=1`; the native webview uses
+with `SUNRACER_USE_SOCKS_TUNNEL=1`; the native webview uses
 `socks5://127.0.0.1:1080`. This does not grant permissions to remote web
 pages, bypass TLS certificate verification or change the server URL.
 
@@ -278,7 +278,7 @@ menu launch still uses the default network and requires a trusted certificate.
 To use the native proxy with your own already-running tunnel, run:
 
 ```sh
-SPACE_NOVA_USE_SOCKS_TUNNEL=1 sunracer-client
+SUNRACER_USE_SOCKS_TUNNEL=1 sunracer-client
 ```
 
 Do not pass `--insecure` or trust arbitrary TLS certificates. This feature
@@ -323,8 +323,8 @@ client to apply the choice to its WebKitGTK/WebView2 webview.
 
 This does **not** create an SSH tunnel, modify GNOME settings, store SSH keys,
 or disable TLS validation. Keep the existing `tunnel()` function or
-`scripts/space-nova-tunnel` running when selecting localhost port 1080.
-The original `SPACE_NOVA_USE_SOCKS_TUNNEL=1` launch override is preserved and
+`scripts/sunracer-tunnel` running when selecting localhost port 1080.
+The original `SUNRACER_USE_SOCKS_TUNNEL=1` launch override is preserved and
 takes precedence over the saved profile until the app is started without it.
 
 Only locally bundled launcher pages can call the three Tauri commands.
@@ -397,7 +397,7 @@ travel over the relay yet; Phoenix remains the SBS source during this stage.
 
 Only the **native compiled client** is authorized to start the listener.
 A browser-served game continues using its existing Phoenix-only pairing flow.
-If `SPACE_NOVA_SBS_BIND/CERT/KEY` are missing, or the chosen headset QR
+If `SUNRACER_SBS_BIND/CERT/KEY` are missing, or the chosen headset QR
 origin differs from the trusted HTTPS `LAN-IP:4443` endpoint, the normal
 Phoenix QR still works but the LAN proof cannot be verified. Do not bypass
 Android certificate warnings. An already-paired phone can scan the small **reconnect QR** in the paired

@@ -435,7 +435,7 @@ class SpaceClient {
       new Socket(endpoint, {params: () => ({token: this.root.dataset.socketToken})}),
       this.bandwidth,
     )
-    window.spaceNovaBandwidth = this.bandwidth
+    window.sunRacerBandwidth = this.bandwidth
     this.socket.onOpen(() => this.setConnection("Relay connected", "online"))
     this.socket.onError(() => this.setConnection("Relay interrupted", "error"))
     this.socket.onClose(() => this.setConnection("Relay offline", "error"))

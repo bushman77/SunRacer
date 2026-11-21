@@ -38,5 +38,5 @@ import {strict as brandingAssert} from "node:assert"
 brandingTest("Atlas HUD shows SunRacer branding", () => {
   const view = readBrandingFileSync(new URL("../../../lib/sunracer_web/controllers/game_html/show.html.heex", import.meta.url), "utf8")
   brandingAssert.match(view, /SUNRACER/)
-  brandingAssert.doesNotMatch(view, /SPACE NOVA/)
+  brandingAssert.doesNotMatch(view, /SPACE ?NOVA/i)
 })

@@ -11,7 +11,7 @@ The single authoritative public release version is the umbrella root
 to preserve the currently installed Tauri client's upgrade ordering.
 
 Use `./scripts/sunracer version X.Y.Z` to change **only** `mix.exs`.
-The release workflow calls `python3 scripts/space-nova-version.py sync`
+The release workflow calls `python3 scripts/sunracer-version.py sync`
 in isolated Windows/Linux runner checkouts to derive the mandatory Tauri,
 Cargo, npm package, and npm lockfile build versions. Those files are build
 metadata, not additional independent release versions. The helper also has
@@ -59,7 +59,7 @@ git push origin sbs
 ```
 
 The release command asks you to type `PUBLISH`. It dispatches
-`.github/workflows/space-nova-release.yml` with the exact branch commit
+`.github/workflows/sunracer-release.yml` with the exact branch commit
 SHA. It refuses an unsynchronized checkout, unmatched version, existing tag,
 or existing GitHub release.
 
@@ -123,8 +123,8 @@ The default SSH destination is `ubuntu@54.200.202.235` using
 `~/Downloads/space-mmo-dev.pem`, adjustable without editing the repository:
 
 ```sh
-SPACE_NOVA_DEPLOY_HOST=ubuntu@your-ec2-address \
-SPACE_NOVA_DEPLOY_SSH_KEY=/path/to/your.pem \
+SUNRACER_DEPLOY_HOST=ubuntu@your-ec2-address \
+SUNRACER_DEPLOY_SSH_KEY=/path/to/your.pem \
 ./scripts/sunracer deploy
 ```
 
@@ -182,7 +182,7 @@ still prompt Windows SmartScreen.
 ## EC2 existing Caddy deployment — 2026-11-06 correction
 
 Production TLS is already terminating in Caddy on standard 443 for
-`https://spacenova.ddns.net`. Caddy proxies to Phoenix HTTP on
+`https://sunracer.ddns.net`. Caddy proxies to Phoenix HTTP on
 `127.0.0.1:4000`. The old documentation incorrectly expected Phoenix
 to manage its own certificate on EC2.
 
@@ -190,11 +190,11 @@ Before replacing the running server:
 
 1. Rebuild the **server** archive after pulling the Caddy proxy mode commit:
    `./scripts/sunracer server`. An archive built before this correction
-   does not support `SPACE_NOVA_PROXY_MODE=true`.
+   does not support `SUNRACER_PROXY_MODE=true`.
 2. Upload and stage the rebuilt archive. Keep the existing running
    service intact until the database backup and new runtime configuration
    have been verified.
-3. Add `SPACE_NOVA_PROXY_MODE=true` to the existing private
+3. Add `SUNRACER_PROXY_MODE=true` to the existing private
    `/home/ubuntu/.config/space_mmo.env`. Keep its existing database
    and session secrets untouched.
 4. Preserve the previous release directory; perform a controlled service
@@ -202,10 +202,10 @@ Before replacing the running server:
    localhost HTTP on 4000 and public Caddy HTTPS on 443.
 5. Deploy the new Tauri client in a separately versioned future release.
    The new launcher defaults to port 443 and migrates saved
-   `https://spacenova.ddns.net:4000` URLs. Old signed clients do not
+   `https://sunracer.ddns.net:4000` URLs. Old signed clients do not
    receive this change until rebuilt/upgraded.
 
 Both configurations remain supported: Caddy proxy mode must be
 explicitly enabled; direct Phoenix TLS still requires its own PEM files.
 
-See `docs/space-nova-port-4000.md` for listener/security details.
+See `docs/sunracer-port-4000.md` for listener/security details.

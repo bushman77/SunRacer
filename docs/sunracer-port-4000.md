@@ -9,14 +9,14 @@ Internet HTTPS/WSS :443 --> Caddy --> 127.0.0.1:4000 Phoenix HTTP/WS
                                      PostgreSQL
 ```
 
-Verified on 2026-11-06: `https://spacenova.ddns.net/login` returned
+Verified on 2026-11-06: `https://sunracer.ddns.net/login` returned
 HTTP/2 200 with server `Caddy`, and Phoenix listened on localhost:4000.
 No separate Let's Encrypt client or certificate files are needed by Phoenix:
 Caddy owns TLS issuance and renewal.
 
 | Mode | Client URL | Phoenix listener |
 | --- | --- | --- |
-| Current EC2 (Caddy) | `https://spacenova.ddns.net` | `http://127.0.0.1:4000` |
+| Current EC2 (Caddy) | `https://sunracer.ddns.net` | `http://127.0.0.1:4000` |
 | Local development | `http://127.0.0.1:4000` | localhost HTTP port 4000 |
 | Optional direct TLS | `https://HOST:4000` | HTTPS port 4000 |
 
@@ -25,7 +25,7 @@ Caddy owns TLS issuance and renewal.
 Existing `/etc/caddy/Caddyfile`:
 
 ```caddy
-spacenova.ddns.net {
+sunracer.ddns.net {
     reverse_proxy 127.0.0.1:4000
 }
 ```
@@ -34,15 +34,15 @@ Set this mode explicitly in the private environment file read by
 `space-mmo.service` at `/home/ubuntu/.config/space_mmo.env`:
 
 ```sh
-SPACE_NOVA_PROXY_MODE=true
-PHX_HOST=spacenova.ddns.net
+SUNRACER_PROXY_MODE=true
+PHX_HOST=sunracer.ddns.net
 ```
 
 The release also needs existing `DATABASE_URL` and `SECRET_KEY_BASE`.
-In Caddy proxy mode, `SPACE_NOVA_TLS_CERTFILE` and
-`SPACE_NOVA_TLS_KEYFILE` are not required.
+In Caddy proxy mode, `SUNRACER_TLS_CERTFILE` and
+`SUNRACER_TLS_KEYFILE` are not required.
 
-This is deliberately opt-in: absent `SPACE_NOVA_PROXY_MODE=true`, the
+This is deliberately opt-in: absent `SUNRACER_PROXY_MODE=true`, the
 production release still requires direct TLS cert/key files and runs HTTPS
 on port 4000. Do not enable proxy mode unless a trusted proxy actually
 terminates public TLS and the backend remains private on loopback.
@@ -58,8 +58,8 @@ Confirm after deployment:
 sudo systemctl status space-mmo --no-pager
 sudo ss -lntp | grep -E ':(443|4000)\b'
 curl -sSI http://127.0.0.1:4000/login | head -1
-curl -fsSI https://spacenova.ddns.net/login | head -1
-curl -fsSI https://spacenova.ddns.net/play | head -1
+curl -fsSI https://sunracer.ddns.net/login | head -1
+curl -fsSI https://sunracer.ddns.net/play | head -1
 ```
 
 To check websocket connections, use the actual desktop or browser client.
@@ -78,13 +78,13 @@ Optional local TLS remains available via
 
 ## Optional direct TLS deployment
 
-For installations without a proxy, do not set `SPACE_NOVA_PROXY_MODE`.
+For installations without a proxy, do not set `SUNRACER_PROXY_MODE`.
 Supply these private environment variables:
 
 ```sh
 PHX_HOST=your.hostname
-SPACE_NOVA_TLS_CERTFILE=/real/path/to/fullchain.pem
-SPACE_NOVA_TLS_KEYFILE=/real/path/to/privkey.pem
+SUNRACER_TLS_CERTFILE=/real/path/to/fullchain.pem
+SUNRACER_TLS_KEYFILE=/real/path/to/privkey.pem
 ```
 
 Obtain trusted certificates and configure renewal separately. Port 4000
@@ -93,9 +93,9 @@ HTTPS directly. This mode is not used by the current EC2 host.
 
 ## Tauri launcher and backwards compatibility
 
-The new Tauri launcher defaults to `https://spacenova.ddns.net`
+The new Tauri launcher defaults to `https://sunracer.ddns.net`
 (standard HTTPS 443). It migrates a saved
-`https://spacenova.ddns.net:4000` origin automatically. Public servers
+`https://sunracer.ddns.net:4000` origin automatically. Public servers
 must use HTTPS 443 or explicitly configured direct TLS 4000. Local HTTP
 development must use loopback and port 4000.
 
@@ -106,7 +106,7 @@ server-hosted Android SBS viewer or game websocket routes.
 
 ## Controlled deployment
 
-The `space-nova-server-linux-x64.tar.gz` archive built before adding
+The `sunracer-server-linux-x64.tar.gz` archive built before adding
 proxy mode **cannot run** against the current EC2 environment file.
 Rebuild from the updated `sbs` checkout and upload the new archive.
 Stage it separately, retain the PostgreSQL and application backups,
@@ -114,4 +114,4 @@ configure proxy mode, run any migrations through the release entrypoint,
 and switch `space-mmo.service` through systemd. Keep the existing Caddy
 configuration and certificates in place.
 
-See `docs/space-nova-release.md` for the release distribution procedure.
+See `docs/sunracer-release.md` for the release distribution procedure.

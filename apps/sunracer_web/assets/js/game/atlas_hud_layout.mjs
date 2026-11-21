@@ -1,4 +1,4 @@
-const STORAGE_KEY="space-nova-atlas-hud-v1"
+const STORAGE_KEY="sunracer-atlas-hud-v1"
 const EDGE=8
 const HEADER=64
 const FOOTER=46

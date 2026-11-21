@@ -140,7 +140,7 @@ export class HelmetControl {
     host?.addEventListener("input", () => { this.hostEdited = true })
     host?.addEventListener("change", () => this.drawQR())
     // Do not offer localhost as a QR destination: a phone cannot reach it.
-    if (host) host.value = chooseHelmetOrigin((window.SPACE_NOVA_SERVER_ORIGIN || window.location.origin))
+    if (host) host.value = chooseHelmetOrigin((window.SUNRACER_SERVER_ORIGIN || window.location.origin))
 
     this.channel = this.socket.channel("helmet:control:" + this.playerId, {})
     this.channel.on("helmet_status", data => this.updateStatus(data))
@@ -158,7 +158,7 @@ export class HelmetControl {
 
   suggestNetworkHosts(hosts, lanHttpsOrigin = null) {
     const address = helmetPairingOrigin(
-      (window.SPACE_NOVA_SERVER_ORIGIN || window.location.origin), hosts, lanHttpsOrigin)
+      (window.SUNRACER_SERVER_ORIGIN || window.location.origin), hosts, lanHttpsOrigin)
     const input = this.root.querySelector("#helmet-host")
     if (input && !this.hostEdited) input.value = address
     const options = this.root.querySelector("#helmet-host-candidates")
@@ -172,7 +172,7 @@ export class HelmetControl {
       for (const hostname of hosts) {
         const origin = chooseHelmetOrigin("http://localhost:4000", [hostname])
         if (!origin) continue
-        const candidate = new URL((window.SPACE_NOVA_SERVER_ORIGIN || window.location.origin))
+        const candidate = new URL((window.SUNRACER_SERVER_ORIGIN || window.location.origin))
         candidate.hostname = hostname
         const item = document.createElement("option")
         item.value = candidate.origin

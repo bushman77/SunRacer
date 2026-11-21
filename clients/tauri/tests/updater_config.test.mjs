@@ -49,7 +49,7 @@ test("production window creates with optional native SOCKS5 proxy only on opt-in
   assert.equal(config.app.windows[0].create, false)
   assert.match(rustSource, /WebviewWindowBuilder::from_config/)
   const networkSource = readText("../src-tauri/src/network.rs")
-  assert.match(networkSource, /SPACE_NOVA_USE_SOCKS_TUNNEL/)
+  assert.match(networkSource, /SUNRACER_USE_SOCKS_TUNNEL/)
   assert.match(networkSource, /socks5:\/\/127\.0\.0\.1:1080/)
   assert.match(networkSource, /require_local/)
   assert.match(rustSource, /window\.proxy_url\(proxy_url\.parse\(\)\?\)/)

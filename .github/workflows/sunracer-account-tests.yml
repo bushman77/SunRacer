@@ -29,7 +29,7 @@ on:
       - "apps/sunracer_web/lib/sunracer_web/application.ex"
       - "apps/sunracer_web/test/sunracer_web/controllers/native_client_controller_test.exs"
       - "apps/sunracer_web/test/sunracer_web/controllers/registration_controller_test.exs"
-      - ".github/workflows/space-nova-account-tests.yml"
+      - ".github/workflows/sunracer-account-tests.yml"
   workflow_dispatch:
 
 permissions:
@@ -77,15 +77,15 @@ jobs:
           MIX_ENV: prod
           DATABASE_URL: ecto://postgres:postgres@127.0.0.1/sunracer_test
           SECRET_KEY_BASE: 0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef
-          PHX_HOST: spacenova.ddns.net
-          SPACE_NOVA_PROXY_MODE: 'true'
-          SPACE_NOVA_EMAIL_PROVIDER: smtp
+          PHX_HOST: sunracer.ddns.net
+          SUNRACER_PROXY_MODE: 'true'
+          SUNRACER_EMAIL_PROVIDER: smtp
           SMTP_HOST: smtp.example.test
           SMTP_PORT: '587'
           SMTP_USERNAME: ci-smtp-user
           SMTP_PASSWORD: ci-not-a-real-secret
           REGISTRATION_FROM_EMAIL: noreply@example.test
-          SPACE_NOVA_REGISTRATION_OPEN: 'false'
+          SUNRACER_REGISTRATION_OPEN: 'false'
         run: |
           mix run --no-start -e '
             cfg = Application.fetch_env!(:sunracer, Sunracer.Mailer)
