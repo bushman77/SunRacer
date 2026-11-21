@@ -15,6 +15,9 @@ import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_
 import {HelmetScreenWake} from "./helmet_screen_wake.mjs"
 import {HelmetHeadTracking} from "./helmet_head_tracking.mjs"
 import {HelmetGazeDwell} from "./helmet_gaze_dwell.mjs"
+import {
+  HELMET_BANDWIDTH_HUD, renderHelmetBandwidth,
+} from "./helmet_bandwidth_hud.mjs"
 import {headsetScreenTapRecenterAllowed} from "./helmet_screen_recenter.mjs"
 
 const STORAGE_KEY = "darkorbit:pilot_hmd_credential"
@@ -71,6 +74,7 @@ export class HelmetClient {
     this.running = false
     this.frameCount = 0
     this.lastScreenRecenterAt = -Infinity
+    this.lastSbsBandwidthUpdateAt = -Infinity
   }
 
   async start() {
@@ -519,6 +523,11 @@ export class HelmetClient {
       }
     }
     this.canvas.hidden = false
+    // These two eye overlays remain visible without head tracking.
+    const bandwidthOverlay = this.root.querySelector("#helmet-bandwidth-sbs")
+    if (bandwidthOverlay) bandwidthOverlay.hidden = false
+    this.lastSbsBandwidthUpdateAt = -Infinity
+    this.updateSbsBandwidth(performance.now())
     // The initial permission tap may have been in portrait or outside the
     // headset. Recenter after the immersive cockpit actually starts.
     this.headTracking.requestRecenter()
@@ -540,6 +549,8 @@ export class HelmetClient {
     this.updateSurrender(null)
     this.helmetSurrender = null
     this.canvas.hidden = true
+    const bandwidthOverlay = this.root.querySelector("#helmet-bandwidth-sbs")
+    if (bandwidthOverlay) bandwidthOverlay.hidden = true
     this.entities.clear()
     this.navComputer.solarNavigation = {planetary_view: null}
     this.orbitalBase = null
@@ -639,9 +650,17 @@ export class HelmetClient {
     }
   }
 
+  updateSbsBandwidth(time) {
+    if (time - this.lastSbsBandwidthUpdateAt < HELMET_BANDWIDTH_HUD.refreshMs) return
+    this.lastSbsBandwidthUpdateAt = time
+    renderHelmetBandwidth(this.root,
+      this.bandwidth.snapshot(HELMET_BANDWIDTH_HUD.windowMs))
+  }
+
   frame(time) {
     if (!this.running || this.mode !== "combat" || document.hidden) return
     try {
+      this.updateSbsBandwidth(time)
       this.beams = this.beams.filter(beam => beam.expiresAt > time)
       this.stationDockingSeconds = this.docked ? null :
         dockingSeconds(this.stationDockingHold, time)

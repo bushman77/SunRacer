@@ -72,3 +72,23 @@ The overlay is explicitly labeled `NET / JSON EST.` and
 network-interface throughput or actual EC2 billable traffic**. The existing
 NET details panel on the phone's setup screen remains available for
 event-by-event and cumulative statistics.
+
+## S21 headset layout correction
+
+The first, camera-parented Three.js bandwidth texture did not appear in
+on-device screenshots despite passing static tests. The revised headset UI
+uses **two small HTML labels**, one at the top-right of each eye viewport,
+above the stereo canvas. They draw the already-collected RX/TX probe values
+every second using `textContent`, and are displayed independently of motion
+sensor availability or camera projection. The overlay never captures pointer
+events or triggers another connection. It is hidden whenever SBS is stopped.
+
+SBS cockpit telemetry now uses at most 55% of the per-eye width (desktop
+retains 75%). NAV and the FLIGHT / CONTACTS / SPACE gaze panel, CLOSE,
+RECENTER and tabs are proportionally smaller and moved apart so they do not
+obscure instrument text. Gaze dwell timing is unchanged.
+
+On a local dev Phoenix server, pull the updated `star_base`, rebuild assets,
+restart Phoenix, and close/reopen the Galaxy S21 `/helmet` browser tab. If
+the page remains unchanged, clear that origin's browser cache before
+re-pairing; the phone does not need a rebuilt Tauri installer.

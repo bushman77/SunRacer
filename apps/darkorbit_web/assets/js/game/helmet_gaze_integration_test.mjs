@@ -97,8 +97,8 @@ test("native desktop starts with ALL headset-only meshes hidden", () => {
 })
 
 test("the phone renders an accessible NAV target and explains missing gyro", () => {
-  assert.match(view, /this\.navSwitch\.position\.set\(0\.95, -0\.64, -2\.46\)/)
-  assert.match(view, /new THREE\.PlaneGeometry\(2\.00, 0\.64\)/)
+  assert.match(view, /this\.navSwitch\.position\.set\(1\.24, -0\.68, -2\.46\)/)
+  assert.match(view, /new THREE\.PlaneGeometry\(1\.52, 0\.55\)/)
   assert.match(view, /ENABLE HEAD TRACKING/)
   assert.match(view, /this\.helmetGazeEnabled && this\.helmetHeadRotation === null/)
 })
@@ -113,20 +113,29 @@ test("HUD gaze inspects read-only flight, contacts and space pages", () => {
     assert.match(view, new RegExp(key))
   }
   assert.match(view, /updateHelmetHudPanel\(client, time\)/)
-  assert.match(view, /this\.helmetNavClose\.position\.set\(0\.78, 0\.79/)
-  assert.match(view, /this\.helmetNavRecenter\.position\.set\(-0\.78, 0\.79/)
+  assert.match(view, /this\.helmetNavClose\.position\.set\(0\.58, 0\.66/)
+  assert.match(view, /this\.helmetNavRecenter\.position\.set\(-0\.58, 0\.66/)
   assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"|"station_talk"/)
 })
 
-test("phone-only live bandwidth rates render in both stereo eyes without another socket", () => {
-  assert.match(view, /this\.camera\.add\(this\.helmetBandwidthHud\)/)
-  assert.match(view, /this\.helmetBandwidthHud\.visible = false/)
-  assert.match(view, /this\.helmetGazeEnabled && this\.mode === "sbs"/)
-  assert.match(view, /this\.updateHelmetBandwidthPlacement\(\)/)
-  assert.match(view, /this\.updateHelmetBandwidth\(client\.bandwidth, time\)/)
-  assert.match(view, /probe\.snapshot\(HELMET_BANDWIDTH_HUD\.windowMs\)/)
-  assert.match(view, /time - this\.lastHelmetBandwidthUpdateAt < HELMET_BANDWIDTH_HUD\.refreshMs/)
-  assert.match(helmet, /this\.bandwidth = new BandwidthProbe\("headset-server"\)/)
-  // The visualization is entirely local and does not introduce a second feed.
-  assert.doesNotMatch(view, /new (Socket|WebSocket)\(/)
+test("the phone SBS meter lives above WebGL in both eyes, independent of gyro", () => {
+  assert.match(phone, /id="helmet-bandwidth-sbs"/)
+  assert.equal((phone.match(/data-helmet-bandwidth-eye/g) || []).length, 2)
+  assert.match(helmet, /renderHelmetBandwidth\(this\.root,/)
+  assert.match(helmet, /bandwidthOverlay\.hidden = false/)
+  assert.match(helmet, /bandwidthOverlay\.hidden = true/)
+  assert.match(helmet, /this\.updateSbsBandwidth\(time\)/)
+  assert.match(helmet, /snapshot\(HELMET_BANDWIDTH_HUD\.windowMs\)/)
+  assert.doesNotMatch(view, /this\.camera\.add\(this\.helmetBandwidthHud\)/)
+  assert.doesNotMatch(view, /updateHelmetBandwidth\(client\.bandwidth, time\)/)
+  // The overlay measures an EXISTING channel; no additional connection.
+  assert.doesNotMatch(helmet, /new WebSocket\(/)
+})
+
+test("compact SBS geometry reduces telemetry and never blocks the NAV hitbox", () => {
+  assert.match(view, /this\.mode === "sbs" \? 0\.55 : 0\.75/)
+  assert.match(view, /new THREE\.PlaneGeometry\(0\.50, 0\.25\)/)
+  assert.match(view, /new THREE\.PlaneGeometry\(1\.52, 0\.55\)/)
+  assert.match(view, /new THREE\.PlaneGeometry\(0\.44, 0\.22\)/)
+  assert.match(view, /this\.raycaster\.intersectObjects\(/)
 })

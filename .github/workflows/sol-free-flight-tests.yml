@@ -71,6 +71,9 @@ on:
       - "apps/darkorbit_web/assets/js/game/helmet_network_test.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_alignment_keys.mjs"
       - "apps/darkorbit_web/assets/js/game/stereo_view.js"
+      - "apps/darkorbit_web/assets/js/game/stereo_layout.mjs"
+      - "apps/darkorbit_web/assets/js/game/stereo_layout_test.mjs"
+      - "apps/darkorbit_web/assets/css/app.css"
       - "apps/darkorbit_web/assets/js/game/green_starbase_visual.js"
       - "apps/darkorbit_web/assets/js/game/green_starbase_visual_test.mjs"
       - "apps/darkorbit_web/assets/js/game/solar_atlas.mjs"
@@ -167,6 +170,7 @@ jobs:
           node --test apps/darkorbit_web/assets/js/game/green_starbase_visual_test.mjs
           node --test apps/darkorbit_web/assets/js/game/orbital_regions_test.mjs
           node --test apps/darkorbit_web/assets/js/game/stereo_viewport_test.mjs
+          node --test apps/darkorbit_web/assets/js/game/stereo_layout_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_alignment_keys_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_alignment_test.mjs
           node --check apps/darkorbit_web/assets/js/game/stereo_view.js

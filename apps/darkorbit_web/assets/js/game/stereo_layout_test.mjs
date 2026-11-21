@@ -24,3 +24,15 @@ test("invalid projection parameters fail safely", () => {
   assert.equal(cockpitHudFit(NaN), null)
   assert.equal(cockpitHudFit(1, 180), null)
 })
+
+test("compact headset telemetry fits 55% per-eye without shrinking desktop", () => {
+  for (const aspect of [0.4, 0.75, 1.0, 1.2]) {
+    const compact = cockpitHudFit(aspect, 70, 0.55)
+    const desktop = cockpitHudFit(aspect, 70, 0.75)
+    assert.ok(compact.widthFraction <= 0.551)
+    assert.ok(compact.scale <= desktop.scale)
+    assert.ok(compact.bottomFraction < 0.86)
+  }
+  assert.equal(cockpitHudFit(1, 70, 0), null)
+  assert.equal(cockpitHudFit(1, 70, 1.01), null)
+})

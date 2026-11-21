@@ -5,6 +5,28 @@
        scissored eye viewports; no duplicate canvases or video stream. --%>
   <canvas id="helmet-viewport" class="absolute inset-0 block h-full w-full" hidden></canvas>
 
+  <%!-- Each SBS eye gets its own fixed, compact, read-only network display.
+       Separate from the WebGL cockpit so it cannot clip or move with head pose. --%>
+  <div id="helmet-bandwidth-sbs" class="helmet-bandwidth-sbs" hidden
+       aria-label="Estimated network data bandwidth in both headset eyes">
+    <div class="helmet-bandwidth-eye" data-helmet-bandwidth-eye>
+      <div class="helmet-bandwidth-card">
+        <span data-net-label>NET / JSON EST.</span>
+        <strong data-net-rx>RX 0 B/s</strong>
+        <strong data-net-tx>TX 0 B/s</strong>
+        <small data-net-note>5s AVG - excl. assets/TLS</small>
+      </div>
+    </div>
+    <div class="helmet-bandwidth-eye" data-helmet-bandwidth-eye aria-hidden="true">
+      <div class="helmet-bandwidth-card">
+        <span data-net-label>NET / JSON EST.</span>
+        <strong data-net-rx>RX 0 B/s</strong>
+        <strong data-net-tx>TX 0 B/s</strong>
+        <small data-net-note>5s AVG - excl. assets/TLS</small>
+      </div>
+    </div>
+  </div>
+
   <%!-- Read-only encounter decision mirror: two independent eye panels.
        The authenticated laptop provides the Hail and Resume controls. --%>
   <section id="helmet-encounter" hidden class="helmet-encounter-overlay"
