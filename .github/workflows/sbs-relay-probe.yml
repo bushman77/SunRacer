@@ -5,6 +5,7 @@ on:
     branches: [star_base]
     paths:
       - "clients/tauri/src-tauri/src/sbs_relay_probe.rs"
+      - "clients/tauri/src-tauri/src/network.rs"
       - "clients/tauri/src-tauri/src/main.rs"
       - "clients/tauri/src-tauri/Cargo.toml"
       - "clients/tauri/src-tauri/Cargo.lock"
@@ -49,5 +50,7 @@ jobs:
         run: |
           mkdir -p clients/tauri/dist/ui
           cp clients/tauri/ui/index.html clients/tauri/dist/ui/index.html
-      - name: Compile and run native LAN relay tests from locked dependencies
-        run: cargo test --locked --manifest-path clients/tauri/src-tauri/Cargo.toml sbs_relay_probe::tests -- --nocapture
+      - name: Compile and run native LAN relay and launcher guard tests from locked dependencies
+        run: |
+          cargo test --locked --manifest-path clients/tauri/src-tauri/Cargo.toml sbs_relay_probe::tests -- --nocapture
+          cargo test --locked --manifest-path clients/tauri/src-tauri/Cargo.toml network::tests -- --nocapture

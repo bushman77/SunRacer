@@ -84,18 +84,23 @@ fn save(app: &AppHandle, settings: &NetworkSettings) -> Result<(), String> {
     Ok(())
 }
 
-// Both URLs are Tauri's local packaged-app origins. The production HTTPS
-// game page (or any other remote origin) is never allowed to call these.
-pub(crate) fn require_local(window: &WebviewWindow) -> Result<(), String> {
-    let url = window.url().map_err(|error| error.to_string())?;
-    let local = (url.scheme() == "tauri" && url.host_str() == Some("localhost"))
-        || (["http", "https"].contains(&url.scheme())
-            && url.host_str() == Some("tauri.localhost"));
-    if local {
+// IMPORTANT: Tauri's IPC capability (tauri.conf.json: local=true, windows=
+// ["main"]) is the authoritative request-origin guard. The runtime checks
+// the ORIGIN OF EACH INVOKE, including after navigation to a remote URL.
+// Do not re-check WebviewWindow::url() here: on Linux/WebKitGTK it can
+// disagree with the actual local IPC origin and incorrectly reject the
+// bundled launcher. Restrict commands to the one permitted window as a
+// second, independent check. No remote capability is granted.
+fn require_main_window_label(label: &str) -> Result<(), String> {
+    if label == "main" {
         Ok(())
     } else {
-        Err("Networking preferences are available only in the local launcher.".into())
+        Err("Native launcher commands are restricted to the Space Nova main window.".into())
     }
+}
+
+pub(crate) fn require_local(window: &WebviewWindow) -> Result<(), String> {
+    require_main_window_label(window.label())
 }
 
 pub fn startup_proxy(app: &AppHandle) -> Option<String> {
@@ -147,6 +152,16 @@ pub fn restart_client(app: AppHandle, window: WebviewWindow) -> Result<(), Strin
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn launcher_command_requires_the_main_window() {
+        // Remote origins are denied by Tauri's local-only command ACL,
+        // tested separately against the packaged capability declaration.
+        assert!(require_main_window_label("main").is_ok());
+        assert!(require_main_window_label("remote").is_err());
+        assert!(require_main_window_label("popup").is_err());
+        assert!(require_main_window_label("").is_err());
+    }
+
     #[test]
     fn defaults_and_proxy_inputs() {
         assert_eq!(NetworkSettings::default().mode, "system");

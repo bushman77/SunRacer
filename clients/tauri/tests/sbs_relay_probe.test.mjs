@@ -8,6 +8,7 @@ const launcher = read("../ui/index.html")
 const ui = read("../ui/sbs_relay_probe.mjs")
 const cargo = read("../src-tauri/Cargo.toml")
 const main = read("../src-tauri/src/main.rs")
+const network = read("../src-tauri/src/network.rs")
 const build = read("../src-tauri/build.rs")
 const config = JSON.parse(read("../src-tauri/tauri.conf.json"))
 
@@ -52,6 +53,14 @@ test("native IPC capabilities are strictly local and explicit", () => {
     assert.ok(capability.permissions.includes("allow-" + command.replaceAll("_", "-")))
   }
   assert.match(native, /crate::network::require_local\(&window\)\?/)
+  assert.equal(capability.remote, undefined,
+    "do not permit remote HTTPS pages to invoke native relay commands")
+  // WebKitGTK can report a different window URL than the authenticated
+  // caller of a local IPC command. Tauri's ACL checks the caller origin.
+  assert.match(network, /require_main_window_label\(window\.label\(\)\)/)
+  assert.doesNotMatch(network, /window\.url\(\)/,
+    "do not bypass local-IPC approval based on WebKitGTK navigation URL")
+  assert.match(network, /if label == "main"/)
 })
 
 test("the installed launcher exposes start, stop, proof URL and completion state", () => {

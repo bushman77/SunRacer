@@ -156,3 +156,17 @@ origin; **only a successful authenticated proof** turns the button into
 and permits retry; merely loading the page or pressing a button never
 counts as success. No pilot credentials, game state, or token appear in the
 message. This is still only the link test—not a working world-state relay.
+
+
+### Stage 1 launcher-origin fix (Linux / WebKitGTK)
+
+If the bundled Tauri launcher displays `Unable to read relay status:
+Networking preferences are available only in the local launcher`, no LAN
+listener or invitation has been created. A second Rust origin test was using
+`WebviewWindow::url()`, which may disagree with the actual local IPC
+request origin on WebKitGTK. The listener's commands now rely on Tauri's
+**local-only, main-window** IPC capability to authorize the originating
+request, plus an independent native `main` window-label check. Remote
+websites have no native permission; **no remote capability** was introduced.
+Restart the rebuilt Tauri application for this native Rust fix to take effect.
+The ordinary `/helmet` page on port 4443 still cannot generate invitations.
