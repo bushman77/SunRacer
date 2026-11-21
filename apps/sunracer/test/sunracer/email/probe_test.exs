@@ -42,7 +42,7 @@ defmodule Sunracer.Email.ProbeTest do
     assert {:ok, :accepted} = Probe.send_test("pilot@example.test")
 
     assert_email_sent(fn email ->
-      assert email.subject == "Space Nova email delivery test"
+      assert email.subject == "SunRacer email delivery test"
       assert email.text_body =~ "No pilot account was created"
       assert Enum.any?(email.to, fn {_name, address} ->
                address == "pilot@example.test"
