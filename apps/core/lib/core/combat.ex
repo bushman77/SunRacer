@@ -7,15 +7,23 @@ defmodule Core.Combat do
   values.
   """
 
-  # 3,600 world units = 216 scene units at WORLD_SCALE 0.06.
-  # This is server-enforced for both manual twin beams and locked autofire.
-  @player_attack_range 3_600.0
+  # Player beam range, server-enforced for manual twin beams and locked
+  # autofire. Deliberately only a little longer than NPC weapons (Dart 420,
+  # Scow 380): holding the narrow band between their range and this one
+  # lets a pilot hit without being hit back, but drifting beyond it means
+  # the beam no longer reaches. 540 world units = 32.4 scene units at
+  # WORLD_SCALE 0.06, where a 40-unit NPC hit sphere spans about 8.5 degrees.
+  @player_attack_range 540.0
   @type damage_result :: %{
           requested_damage: non_neg_integer(),
           shield_damage: non_neg_integer(),
           hull_damage: non_neg_integer(),
           destroyed: boolean()
         }
+
+  @doc "The player beam's maximum range in world units."
+  @spec player_attack_range() :: float()
+  def player_attack_range, do: @player_attack_range
 
   @spec player_weapon(map(), pos_integer()) :: %{
           damage: non_neg_integer(),

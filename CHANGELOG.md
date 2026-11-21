@@ -2,6 +2,40 @@
 
 ## Unreleased
 
+### Player beam range synced with NPC weapons (2026-11-21, branch `story_line`)
+
+#### Changed
+
+- Player beam range (manual twin beams and lock-on) drops from 3,600 to
+  540 world units (`Core.Combat.player_attack_range/0`). NPC lasers reach
+  420 (Dart) and 380 (Scow), so there is a narrow band where a pilot hits
+  without being hit back, and beyond 540 the beam no longer reaches. At 540
+  units the 40-unit NPC hit sphere spans about 8.5 degrees in the sight;
+  at 3,600 it was about 1.3 degrees.
+- On a miss the wing beams now converge on the sight line at 540 units.
+- Story step 6 prompt teaches the band: reverse throttle, keep Corsair-17
+  between 420 and 540.
+
+#### Why
+
+- Simulated against the real map server with the staged Corsair-17 and a
+  fresh Sunracer (sight on target, every shot hitting): standing still,
+  the pilot is destroyed at 10.2 s with Corsair-17 on 185/245 hull. Backing
+  off in cruise mode to hold 450-520 units, Corsair-17 surrenders at 16.9 s
+  and the pilot takes no damage. The Sunracer reverses at up to 320 u/s;
+  the Dart pursues at 210, so the band can be held by flying.
+
+#### Verification
+
+- New test: every NPC weapon is outranged by the player beam by more than
+  0 and at most 200 units. Updated: the long-range hit test (now 500 units,
+  inside the band) and the dual-laser test (aims the eye sight, not ship
+  centre; it previously passed only because beams converged at 3,600).
+- `mix test` core 298 / darkorbit 82 / darkorbit_web 96, 0 failures;
+  `npm test` 400 pass. The simulations were run as throwaway tests and not
+  committed.
+- Manual verification: none. The band has not been flown in the cockpit.
+
 ### Story prologue "First Run": playable prologue (2026-11-21, branch `story_line`)
 
 #### Added

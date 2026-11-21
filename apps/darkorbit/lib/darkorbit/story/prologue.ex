@@ -318,8 +318,9 @@ defmodule Darkorbit.Story.Prologue do
     line(
       @kade,
       "Green Starbase communications",
-      "Keep the sight on Corsair-17 and let your shields soak the return fire. " <>
-        "If it offers surrender, accept it, and seize its hold if you have the room.",
+      "Corsair-17's guns reach 420; your beam reaches 540. Ease the throttle into " <>
+        "reverse, keep it at the edge of your sight and it can't touch you. If it " <>
+        "offers surrender, accept it, and seize its hold if you have the room.",
       "Bring Corsair-17 to surrender and accept it"
     )
   end

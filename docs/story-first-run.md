@@ -152,6 +152,7 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 - The consignment is **3 crates**, not 6: the Sunracer's hold is 4 t. Three leave room for one seized crate from Corsair-17. If the hold is full, accepting the surrender (without seizing) still completes step 6.
 - **Vesper-02 in the story is a private copy** on the Earth–Mars run, staged for the prologue pilot only. The shared Vesper-02 keeps its Earth–Venus timetable, and other pilots never see the story copy. The story copy cannot be attacked.
 - **Story vessels hold position** where they are staged; they are props for one encounter hold and retire when the voyage ends.
+- **The fight is won by range, not stats.** Player beams reach 540 world units, the Dart's laser 420. Standing still against Corsair-17 loses; reversing to hold it between 420 and 540 wins without damage (simulated). Step 6's prompt teaches this.
 - **Corsair-17 surrenders at 50% hull.** Destroying it instead loses the data chip, so the rescue is redone like any other failure.
 - **Timing.** Vesper-02 closes in once the Earth–Mars cruise passes 12%. The distress call fires when the pilot cruises within 2.5 million game-km of the Green Starbase, in either direction. After a failed rescue it waits for a later voyage.
 - **Skip** pauses the whole prologue (no staging, no prompts); *Resume story* continues from the same step.

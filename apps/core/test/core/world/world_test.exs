@@ -502,7 +502,7 @@ defmodule Core.WorldTest do
     # The extended-range emitter remains a server-owned player weapon.
     assert {:ok, selection_snapshot} = World.snapshot("1-1", context.world_options)
     pilot = Enum.find(selection_snapshot.entities, &(&1.id == :combat_pilot))
-    assert pilot.attack_range == 3_600.0
+    assert pilot.attack_range == 540.0
     assert pilot.next_attack_tick == 0
 
     assert {:ok, %{target: %{id: near_id}}} =
@@ -524,20 +524,20 @@ defmodule Core.WorldTest do
     assert damaged.hull == 241
   end
 
-  test "laser hit actually reduces shields at 3,200 game units", context do
+  test "laser hit reduces shields from inside the beam band, beyond a Dart's reach", context do
     opts = context.world_options
     assert {:ok, session} = World.connect(:long_range_pilot, context.stats, opts)
     npc_id = "npc:1-1:dart:1"
 
-    # Place the existing NPC down the ship's +Y axis, within the new
-    # weapon range but well beyond the previous 720-unit cutoff.
+    # Place the existing NPC down the ship's +Y axis at 500 units: inside
+    # the 540-unit beam range, outside the Dart's own 420-unit laser.
     [{pid, _}] = Registry.lookup(@registry, {:world_map, "1-1"})
     :sys.replace_state(pid, fn state ->
       npc = Map.fetch!(state.npcs, npc_id)
       # On the pilot's sight line: the cockpit eye sits 2.75 scene units
       # (45.8 world units) above ship centre, and the wing lasers converge
       # on what lies under the sight (LineOfFire.trace_pair/4).
-      at_distance = %{npc | position: %Core.World.Position{x: 1_000.0, y: 4_200.0,
+      at_distance = %{npc | position: %Core.World.Position{x: 1_000.0, y: 1_500.0,
                                                             z: 2.75 / 0.06}}
       pilot = Map.fetch!(state.entities, :long_range_pilot)
       pilot = %{pilot | orientation: Orientation.from_angles(%{
@@ -617,9 +617,20 @@ defmodule Core.WorldTest do
     [{map_pid, _}] = Registry.lookup(@registry, {:world_map, "1-1"})
     :sys.replace_state(map_pid, fn state ->
       entity = Map.fetch!(state.entities, :wing_test_pilot)
-      entity = %{entity | orientation: Orientation.from_angles(
-        %{yaw: yaw, pitch: pitch, roll: 0.0}
-      )}
+      npc_position = Map.fetch!(state.npcs, target.id).position
+      # Put the central sight (the pilot's eye, above ship centre) on the
+      # target: refine the centre-to-target aim from the eye twice.
+      orientation =
+        Enum.reduce(1..2, Orientation.from_angles(%{yaw: yaw, pitch: pitch, roll: 0.0}),
+          fn _, current ->
+            eye = Core.Combat.LineOfFire.eye_position(entity.position, current)
+            ex = npc_position.x - eye.x
+            ey = npc_position.y - eye.y
+            ez = npc_position.z - eye.z
+            Orientation.from_angles(%{yaw: :math.atan2(ex, -ey),
+              pitch: :math.atan2(ez, :math.sqrt(ex * ex + ey * ey)), roll: 0.0})
+          end)
+      entity = %{entity | orientation: orientation}
       %{state | entities: Map.put(state.entities, :wing_test_pilot, entity)}
     end)
 

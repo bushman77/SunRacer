@@ -4,18 +4,27 @@ defmodule Core.CombatTest do
   alias Core.Combat
   alias Core.World.Position
 
-  test "the equipped player laser has a real 3,600-unit combat range" do
+  test "the equipped player laser reaches 540 units and no further" do
     weapon = Combat.player_weapon(%{damage: 40}, 100)
-    assert weapon.attack_range == 3_600.0
+    assert weapon.attack_range == 540.0
     assert weapon.damage == 40
 
     attacker = combatant(:player, :pilot, {1_000, 1_000},
       attack_range: weapon.attack_range, damage: weapon.damage)
-    in_range = combatant(:npc, "in", {4_200, 1_000})
-    out_of_range = combatant(:npc, "out", {4_700, 1_000})
+    in_range = combatant(:npc, "in", {1_530, 1_000})
+    out_of_range = combatant(:npc, "out", {1_560, 1_000})
     assert :ok == Combat.validate_attack(attacker, in_range, 0)
     assert {:error, :out_of_range} =
              Combat.validate_attack(attacker, out_of_range, 0)
+  end
+
+  test "every NPC weapon is outranged by the player beam by a narrow band" do
+    for definition <- Core.NPC.Catalog.all() do
+      band = Combat.player_attack_range() - definition.attack_range
+      # Wide enough to fight from, narrow enough that it takes flying.
+      assert band > 0, "#{definition.id} outranges the player beam"
+      assert band <= 200, "#{definition.id} band #{band} is too forgiving"
+    end
   end
 
   test "validates PvE targets, range, and deterministic cooldown ticks" do
