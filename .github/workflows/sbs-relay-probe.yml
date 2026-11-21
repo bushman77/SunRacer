@@ -21,6 +21,15 @@ permissions:
   contents: read
 
 jobs:
+  lockfile-report:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Report exact cargo dependency lockfile adjustment
+        run: |
+          cargo metadata --format-version 1 --manifest-path clients/tauri/src-tauri/Cargo.toml > /dev/null
+          git diff -- clients/tauri/src-tauri/Cargo.lock
   launcher-tests:
     runs-on: ubuntu-24.04
     steps:
