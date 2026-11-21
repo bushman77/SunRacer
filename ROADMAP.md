@@ -836,6 +836,33 @@ Source: [Symbrella `symbolic_generation`](https://github.com/bushman77/Symbrella
   PostgreSQL persistence boundary.
 
 
+### Smoother mouse look (2026-11-20)
+
+- [x] Windowed mouse-velocity command (polling-rate independent, no coast).
+- [x] Own-ship rotation/position prediction between 10 Hz ticks using the
+  server turn rules and recorded input history.
+- [ ] Browser-verify feel at several sensitivities, on LAN and on EC2.
+- [ ] Consider sharing turn limits with the client from the server (one
+  source of truth) instead of mirrored constants.
+
+### Pilot HMD review fixes (2026-11-20)
+
+- [x] Smooth headset entities between server ticks (shared with laptop).
+- [x] Single animation-frame request on the headset across sleep/wake.
+- [x] `viewport-fit=cover` on `/helmet` so eye viewports use the full screen.
+- [x] Mirror Green Starbase, fly-by contact and proximity warnings on the phone
+  through a whitelisted visual navigation subset.
+- [x] Encounter/surrender status only in the stereo HUD; pooled beam meshes;
+  gap-aware SBS picking; parallel SBS eye axes; far aiming ring.
+- [x] Headset DPR cap 2.0; inward first-run gap; optional lens distortion (beta).
+- [ ] Run `mix test` (channel/controller tests added) and `mix precommit`.
+- [ ] Manually verify on the Galaxy S21 headset: full-width eye viewports,
+  smooth motion, no frame-rate drop after screen sleep/wake, Green Starbase
+  visible, HUD readability at DPR 2.0, distortion pass on/off.
+- [ ] Calibrate lens distortion coefficients and per-headset FOV; consider
+  storing them with the eye gap/IPD calibration in PostgreSQL.
+- [ ] HTTPS on the LAN to unlock Wake Lock and orientation sensors (head-look).
+
 ### Green Starbase — independent Earth–Mars landmark (2026-11-08)
 
 - [x] The first independent interplanetary starbase now has a stable,

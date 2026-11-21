@@ -107,6 +107,29 @@ defmodule DarkorbitWeb.HelmetChannelTest do
     assert_push "helmet_navigation", %{planetary_view: ^visual}
     assert_push "helmet_encounter", %{paused: false, encounter: nil}
 
+    # Scenery the laptop SBS view draws (Green Starbase, fly-by contact)
+    # reaches the HMD as visual fields only, never cargo or faction data.
+    site = %{x: 1.0, y: 2.0, z: 3.0}
+    Phoenix.PubSub.broadcast(Darkorbit.PubSub, Darkorbit.World.PubSub.topic("sol"),
+      {:solar_navigation_updated, %{player_id: id,
+        navigation: %{status: :idle, location_id: nil, green_starbase_nearby: true,
+          pending_encounter: nil, cargo: %{secret: 2},
+          starbases: [%{id: "sol:starbase:green", model: :green_pyramid_starbase_v1,
+                        site_3d: site, name: "Green", services: %{secret: 3}}],
+          encounter: %{id: "flyby:1", mode: :strategic_flyby, call_sign: "Vesper-02",
+                       ship_class: "scow", distance_km: 5.0,
+                       relative_position_km: %{x: 1.0, y: 0.0, z: 0.0},
+                       cargo: %{secret: 4}, faction_id: "secret"}}}})
+    assert_push "helmet_navigation", %{status: :idle, location_id: nil,
+      green_starbase_nearby: true,
+      starbases: [%{id: "sol:starbase:green", site_3d: ^site} = base],
+      encounter: %{id: "flyby:1", call_sign: "Vesper-02"} = flyby} = scenery
+    refute Map.has_key?(scenery, :cargo)
+    refute Map.has_key?(base, :services)
+    refute Map.has_key?(flyby, :cargo)
+    refute Map.has_key?(flyby, :faction_id)
+    assert_push "helmet_encounter", %{paused: false, encounter: nil}
+
     Phoenix.PubSub.broadcast(Darkorbit.PubSub, Darkorbit.World.PubSub.topic("sol"),
       {:solar_navigation_updated, %{player_id: id + 1,
         navigation: %{planetary_view: %{body_id: "mars"}, pending_encounter: nil}}})

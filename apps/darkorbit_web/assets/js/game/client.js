@@ -26,13 +26,14 @@ import {gameSocketEndpoint} from "./socket_endpoint.mjs"
 import {
   MouseSteering, validMouseSensitivity, MOUSE_STEERING_IDLE_MS,
 } from "./mouse_steering.mjs"
-import {smoothAttitude} from "./attitude_interpolation.mjs"
-import {smoothOrientation, orientationTelemetry} from "./orientation_interpolation.mjs"
+import {orientationTelemetry} from "./orientation_interpolation.mjs"
+import {smoothEntityPresentation} from "./entity_smoothing.mjs"
 import {SpaceLaserTrigger} from "./space_laser_trigger.mjs"
 import {applyLaserBurstDamage, visualLaserRays} from "./laser_burst.mjs"
 import {laserFeedback, LASER_FEEDBACK_MS} from "./laser_feedback.mjs"
 import {nextFlightMode, validFlightMode} from "./display_modes.mjs"
-import {cameraSettleSeconds} from "./camera_response.mjs"
+import {cameraSettleSeconds, PREDICTED_OWN_SHIP_SETTLE_SECONDS} from "./camera_response.mjs"
+import {predictOrientation, predictPosition, InputHistory} from "./own_ship_prediction.mjs"
 import {planetaryImpactMessage} from "./planetary_impact.mjs"
 import {
   ownPlanetaryWarning, proximityEventWarning, planetaryWarningView,
@@ -626,7 +627,12 @@ class SpaceClient {
     const orientation = entity.orientation || null
     const velocity = entity.velocity || {x: 0, y: 0, z: 0}
 
+    // Arrival time of this authoritative state: own-ship prediction runs the
+    // server's turn rules forward from here until the next snapshot.
+    const authoritativeAt = performance.now()
+
     if (existing) {
+      existing.authoritativeAt = authoritativeAt
       existing.target = target
       existing.destination = destination
       existing.navigationMode = entity.navigation_mode || "manual"
@@ -690,6 +696,7 @@ class SpaceClient {
         displayName: entity.display_name,
         render: {...target},
         target,
+        authoritativeAt,
         destination,
         navigationMode: entity.navigation_mode || "manual",
         routeWaypoints: route3d,
@@ -1384,36 +1391,32 @@ class SpaceClient {
   }
 
   interpolate(deltaSeconds) {
-    const positionBlend = 1 - Math.exp(-deltaSeconds / 0.085)
     const pointerLocked = this.mouseSteeringEnabled &&
       document.pointerLockElement === this.canvas
 
+    const now = performance.now()
+    // Record what the pilot is commanding so prediction can replay it.
+    if (!this.flightInputHistory) this.flightInputHistory = new InputHistory()
+    if (this.flightControls?.active()) {
+      this.flightInputHistory.record(now, this.flightControls.axes())
+    } else {
+      this.flightInputHistory.clear()
+    }
     for (const entity of this.entities.values()) {
+      const predicted = this.predictOwnShip(entity, now)
+      if (predicted) {
+        smoothEntityPresentation(entity, deltaSeconds,
+          PREDICTED_OWN_SHIP_SETTLE_SECONDS, predicted)
+        continue
+      }
       // The local pointer-lock camera should not trail far behind the last
       // server orientation when the user releases the mouse. Remote players
       // and keyboard-only flight retain the original 85ms smoothing.
-      const cameraSettle = cameraSettleSeconds({
+      // Shared with the paired headset (entity_smoothing.mjs).
+      smoothEntityPresentation(entity, deltaSeconds, cameraSettleSeconds({
         ownShip: entity.id === this.selfId,
         pointerLocked,
-      })
-      entity.render.x += (entity.target.x - entity.render.x) * positionBlend
-      entity.render.y += (entity.target.y - entity.render.y) * positionBlend
-      entity.render.z = (entity.render.z ?? 0) +
-        ((entity.target.z ?? 0) - (entity.render.z ?? 0)) * positionBlend
-      if (entity.attitude) {
-        entity.renderAttitude = smoothAttitude(
-          entity.renderAttitude || entity.attitude,
-          entity.attitude,
-          deltaSeconds,
-          cameraSettle
-        )
-      }
-      if (entity.orientation) {
-        entity.renderOrientation = smoothOrientation(
-          entity.renderOrientation || entity.orientation,
-          entity.orientation, deltaSeconds, cameraSettle
-        )
-      }
+      }))
     }
 
     const rotationBlend = 1 - Math.exp(-deltaSeconds / 0.075)
@@ -1425,6 +1428,24 @@ class SpaceClient {
       )
     }
 
+  }
+
+  // Manual flight only: run the server's own turn rules forward from the last
+  // authoritative snapshot with the pilot's current input, so the camera
+  // moves every frame instead of every 100 ms server tick. Presentation only.
+  predictOwnShip(entity, now) {
+    if (entity.id !== this.selfId || entity.destination || !entity.orientation ||
+        !Number.isFinite(entity.authoritativeAt) || !this.flightControls?.active()) return null
+    const seconds = Math.max(0, (now - entity.authoritativeAt) / 1000)
+    return {
+      orientation: predictOrientation(entity.orientation, entity.angularVelocity,
+        this.flightInputHistory?.entries.length
+          ? this.flightInputHistory.since(entity.authoritativeAt)
+          : this.flightControls.axes(),
+        {mouseMode: this.flightControls.mouseMode, seconds}),
+      target: predictPosition(entity.target, entity.velocity, seconds),
+      positionSettleSeconds: PREDICTED_OWN_SHIP_SETTLE_SECONDS,
+    }
   }
 
   draw(time) {

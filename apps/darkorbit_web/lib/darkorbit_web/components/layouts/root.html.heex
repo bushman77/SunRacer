@@ -2,7 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content={
+      if assigns[:viewport_fit_cover],
+        do: "width=device-width, initial-scale=1, viewport-fit=cover",
+        else: "width=device-width, initial-scale=1"
+    } />
     <meta name="csrf-token" content={get_csrf_token()} />
     <meta name="theme-color" content="#030914" />
     <meta name="description" content="Space Nova is an original multiplayer space adventure set in a living Solar System. Explore, fly and fight." />

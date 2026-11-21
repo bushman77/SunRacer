@@ -291,13 +291,39 @@ defmodule DarkorbitWeb.HelmetChannel do
 
   # Tactical presence is a single display hint, not an encounter payload.
   # The phone still receives no commands, cargo or reputation metadata.
+  # The phone must draw the same scenery as the laptop SBS view (Green
+  # Starbase, strategic fly-by contacts), so it also receives the small set
+  # of *visual* fields those renderers read. Still no cargo, reputation,
+  # faction standing, commands or full navigation state.
   defp visual_navigation(navigation) when is_map(navigation),
     do: %{
       planetary_view: Map.get(navigation, :planetary_view),
-      tactical_active: is_map(Map.get(navigation, :tactical_encounter))
+      tactical_active: is_map(Map.get(navigation, :tactical_encounter)),
+      status: Map.get(navigation, :status),
+      location_id: Map.get(navigation, :location_id),
+      green_starbase_nearby: Map.get(navigation, :green_starbase_nearby) == true,
+      starbases: visual_starbases(Map.get(navigation, :starbases)),
+      origin_position_km: Map.get(navigation, :origin_position_km),
+      destination_position_km: Map.get(navigation, :destination_position_km),
+      encounter: visual_encounter(Map.get(navigation, :encounter)),
+      pending_encounter: visual_encounter(Map.get(navigation, :pending_encounter))
     }
 
   defp visual_navigation(_), do: %{planetary_view: nil, tactical_active: false}
+
+  defp visual_starbases(bases) when is_list(bases),
+    do: for(base when is_map(base) <- bases,
+            do: Map.take(base, [:id, :model, :site_3d]))
+
+  defp visual_starbases(_), do: []
+
+  @visual_encounter_fields [:id, :mode, :call_sign, :ship_class,
+                            :relative_position_km, :distance_km]
+
+  defp visual_encounter(encounter) when is_map(encounter),
+    do: Map.take(encounter, @visual_encounter_fields)
+
+  defp visual_encounter(_), do: nil
 
   defp helmet_encounter(%{tactical_encounter: tactical}) when is_map(tactical),
     do: %{paused: false, encounter: nil}

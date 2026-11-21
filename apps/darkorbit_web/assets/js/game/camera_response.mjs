@@ -3,6 +3,10 @@
 // latest authoritative quaternion after input updates.
 export const STANDARD_CAMERA_SETTLE_SECONDS = 0.085
 export const POINTER_LOCK_CAMERA_SETTLE_SECONDS = 0.025
+// The own ship is predicted between ticks (own_ship_prediction.mjs), so the
+// camera follows a continuous goal; this settle only absorbs the small
+// correction when each authoritative snapshot lands.
+export const PREDICTED_OWN_SHIP_SETTLE_SECONDS = 0.045
 
 export const cameraSettleSeconds = ({ownShip = false, pointerLocked = false} = {}) =>
   ownShip && pointerLocked

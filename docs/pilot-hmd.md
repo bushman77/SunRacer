@@ -109,6 +109,25 @@ preserving separate, non-overlapping framebuffers. The lens separation
 (40–85 mm) remains a distinct calibration. Make incremental changes to avoid
 eyestrain or double vision.
 
+## Headset display behaviour (2026-11-20)
+
+- `/helmet` uses `viewport-fit=cover`, so the canvas spans the camera cutout
+  and both eye viewports split the full physical screen.
+- Entities are smoothed between the 100 ms server ticks exactly as on the
+  laptop (`entity_smoothing.mjs`); fresh snapshots, map changes and jumps
+  beyond 1,500 world units snap instead of sweeping.
+- SBS cameras are parallel; image alignment is entirely the centre gap. The
+  first-run gap is -48 CSS px. The aiming ring is drawn far ahead.
+- Encounter holds, surrender offers and planetary proximity warnings appear in
+  the stereo cockpit HUD. Green Starbase and fly-by contacts render on the
+  phone from a whitelisted visual navigation subset.
+- Phone-only local settings (no server storage yet):
+  - `darkorbit:pilot_hmd_max_dpr` — render resolution cap, 1–3 (default 2).
+  - `darkorbit:pilot_hmd_lens_distortion` — `"1"` enables the beta barrel
+    pre-distortion pass (also the checkbox on the setup screen).
+  - `darkorbit:pilot_hmd_lens_k` — `"k1,k2"` coefficients (default `0.10,0.05`).
+  None of these have been verified on a headset yet.
+
 ## Running on the laptop
 
 From the umbrella root:
