@@ -23,7 +23,7 @@ const TTL: Duration = Duration::from_secs(600);
 const MAX_HEADERS: usize = 8192;
 const REQUEST_TIMEOUT: Duration = Duration::from_secs(8);
 
-const PROOF_PAGE: &str = r#"<!doctype html><html lang="en"><head>
+const PROOF_PAGE: &str = r##"<!doctype html><html lang="en"><head>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Space Nova - LAN Relay Proof</title>
 <style>
@@ -53,7 +53,7 @@ h1{font-size:1.25rem;margin-top:0}small{color:#a1c5ca}
     status.textContent="Connection failed. Check LAN reachability and the trusted TLS certificate.";
   }
 })();
-</script></body></html>"#;
+</script></body></html>"##;
 
 #[derive(Serialize)]
 pub struct ProbeInfo {
