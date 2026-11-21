@@ -117,3 +117,16 @@ test("HUD gaze inspects read-only flight, contacts and space pages", () => {
   assert.match(view, /this\.helmetNavRecenter\.position\.set\(-0\.78, 0\.79/)
   assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"|"station_talk"/)
 })
+
+test("phone-only live bandwidth rates render in both stereo eyes without another socket", () => {
+  assert.match(view, /this\.camera\.add\(this\.helmetBandwidthHud\)/)
+  assert.match(view, /this\.helmetBandwidthHud\.visible = false/)
+  assert.match(view, /this\.helmetGazeEnabled && this\.mode === "sbs"/)
+  assert.match(view, /this\.updateHelmetBandwidthPlacement\(\)/)
+  assert.match(view, /this\.updateHelmetBandwidth\(client\.bandwidth, time\)/)
+  assert.match(view, /probe\.snapshot\(HELMET_BANDWIDTH_HUD\.windowMs\)/)
+  assert.match(view, /time - this\.lastHelmetBandwidthUpdateAt < HELMET_BANDWIDTH_HUD\.refreshMs/)
+  assert.match(helmet, /this\.bandwidth = new BandwidthProbe\("headset-server"\)/)
+  // The visualization is entirely local and does not introduce a second feed.
+  assert.doesNotMatch(view, /new (Socket|WebSocket)\(/)
+})

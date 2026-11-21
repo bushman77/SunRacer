@@ -17,6 +17,10 @@ import {GreenStarbaseVisual} from "./green_starbase_visual.js"
 import {GreenStarbaseInterior, greenStarbaseInteriorVisible} from "./green_starbase_interior.js"
 import {EncounterShipVisual} from "./encounter_ship.js"
 import {SpaceEnvironmentVisual} from "./space_environment_visual.js"
+import {
+  HELMET_BANDWIDTH_HUD, helmetBandwidthLayout, helmetBandwidthLines,
+  paintHelmetBandwidth,
+} from "./helmet_bandwidth_hud.mjs"
 import {helmetHudLines, HMD_HUD_PAGES} from "./helmet_hud_pages.mjs"
 
 // Rendering only: no Phoenix socket, no movement authority, no combat calculations.
@@ -249,6 +253,28 @@ export class StereoSpaceView {
     this.camera.add(sight)
     this.sight = sight
 
+    // View-locked diagnostic, placed in the top-right of EACH stereo eye.
+    // A single Three.js plane is rendered with the correct eye projection;
+    // it is not a flat HTML overlay spanning both halves of the screen.
+    this.helmetBandwidthCanvas = document.createElement("canvas")
+    this.helmetBandwidthCanvas.width = 512
+    this.helmetBandwidthCanvas.height = 256
+    this.helmetBandwidthTexture = new THREE.CanvasTexture(this.helmetBandwidthCanvas)
+    this.helmetBandwidthTexture.colorSpace = THREE.SRGBColorSpace
+    this.helmetBandwidthHud = new THREE.Mesh(
+      new THREE.PlaneGeometry(
+        HELMET_BANDWIDTH_HUD.width, HELMET_BANDWIDTH_HUD.height),
+      new THREE.MeshBasicMaterial({
+        map: this.helmetBandwidthTexture, transparent: true,
+        depthTest: false, depthWrite: false,
+      }),
+    )
+    this.helmetBandwidthHud.visible = false
+    this.helmetBandwidthHud.renderOrder = 95
+    this.camera.add(this.helmetBandwidthHud)
+    this.lastHelmetBandwidthUpdateAt = -Infinity
+    this.lastHelmetBandwidthText = null
+
     this.cockpitFraming = framing
     this.scene.add(framing)
 
@@ -359,7 +385,30 @@ export class StereoSpaceView {
     // these physical meshes until the HMD explicitly opts into gaze mode.
     this.setHelmetNavOpen(this.helmetGazeEnabled && this.helmetNavOpen)
     this.setHelmetHeadRotation(this.helmetHeadRotation)
+    this.updateHelmetBandwidthPlacement()
     this.updateGazeFeedback({target: null, armed: false, progress: 0})
+  }
+
+  updateHelmetBandwidthPlacement() {
+    if (!this.helmetBandwidthHud) return
+    const layout = helmetBandwidthLayout(this.camera.aspect, this.camera.fov)
+    this.helmetBandwidthHud.visible = Boolean(
+      this.helmetGazeEnabled && this.mode === "sbs" && layout)
+    if (!layout) return
+    this.helmetBandwidthHud.position.set(layout.x, layout.y, layout.z)
+    this.helmetBandwidthHud.scale.setScalar(layout.scale)
+  }
+
+  updateHelmetBandwidth(probe, time) {
+    if (!this.helmetBandwidthHud?.visible || !probe?.snapshot ||
+        time - this.lastHelmetBandwidthUpdateAt < HELMET_BANDWIDTH_HUD.refreshMs) return
+    this.lastHelmetBandwidthUpdateAt = time
+    const snapshot = probe.snapshot(HELMET_BANDWIDTH_HUD.windowMs)
+    const lines = helmetBandwidthLines(snapshot).join("\n")
+    if (lines === this.lastHelmetBandwidthText) return
+    this.lastHelmetBandwidthText = lines
+    paintHelmetBandwidth(this.helmetBandwidthCanvas, snapshot)
+    this.helmetBandwidthTexture.needsUpdate = true
   }
 
   setHelmetHeadRotation(quaternion) {
@@ -471,6 +520,7 @@ export class StereoSpaceView {
       this.hudPanel.scale.setScalar(fit.scale)
       this.dash.scale.setScalar(fit.scale)
     }
+    this.updateHelmetBandwidthPlacement()
   }
 
   setCamera(ownShip) {
@@ -782,6 +832,8 @@ export class StereoSpaceView {
       this.updateHud(client, time)
       this.updateHelmetHudPanel(client, time)
     }
+    // Visible during flight AND when docked; draws local counters only.
+    this.updateHelmetBandwidth(client.bandwidth, time)
     this.stereo.update(this.camera)
     const activeScene = docked ? this.hangarScene : this.scene
     const {width, height} = this.size
