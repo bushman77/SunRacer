@@ -2,6 +2,33 @@
 
 ## Unreleased
 
+### Manual lasers converge on the central sight (2026-11-21)
+
+#### Fixed
+
+- Manual wing lasers fired parallel to the nose from the wing muzzles,
+  about 24 world units below the pilot's eye line, but the cockpit camera
+  (and the central sight) sits 2.75 scene units above ship centre. A target
+  centred in the sight was hit only by a ~2 unit margin of the 40-unit hit
+  sphere; drifting ~4 units upward (under half a degree at combat range)
+  missed with both beams, so shooting felt like it did nothing.
+- `LineOfFire.trace_pair/4` now traces the sight line (pilot eye along the
+  nose, server-owned `eye_position/2`) and converges both wing beams on its
+  impact point, or on the sight line at maximum range on a miss. Each wing
+  still traces its own muzzle-to-aim segment, so a ship physically in the
+  way takes that wing's hit. Range, cooldown and damage are unchanged; no
+  client ray or target is trusted.
+
+#### Verification
+
+- `line_of_fire_test.exs`: 12/12 pass, run standalone against the real
+  `Combat`, `Orientation`, `FlightDynamics` and `LineOfFire` modules. Tests
+  updated to place "centred" targets on the real eye line; added coverage
+  for the hit zone around the sight (+/-20 units), eye position under roll,
+  and a ship blocking one wing.
+- Full `mix test` not run (the sandbox cannot reach hex.pm). Not verified in
+  game yet.
+
 ### Green Starbase launch faced back into the hangar (2026-11-21)
 
 #### Fixed

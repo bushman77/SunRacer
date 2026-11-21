@@ -17,6 +17,10 @@ defmodule Core.Combat.LineOfFire do
   @muzzle_up_scene 1.3
   @wing_half_span_scene 1.75
   @wings [:left, :right]
+  # Pilot eye / cockpit camera, ship-local. MUST match the client camera
+  # offset in StereoSpaceView.setCamera (Vector3(0, 2.75, 0)). The central
+  # sight lies on the ray from this eye along the nose.
+  @eye_up_scene 2.75
 
   # NPC octahedrons are rendered with radius 2 scene units (33 world
   # units); a 40-unit collision sphere allows both wing rays to hit an
@@ -45,32 +49,68 @@ defmodule Core.Combat.LineOfFire do
     end)
   end
 
+  @doc "Server-owned pilot eye position (the cockpit camera), ship-local."
+  @spec eye_position(map(), Orientation.t()) :: map()
+  def eye_position(position, orientation) do
+    scene = Orientation.rotate(orientation, %{x: 0.0, y: @eye_up_scene, z: 0.0})
+    %{
+      x: position.x + scene.x / @scene_scale,
+      y: position.y + scene.z / @scene_scale,
+      z: Map.get(position, :z, 0.0) + scene.y / @scene_scale
+    }
+  end
+
   @doc """
-  Trace both parallel nose-aimed wing lasers against the same world state.
-  Returns two beams (hit or miss). No lock-on, client ray or damage required.
+  Fire both wing lasers at what lies under the central sight.
+
+  The sight is the ray from the pilot's eye along the nose. The server
+  traces that ray against living NPC spheres; both wing beams then converge
+  on the impact point (or on the sight line at maximum range on a miss).
+
+  Previously the two beams ran parallel to the nose from the wing muzzles,
+  about 24 world units below the eye line. A target centred in the sight
+  was hit only by a ~2 unit margin, and drifting ~4 units upward missed
+  completely, so aiming felt broken.
+
+  Each wing still traces its own physical segment to the aim point: a ship
+  between a muzzle and the aim point takes that wing's hit instead.
+  Returns two beams (hit or miss). No lock-on, client ray or client target.
   """
   @spec trace_pair(map(), Orientation.t(), [map()], number()) :: [map()]
   def trace_pair(position, orientation, npcs, max_distance)
       when is_list(npcs) and is_number(max_distance) and max_distance > 0 do
     heading = Orientation.forward(orientation)
-    # Muzzle already extends forward from ship center. Keep the physical
-    # maximum range measured from the player, not from the new muzzle.
-    remaining = max(0.01, max_distance - @muzzle_forward_scene / @scene_scale)
     eligible =
       Enum.filter(npcs, fn npc ->
         Combat.alive?(npc) and Map.get(npc, :state) != :surrendered and
           Combat.in_range?(%{position: position}, npc, max_distance)
       end)
 
-    Enum.map(wing_muzzles(position, orientation), fn %{side: side, from: origin} ->
-      case trace(origin, heading, eligible, remaining) do
-        {:hit, target, impact} ->
-          %{side: side, from: origin, to: impact, target: target,
-            target_id: target.id, hit: true}
+    eye = eye_position(position, orientation)
+    aim =
+      case trace(eye, heading, eligible, max_distance) do
+        {:hit, _target, impact} -> impact
+        {:miss, endpoint} -> endpoint
+      end
 
-        {:miss, endpoint} ->
-          %{side: side, from: origin, to: endpoint, target: nil,
-            target_id: nil, hit: false}
+    Enum.map(wing_muzzles(position, orientation), fn %{side: side, from: origin} ->
+      segment = sub(aim, origin)
+      length = :math.sqrt(dot(segment, segment))
+
+      if length <= 1.0e-9 do
+        %{side: side, from: origin, to: aim, target: nil, target_id: nil, hit: false}
+      else
+        direction = scale(segment, 1.0 / length)
+        # Small tolerance so the wing reaches the sphere surface it aims at.
+        case trace_segment(origin, direction, eligible, length + 1.0e-6) do
+          {:hit, target, impact} ->
+            %{side: side, from: origin, to: impact, target: target,
+              target_id: target.id, hit: true}
+
+          {:miss, _endpoint} ->
+            %{side: side, from: origin, to: aim, target: nil,
+              target_id: nil, hit: false}
+        end
       end
     end)
   end
@@ -106,6 +146,45 @@ defmodule Core.Combat.LineOfFire do
     end
   end
 
+  # Wing segment from muzzle to the aim point. Weapon range was already
+  # enforced (eligible targets are within range of the ship); here only the
+  # entry point must lie on the segment, since the aim point is on a sphere's
+  # near surface and that sphere's centre is beyond the segment end.
+  defp trace_segment(origin, direction, npcs, length) do
+    npcs
+    |> Enum.flat_map(fn npc ->
+      case segment_sphere(origin, direction, npc.position, @npc_radius, length) do
+        nil -> []
+        distance -> [{distance, to_string(npc.id), npc}]
+      end
+    end)
+    |> Enum.sort_by(fn {distance, id, _npc} -> {distance, id} end)
+    |> List.first()
+    |> case do
+      {distance, _id, npc} -> {:hit, npc, extend(origin, direction, distance)}
+      nil -> {:miss, extend(origin, direction, length)}
+    end
+  end
+
+  defp segment_sphere(origin, direction, center, radius, length) do
+    offset = %{x: center.x - origin.x, y: center.y - origin.y,
+               z: Map.get(center, :z, 0.0) - Map.get(origin, :z, 0.0)}
+    projection = dot(offset, direction)
+    perpendicular_sq = max(0.0, dot(offset, offset) - projection * projection)
+
+    if perpendicular_sq > radius * radius do
+      nil
+    else
+      entry = projection - :math.sqrt(radius * radius - perpendicular_sq)
+      cond do
+        entry >= 0.0 and entry <= length -> entry
+        # Muzzle already inside the sphere (point-blank): it is a hit.
+        entry < 0.0 and projection + :math.sqrt(radius * radius - perpendicular_sq) >= 0.0 -> 0.0
+        true -> nil
+      end
+    end
+  end
+
   defp ray_sphere(origin, direction, center, radius, max_distance) do
     offset = %{
       x: center.x - origin.x,
@@ -137,4 +216,6 @@ defmodule Core.Combat.LineOfFire do
           z: p.z + d.z * distance}
 
   defp dot(a, b), do: a.x * b.x + a.y * b.y + a.z * b.z
+  defp sub(a, b), do: %{x: a.x - b.x, y: a.y - b.y, z: Map.get(a, :z, 0.0) - Map.get(b, :z, 0.0)}
+  defp scale(v, k), do: %{x: v.x * k, y: v.y * k, z: v.z * k}
 end

@@ -1294,3 +1294,10 @@ See `docs/space-nova-release.md` for the distribution procedure.
   throttle from launch without hull contact.
 - [ ] `mix test` and an in-game launch check (laptop and headset).
 
+### Manual laser aim (2026-11-21)
+
+- [x] Wing lasers converge on the central sight (server-owned eye line).
+- [ ] `mix test`; in-game check that a target in the sight ring is hit.
+- [ ] Consider per-ship-class hit radii (Scow and freighters are larger
+  than the 40-unit sphere).
+

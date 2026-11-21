@@ -7,13 +7,16 @@ defmodule Core.Combat.LineOfFireTest do
   alias Core.World.Position
 
   @origin %Position{x: 1_000.0, y: 1_000.0, z: 0.0}
+  # Pilot eye (cockpit camera) height in world units: 2.75 scene / 0.06.
+  # The central sight lies on the nose ray from this eye.
+  @eye_z 2.75 / 0.06
   defp npc(id, x, y, z \\ 0.0) do
     %{id: id, position: %Position{x: x, y: y, z: z},
       kind: :npc, status: :alive, hull: 100}
   end
 
   test "two real wing-mounted rays hit an enemy under the central sight" do
-    enemy = npc("ahead", 1_000.0, 700.0)
+    enemy = npc("ahead", 1_000.0, 700.0, @eye_z)
     beams = LineOfFire.trace_pair(
       @origin, Orientation.identity(), [enemy], 720.0
     )
@@ -27,14 +30,42 @@ defmodule Core.Combat.LineOfFireTest do
     assert right.from.x > @origin.x
     assert_in_delta left.from.y, right.from.y, 1.0e-8
     assert_in_delta left.from.z, right.from.z, 1.0e-8
+    # Both beams converge on the point under the sight (front surface).
     assert left.to.y > enemy.position.y
     assert right.to.y > enemy.position.y
-    assert left.to.x < enemy.position.x
-    assert right.to.x > enemy.position.x
+    assert_in_delta left.to.x, enemy.position.x, 1.0e-6
+    assert_in_delta right.to.x, enemy.position.x, 1.0e-6
+    assert_in_delta left.to.z, enemy.position.z, 1.0e-6
+  end
+
+  test "the hit zone is centred on the sight, not below it" do
+    # Regression: parallel beams 24 units below the eye missed a target
+    # only ~4 units above the sight centre. Small aim errors in any
+    # direction now still hit with both beams.
+    for {dx, dz} <- [{0.0, 4.0}, {0.0, 20.0}, {0.0, -20.0}, {20.0, 0.0}, {-20.0, 0.0},
+                     {25.0, 25.0}] do
+      enemy = npc("aim", 1_000.0 + dx, 600.0, @eye_z + dz)
+      beams = LineOfFire.trace_pair(@origin, Orientation.identity(), [enemy], 720.0)
+      assert Enum.all?(beams, & &1.hit), "missed at offset #{inspect({dx, dz})}"
+    end
+
+    # Well outside the sight it still misses.
+    wide = npc("wide", 1_000.0, 600.0, @eye_z + 60.0)
+    refute Enum.any?(LineOfFire.trace_pair(@origin, Orientation.identity(), [wide], 720.0),
+             & &1.hit)
+  end
+
+  test "eye position matches the cockpit camera and rotates with the ship" do
+    assert_in_delta LineOfFire.eye_position(@origin, Orientation.identity()).z,
+                    @eye_z, 1.0e-9
+    rolled = Orientation.from_angles(%{yaw: 0.0, pitch: 0.0, roll: :math.pi() / 2})
+    eye = LineOfFire.eye_position(@origin, rolled)
+    assert_in_delta eye.z, 0.0, 1.0e-6
+    assert_in_delta abs(eye.x - @origin.x), @eye_z, 1.0e-6
   end
 
   test "a distant centered ship can be struck at 3,200 world units" do
-    enemy = npc("distant", 1_000.0, 4_200.0)
+    enemy = npc("distant", 1_000.0, 4_200.0, @eye_z)
     facing_south = Orientation.from_angles(%{yaw: :math.pi(), pitch: 0.0, roll: 0.0})
 
     beams = LineOfFire.trace_pair(@origin, facing_south, [enemy], 3_600.0)
@@ -55,15 +86,16 @@ defmodule Core.Combat.LineOfFireTest do
     assert Enum.all?(beams, &(&1.to.y < enemy.position.y))
   end
 
-  test "each wing can independently hit a different target" do
-    left_npc = npc("left", 1_000.0 - 1.75 / 0.06, 700.0, 1.3 / 0.06)
-    right_npc = npc("right", 1_000.0 + 1.75 / 0.06, 700.0, 1.3 / 0.06)
+  test "a ship between one wing and the aim point takes that wing's hit" do
+    main = npc("main", 1_000.0, 500.0, @eye_z)
+    # Sits on the left muzzle's path to the aim point, clear of the right one.
+    blocker = npc("blocker", 962.0, 905.0, 15.0)
     [left, right] =
-      LineOfFire.trace_pair(@origin, Orientation.identity(), [right_npc, left_npc], 720.0)
+      LineOfFire.trace_pair(@origin, Orientation.identity(), [main, blocker], 720.0)
 
     assert left.hit and right.hit
-    assert left.target_id == "left"
-    assert right.target_id == "right"
+    assert left.target_id == "blocker"
+    assert right.target_id == "main"
   end
 
   test "two distinct red rays miss targets behind or outside range" do
@@ -79,7 +111,7 @@ defmodule Core.Combat.LineOfFireTest do
 
   test "gun mounts and their rays rotate with the ship through yaw and roll" do
     east = Orientation.from_angles(%{yaw: :math.pi() / 2, pitch: 0.0, roll: 0.0})
-    target = npc("east", 1_350.0, 1_000.0)
+    target = npc("east", 1_350.0, 1_000.0, @eye_z)
     east_beams = LineOfFire.trace_pair(@origin, east, [target], 720.0)
     assert Enum.all?(east_beams, & &1.hit)
     assert Enum.all?(east_beams, &(&1.to.x > &1.from.x))
