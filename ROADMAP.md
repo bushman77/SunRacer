@@ -29,7 +29,8 @@
 # 🚀 Sunracer Umbrella – Roadmap
 
 ## 🎯 Vision
-based on https://github.com/yusufsahinhamza/sunracer-cms
+Reference implementation (someone else's project, not ours; archived June 2021):
+https://github.com/yusufsahinhamza/darkorbit-cms
 Rebuild a modern, scalable SunRacer server ecosystem using Elixir/OTP, replacing legacy PHP CMS-style architectures with:
 
 - Strong domain modeling
