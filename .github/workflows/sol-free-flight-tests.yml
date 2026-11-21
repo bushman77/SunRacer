@@ -5,6 +5,11 @@ on:
     branches: [main, star_base]
     paths:
       - "apps/core/lib/core/universe/navigation.ex"
+      - "apps/core/lib/core/universe/sol.ex"
+      - "apps/core/lib/core/universe/space_environment.ex"
+      - "apps/core/test/core/universe/space_environment_test.exs"
+      - "apps/darkorbit_web/assets/js/game/space_environment_field*.mjs"
+      - "apps/darkorbit_web/assets/js/game/space_environment_visual.js"
       - "apps/core/lib/core/universe/green_starbase.ex"
       - "apps/core/test/core/universe/green_starbase_test.exs"
       - "apps/core/lib/core/universe/navigation/checkpoint.ex"
@@ -125,6 +130,7 @@ jobs:
           mix test apps/core/test/core/universe/encounters_test.exs
           mix test apps/core/test/core/universe/traffic_test.exs
           mix test apps/core/test/core/universe/navigation_test.exs
+          mix test apps/core/test/core/universe/space_environment_test.exs
           mix test apps/core/test/core/universe/green_starbase_test.exs
           mix test apps/core/test/core/universe/free_flight_region_test.exs
           mix test apps/core/test/core/world/world_test.exs
@@ -150,6 +156,8 @@ jobs:
         run: |
           node --test apps/darkorbit_web/assets/js/game/solar_atlas_view_test.mjs
           node --test apps/darkorbit_web/assets/js/game/solar_atlas_test.mjs
+          node --test apps/darkorbit_web/assets/js/game/space_environment_field_test.mjs
+          node --check apps/darkorbit_web/assets/js/game/space_environment_visual.js
           node --test apps/darkorbit_web/assets/js/game/green_starbase_visual_test.mjs
           node --test apps/darkorbit_web/assets/js/game/orbital_regions_test.mjs
           node --test apps/darkorbit_web/assets/js/game/stereo_viewport_test.mjs

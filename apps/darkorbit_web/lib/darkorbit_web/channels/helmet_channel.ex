@@ -327,6 +327,22 @@ defmodule DarkorbitWeb.HelmetChannel do
       tactical_active: is_map(Map.get(navigation, :tactical_encounter))
     }
 
+    # HMD receives only scenery metadata, never the pilot's full navigation
+    # state, cargo, contact identities, or economic information.
+    basic =
+      case Map.get(navigation, :space_environment) do
+        %{region_id: id, kind: kind, intensity: intensity, visual_only: true}
+            when is_binary(id) and
+              kind in ["open_space", "asteroid_belt", "orbital_debris", "ion_storm"] and
+              is_number(intensity) and intensity >= 0 and intensity <= 1 ->
+          Map.put(basic, :space_environment, %{
+            region_id: id, kind: kind, intensity: intensity, visual_only: true
+          })
+
+        _ ->
+          basic
+      end
+
     if Map.get(navigation, :status) == :idle and
          Map.get(navigation, :location_id) == nil and
          Map.get(navigation, :green_starbase_nearby) == true do

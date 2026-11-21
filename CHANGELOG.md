@@ -844,3 +844,7 @@
   profile; spatial-cell coordinates remain stable across Atlas toggles.
 - Added Node tests for density, stability, locality and invalid input.
 - Laptop/phone visual verification and full test suites remain outstanding.
+
+- HMD scenery parity: restricted helmet feed now carries only the validated
+  environmental profile, with no cargo or strategic contacts. Added phone-side
+  validation and CI coverage for all new environmental components.

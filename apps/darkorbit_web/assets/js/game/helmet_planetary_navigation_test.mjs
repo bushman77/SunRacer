@@ -81,3 +81,23 @@ test("HMD retains only a boolean tactical hint, never encounter details", () => 
   assert.deepEqual(navigation, {planetary_view: null, tactical_active: true})
   assert.equal(helmetPlanetaryNavigation({tactical_active: "true"}).tactical_active, false)
 })
+
+test("HMD accepts only sanitized environmental scenery metadata",()=>{
+  const region={region_id:"sol:ion_storm:alpha",kind:"ion_storm",
+    intensity:0.7,visual_only:true,private_position_km:{secret:1}}
+  const result=helmetPlanetaryNavigation({space_environment:region,
+    cargo:{secret:44},contacts:[{secret:5}]})
+  assert.deepEqual(result.space_environment,{
+    region_id:"sol:ion_storm:alpha",kind:"ion_storm",intensity:0.7,
+    visual_only:true,
+  })
+  assert.equal(result.cargo,undefined)
+  assert.equal(result.contacts,undefined)
+  for(const value of [{...region,visual_only:false},
+    {...region,kind:"collision_hazard"},
+    {...region,intensity:Infinity},{...region,intensity:1.4}]){
+    assert.equal(helmetPlanetaryNavigation({
+      space_environment:value,
+    }).space_environment,undefined)
+  }
+})

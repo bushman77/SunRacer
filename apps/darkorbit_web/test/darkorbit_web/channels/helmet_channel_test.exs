@@ -137,11 +137,15 @@ defmodule DarkorbitWeb.HelmetChannelTest do
       visual_only: true, angular_diameter_deg: 4.0,
       radius_km: 6051.8, visual_distance_km:
         6051.8 / :math.sin(4.0 * :math.pi() / 360)}
+    region = %{region_id: "sol:asteroid_belt", kind: "asteroid_belt",
+      intensity: 0.72, visual_only: true}
     Phoenix.PubSub.broadcast(Darkorbit.PubSub, Darkorbit.World.PubSub.topic("sol"),
       {:solar_navigation_updated, %{player_id: id,
         navigation: %{planetary_view: visual, pending_encounter: nil,
-          cargo: %{secret: 1}}}})
-    assert_push "helmet_navigation", %{planetary_view: ^visual}
+          space_environment: region, cargo: %{secret: 1}}}})
+    assert_push "helmet_navigation", %{planetary_view: ^visual,
+      space_environment: ^region} = scenic
+    refute Map.has_key?(scenic, :cargo)
     assert_push "helmet_encounter", %{paused: false, encounter: nil}
 
     # A confirmed Green Starbase approach delivers only canonical, read-only

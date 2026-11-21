@@ -1255,3 +1255,8 @@ See `docs/space-nova-release.md` for the distribution procedure.
 - [ ] Stage 3: server-owned persistent physical hazards, legitimate collision
   geometry, salvage and damage; only after separate safety and persistence
   contracts have been tested.
+
+- [x] Deliver the sanitized visual profile to the read-only paired helmet feed
+  so both SBS eyes can render the same local environmental scenery.
+- [x] Add regression tests for paired-device privacy and scene metadata; include
+  environmental Core/Node tests and JS syntax checking in SOL free-flight CI.

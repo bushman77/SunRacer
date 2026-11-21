@@ -43,7 +43,7 @@ defmodule Core.Universe.SpaceEnvironmentTest do
     assert SpaceEnvironment.at(storm.center_km).kind == "ion_storm"
     assert SpaceEnvironment.at(storm.center_km).intensity == 1.0
     assert SpaceEnvironment.at(%{storm.center_km |
-      z: storm.radius_km + 1}).kind == "open_space"
+      z: storm.radius_km + 1}).kind == "asteroid_belt"
   end
 
   test "malformed locations do not create hazards or crash classification" do

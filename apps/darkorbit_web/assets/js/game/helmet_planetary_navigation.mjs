@@ -9,6 +9,19 @@ export function helmetPlanetaryNavigation(payload) {
     tactical_active: payload?.tactical_active === true,
   }
 
+  // Validate the optional read-only scenery profile independently.
+  const profile = payload?.space_environment
+  if(profile?.visual_only===true &&
+    typeof profile.region_id==="string" &&
+    ["open_space","asteroid_belt","orbital_debris","ion_storm"].includes(profile.kind) &&
+    Number.isFinite(profile.intensity) &&
+    profile.intensity>=0 && profile.intensity<=1) {
+    navigation.space_environment={
+      region_id:profile.region_id,kind:profile.kind,
+      intensity:profile.intensity,visual_only:true,
+    }
+  }
+
   // Green Starbase has the same locally bundled geometry on both desktop
   // and Android. The authenticated server supplies its read-only location
   // only while the pilot is at the actual deep-space station waypoint.
