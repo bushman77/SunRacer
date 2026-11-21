@@ -25,6 +25,11 @@ export class HelmetGazeDwell {
       this.startedAt = now
       this.fired = false
     }
+    // After a target fires, keep it latched until the viewer looks away.
+    // Clear the progress arc rather than leaving a full ring in the SBS view.
+    if (this.fired) {
+      return {target, armed: false, progress: 0, activated: null}
+    }
     const elapsed = Math.max(0, now - this.startedAt)
     const armed = elapsed >= this.armMs
     const progress = armed ?

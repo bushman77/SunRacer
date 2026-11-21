@@ -63,6 +63,7 @@ on:
       - "apps/darkorbit_web/assets/js/game/helmet_head_tracking_test.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_gaze_dwell.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_gaze_dwell_test.mjs"
+      - "apps/darkorbit_web/assets/js/game/helmet_hud_pages*.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_gaze_integration_test.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_control.mjs"
       - "apps/darkorbit_web/assets/js/game/helmet_network.mjs"
@@ -173,6 +174,7 @@ jobs:
           node --test apps/darkorbit_web/assets/js/game/helmet_network_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_head_tracking_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_gaze_dwell_test.mjs
+          node --test apps/darkorbit_web/assets/js/game/helmet_hud_pages_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_gaze_integration_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_keyboard_only_test.mjs
           node --test apps/darkorbit_web/assets/js/game/helmet_screen_wake_test.mjs

@@ -662,9 +662,15 @@ export class HelmetClient {
       !document.hidden && this.headTracking.ready(time)
     const update = this.gaze.update(target, time, enabled)
     this.view?.updateGazeFeedback(update)
-    if (update.activated === "nav_open") {
+    if (update.activated === "nav_open" || update.activated === "hud_inspect") {
+      this.view?.setHelmetHudPage("flight")
       this.view?.setHelmetNavOpen(true)
       this.gaze.reset()
+    } else if (update.activated === "hud_flight" ||
+               update.activated === "hud_contacts" ||
+               update.activated === "hud_space") {
+      // Do NOT reset the latch: a held look must not repeatedly activate a tab.
+      this.view?.setHelmetHudPage(update.activated.slice(4))
     } else if (update.activated === "nav_close") {
       this.view?.setHelmetNavOpen(false)
       this.gaze.reset()

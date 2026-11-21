@@ -98,7 +98,22 @@ test("native desktop starts with ALL headset-only meshes hidden", () => {
 
 test("the phone renders an accessible NAV target and explains missing gyro", () => {
   assert.match(view, /this\.navSwitch\.position\.set\(0\.95, -0\.64, -2\.46\)/)
-  assert.match(view, /new THREE\.PlaneGeometry\(2\.00, 1\.08\)/)
+  assert.match(view, /new THREE\.PlaneGeometry\(2\.00, 0\.64\)/)
   assert.match(view, /ENABLE HEAD TRACKING/)
   assert.match(view, /this\.helmetGazeEnabled && this\.helmetHeadRotation === null/)
+})
+
+test("HUD gaze inspects read-only flight, contacts and space pages", () => {
+  assert.match(view, /\[this\.navSwitch, this\.hudPanel\]/)
+  assert.match(view, /return target === this\.hudPanel \? "hud_inspect"/)
+  for (const key of ["hud_inspect", "hud_flight", "hud_contacts", "hud_space"]) {
+    assert.ok(helmet.includes('"' + key + '"'))
+  }
+  for (const key of ["helmetNavFlight", "helmetNavContacts", "helmetNavSpace"]) {
+    assert.match(view, new RegExp(key))
+  }
+  assert.match(view, /updateHelmetHudPanel\(client, time\)/)
+  assert.match(view, /this\.helmetNavClose\.position\.set\(0\.78, 0\.79/)
+  assert.match(view, /this\.helmetNavRecenter\.position\.set\(-0\.78, 0\.79/)
+  assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"|"station_talk"/)
 })

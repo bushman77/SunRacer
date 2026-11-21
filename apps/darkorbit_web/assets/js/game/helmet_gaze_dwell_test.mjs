@@ -13,6 +13,10 @@ test("one second hold to arm, then 800ms circular confirmation, only one activat
   assert.equal(dwell.update("nav_open", 1_899).activated, null)
   assert.equal(dwell.update("nav_open", 1_900).activated, "nav_open")
   assert.equal(dwell.update("nav_open", 2_900).activated, null)
+  assert.equal(dwell.update("nav_open", 2_900).progress, 0)
+  assert.equal(dwell.update("nav_open", 4_800).activated, null)
+  assert.equal(dwell.update("hud_contacts", 5_100).progress, 0)
+  assert.equal(dwell.update("hud_contacts", 6_900).activated, "hud_contacts")
 })
 
 test("looking away, losing tracking, changing target or clock rollback cancels", () => {

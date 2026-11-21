@@ -17,6 +17,7 @@ import {GreenStarbaseVisual} from "./green_starbase_visual.js"
 import {GreenStarbaseInterior, greenStarbaseInteriorVisible} from "./green_starbase_interior.js"
 import {EncounterShipVisual} from "./encounter_ship.js"
 import {SpaceEnvironmentVisual} from "./space_environment_visual.js"
+import {helmetHudLines, HMD_HUD_PAGES} from "./helmet_hud_pages.mjs"
 
 // Rendering only: no Phoenix socket, no movement authority, no combat calculations.
 const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
@@ -140,6 +141,9 @@ export class StereoSpaceView {
     // Three.js treats visible=undefined as visible, not hidden.
     this.helmetGazeEnabled = false
     this.helmetNavOpen = false
+    this.helmetHudPage = "flight"
+    this.lastHelmetHudText = ""
+    this.lastHelmetHudUpdateAt = -Infinity
     this.helmetHeadRotation = null
     this.onHelmetGaze = null
     this.lastGazeArcProgress = -1
@@ -261,44 +265,56 @@ export class StereoSpaceView {
     this.navSwitch.renderOrder = 68
     framing.add(this.navSwitch)
 
-    // A simple read-only navigation display inside the same ship-fixed
-    // cockpit space. Mission planning and flight remain laptop-authorized.
+    // The HUD itself is gaze-selectable. Inspecting it opens this compact,
+    // read-only information panel; there are no HMD flight/combat commands.
+    // Its controls sit OUTSIDE the text surface so they cannot obscure it.
     this.helmetNavPanel = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.00, 1.08),
+      new THREE.PlaneGeometry(2.00, 0.64),
       new THREE.MeshBasicMaterial({
-        map: cockpitLabel([
-          "SOL / NAV",
-          "HMD GAZE PROTOTYPE",
-          "FLIGHT: LAPTOP",
-          "LOOK AT CLOSE",
-        ], {width: 1024, height: 600}),
+        map: cockpitLabel(["FLIGHT / STATUS", "LOOK AT A TAB", "HMD READ-ONLY"],
+          {width: 1024, height: 480}),
         transparent: true, depthTest: false,
       }),
     )
-    // Comfortable phone SBS panel, not a giant full-screen desktop billboard.
-    this.helmetNavPanel.position.set(0, 0.07, -2.46)
+    this.helmetNavPanel.position.set(0, 0.30, -2.46)
     this.helmetNavPanel.renderOrder = 70
     framing.add(this.helmetNavPanel)
     this.helmetNavClose = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.70, 0.36),
+      new THREE.PlaneGeometry(0.62, 0.30),
       new THREE.MeshBasicMaterial({
         map: cockpitLabel(["CLOSE"], {width: 512, height: 256}),
         transparent: true, depthTest: false,
       }),
     )
-    this.helmetNavClose.position.set(0.70, 0.49, -2.40)
+    this.helmetNavClose.position.set(0.78, 0.79, -2.40)
     this.helmetNavClose.renderOrder = 71
     framing.add(this.helmetNavClose)
     this.helmetNavRecenter = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.96, 0.36),
+      new THREE.PlaneGeometry(0.82, 0.30),
       new THREE.MeshBasicMaterial({
         map: cockpitLabel(["RECENTER"], {width: 512, height: 256}),
         transparent: true, depthTest: false,
       }),
     )
-    this.helmetNavRecenter.position.set(-0.60, -0.36, -2.40)
+    this.helmetNavRecenter.position.set(-0.78, 0.79, -2.40)
     this.helmetNavRecenter.renderOrder = 71
     framing.add(this.helmetNavRecenter)
+    const helmetHudTab = (label, x) => {
+      const node = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.62, 0.28),
+        new THREE.MeshBasicMaterial({
+          map: cockpitLabel([label], {width: 512, height: 256}),
+          transparent: true, depthTest: false,
+        }),
+      )
+      node.position.set(x, -0.22, -2.40)
+      node.renderOrder = 71
+      framing.add(node)
+      return node
+    }
+    this.helmetNavFlight = helmetHudTab("FLIGHT", -0.76)
+    this.helmetNavContacts = helmetHudTab("CONTACTS", 0)
+    this.helmetNavSpace = helmetHudTab("SPACE", 0.76)
 
     // Both eyes inherit the same reticle via the central camera. The
     // arc stays hidden until dwell has armed a genuine interactive target.
@@ -368,12 +384,39 @@ export class StereoSpaceView {
       Boolean(this.helmetGazeEnabled && this.helmetNavOpen)
     if (this.helmetNavRecenter) this.helmetNavRecenter.visible =
       Boolean(this.helmetGazeEnabled && this.helmetNavOpen)
+    for (const control of [this.helmetNavFlight, this.helmetNavContacts,
+      this.helmetNavSpace]) {
+      if (control) control.visible =
+        Boolean(this.helmetGazeEnabled && this.helmetNavOpen)
+    }
+  }
+
+  setHelmetHudPage(page) {
+    if (!HMD_HUD_PAGES.includes(page)) return
+    this.helmetHudPage = page
+    this.lastHelmetHudUpdateAt = -Infinity
+  }
+
+  updateHelmetHudPanel(client, time) {
+    if (!this.helmetGazeEnabled || !this.helmetNavOpen ||
+        time - this.lastHelmetHudUpdateAt < 350) return
+    this.lastHelmetHudUpdateAt = time
+    const lines = helmetHudLines(this.helmetHudPage, client)
+    const text = lines.join("\n")
+    if (text === this.lastHelmetHudText) return
+    this.lastHelmetHudText = text
+    const old = this.helmetNavPanel.material.map
+    this.helmetNavPanel.material.map = cockpitLabel(lines, {width: 1024, height: 480})
+    this.helmetNavPanel.material.needsUpdate = true
+    old?.dispose()
   }
 
   gazeTarget() {
     if (!this.helmetGazeEnabled || !this.helmetHeadRotation) return null
     const candidates = this.helmetNavOpen ?
-      [this.helmetNavClose, this.helmetNavRecenter] : [this.navSwitch]
+      [this.helmetNavClose, this.helmetNavRecenter, this.helmetNavFlight,
+        this.helmetNavContacts, this.helmetNavSpace] :
+      [this.navSwitch, this.hudPanel]
     this.camera.updateMatrixWorld(true)
     this.cockpitFraming.updateMatrixWorld(true)
     this.raycaster.set(this.camera.position,
@@ -381,8 +424,13 @@ export class StereoSpaceView {
     const hits = this.raycaster.intersectObjects(
       candidates.filter(candidate => candidate?.visible), false)
     if (!hits.length || hits[0].distance >= 6) return null
-    return hits[0].object === this.helmetNavClose ? "nav_close" :
-      hits[0].object === this.helmetNavRecenter ? "recenter" : "nav_open"
+    const target = hits[0].object
+    if (target === this.helmetNavClose) return "nav_close"
+    if (target === this.helmetNavRecenter) return "recenter"
+    if (target === this.helmetNavFlight) return "hud_flight"
+    if (target === this.helmetNavContacts) return "hud_contacts"
+    if (target === this.helmetNavSpace) return "hud_space"
+    return target === this.hudPanel ? "hud_inspect" : "nav_open"
   }
 
   updateGazeFeedback({target = null, armed = false, progress = 0} = {}) {
@@ -732,6 +780,7 @@ export class StereoSpaceView {
       this.syncShips(client)
       this.syncBeams(client, time)
       this.updateHud(client, time)
+      this.updateHelmetHudPanel(client, time)
     }
     this.stereo.update(this.camera)
     const activeScene = docked ? this.hangarScene : this.scene
