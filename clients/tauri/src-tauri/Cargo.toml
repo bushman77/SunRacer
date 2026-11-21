@@ -15,3 +15,8 @@ tauri-plugin-dialog = "2"
 serde_json = "1"
 serde = { version = "1", features = ["derive"] }
 reqwest = { version = "0.13", default-features = false, features = ["json", "rustls"] }
+# Already present transitively in Cargo.lock; direct dependencies for the
+# opt-in, TLS-only Tauri -> phone LAN probe. Never enable plaintext fallback.
+tokio = { version = "1.54", features = ["net", "io-util", "time", "sync"] }
+tokio-rustls = "0.26"
+ring = "0.17"

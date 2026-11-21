@@ -96,3 +96,36 @@ re-pairing; the phone does not need a rebuilt Tauri installer.
 ## Direct headset sparse-stream experiment (Stage 0b)
 
 The S21 showed ~19.4 KiB/s incoming JSON while stationary. The existing headset channel was transmitting a complete world-state map on every tick. The delta-v1 optimization now sends one initial snapshot and only changed fields thereafter. No-op updates are suppressed with periodic clock updates. The phone reconstructs its state using the same WorldStreamDelta algorithm as the desktop and can request an authenticated, rate-limited resync after a gap. This is an interim improvement, NOT the complete secure LAN relay: the headset still contacts the server directly. Compare steady RX readings after rebuilding both phone assets and the local Phoenix server. Do not claim measured savings until the Galaxy S21 is retested.
+
+
+## Stage 1a — Tauri → Galaxy TLS-only LAN proof (implemented)
+
+The native Tauri launcher has a new opt-in **SBS relay test**. It starts a
+restricted HTTPS listener **only** after a local user clicks Start, and only
+on a single explicit private LAN IPv4 address (`SPACE_NOVA_SBS_BIND`, port
+4455 in the developer script). It reuses the phone-trusted mkcert certificate
+and never falls back to plaintext. The existing login bridge, Phoenix stream,
+and HMD rendering are untouched.
+
+The launcher presents a ten-minute, one-time, 192-bit random invitation in
+an HTTPS **fragment**. The phone loads a bundled static TLS proof page, clears
+its fragment, and sends its token in an Authorization header to a single
+allowed POST endpoint. Tauri consumes the token and reports **Phone verified
+over local HTTPS**. The listener accepts no other routes, no uploads, no
+arbitrary file paths, no CORS and no game commands. Stop or closing the client
+terminates the listener. Re-pairing requires a new token.
+
+Try using `bash clients/tauri/scripts/dev-sbs-relay.sh` from the repo root,
+then click **SBS relay test → Start secure LAN test** in the Tauri launcher;
+copy the resulting one-time URL to the S21 on the same Wi-Fi. The phone's
+Android browser must trust the cert's issuing CA and the certificate must
+include the laptop's private IPv4 SAN. If this cannot be verified, fail
+closed instead of bypassing a certificate warning.
+
+**Important:** This is a transport/authentication proof, **not** the finished
+local relay. It does not yet send any world-state delta or locally hosted
+graphical asset. Existing `/helmet` remains connected to Phoenix until the
+scoped LAN state relay, local static asset manifest, and isolation tests pass.
+The next implementation step should use the established trusted LAN channel
+and migrate the phone to the filtered state stream, not copy or multiplex
+another full Phoenix connection.

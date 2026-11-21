@@ -9,6 +9,7 @@
     <link rel="stylesheet" href="./launcher.css">
     <script type="module" src="./launcher.mjs"></script>
     <script type="module" src="./networking.mjs"></script>
+    <script type="module" src="./sbs_relay_probe.mjs"></script>
   </head>
   <body>
     <div class="launcher-stage">
@@ -16,6 +17,7 @@
         <span class="launcher-brand"><span aria-hidden="true">✦</span> SPACE NOVA</span>
         <span class="launcher-rail-status">FLIGHT SYSTEMS // DESKTOP CLIENT</span>
         <button type="button" id="networking-open" class="networking-open">⚙ Network settings</button>
+        <button type="button" id="sbs-relay-open" class="networking-open">SBS relay test</button>
       </header>
 
       <section id="networking-panel" class="networking-panel" hidden aria-label="Native networking settings">
@@ -37,6 +39,24 @@
           <button class="primary" type="submit">Save and restart client</button>
         </form>
         <p class="networking-note">These settings affect the native client only. They do not start an SSH tunnel or change GNOME's system proxy.</p>
+      </section>
+
+      <section id="sbs-relay-panel" class="networking-panel" hidden aria-label="Secure headset relay connection test">
+        <div class="networking-title"><h2>SBS Local Relay - Stage 1</h2>
+          <button type="button" id="sbs-relay-close" class="text-button">Close ✕</button></div>
+        <p class="networking-note">Only test the trusted HTTPS link between this laptop and the Galaxy S21.
+          Game state and graphics still use your existing Phoenix connection.</p>
+        <div class="actions">
+          <button type="button" id="sbs-relay-start" class="primary">Start secure LAN test</button>
+          <button type="button" id="sbs-relay-stop" class="secondary">Stop test</button>
+        </div>
+        <label for="sbs-relay-url">One-time phone invitation (valid 10 minutes)</label>
+        <input id="sbs-relay-url" type="text" readonly spellcheck="false" placeholder="Start the test to generate a private URL">
+        <button id="sbs-relay-copy" type="button" class="text-button">Copy phone link</button>
+        <p id="sbs-relay-status" class="networking-note" role="status" aria-live="polite">Not started.</p>
+        <p class="networking-note">Open the link on your phone. It should display
+          SECURE LAN LINK CONFIRMED. The certificate must already be trusted by Android.
+          Do not share the one-time link outside your LAN.</p>
       </section>
 
       <main class="shell">

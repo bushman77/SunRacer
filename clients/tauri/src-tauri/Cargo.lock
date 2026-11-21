@@ -3176,12 +3176,15 @@ name = "space-nova-client"
 version = "0.3.1"
 dependencies = [
  "reqwest",
+ "ring",
  "serde",
  "serde_json",
  "tauri",
  "tauri-build",
  "tauri-plugin-dialog",
  "tauri-plugin-updater",
+ "tokio",
+ "tokio-rustls",
 ]
 
 [[package]]

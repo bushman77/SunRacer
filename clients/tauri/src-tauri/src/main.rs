@@ -2,6 +2,7 @@
 
 mod network;
 mod native_loopback;
+mod sbs_relay_probe;
 
 use tauri::Manager;
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
@@ -16,6 +17,9 @@ fn main() {
             network::save_network_settings,
             network::restart_client,
             native_loopback::native_loopback_post,
+            sbs_relay_probe::start_sbs_relay_probe,
+            sbs_relay_probe::sbs_relay_probe_status,
+            sbs_relay_probe::stop_sbs_relay_probe,
         ])
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_updater::Builder::new().build())

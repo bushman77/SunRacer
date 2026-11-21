@@ -376,3 +376,55 @@ users and regression testing.
 
 This is an *online* multiplayer client, not an offline single-player game:
 only assets, rendering and input handling are local.
+
+## Stage 1: opt-in secure local SBS link test (no game relay yet)
+
+From the repo root, after installing Tauri/Rust build dependencies, launch:
+
+```bash
+bash clients/tauri/scripts/dev-sbs-relay.sh
+```
+
+This script discovers your laptop's private LAN IPv4 address (or uses
+`DARKORBIT_DEV_LAN_HOST`), verifies the already trusted development
+certificate covers that IP, and runs Tauri with
+`SPACE_NOVA_SBS_BIND=<LAN-IP>:4455`,
+`SPACE_NOVA_SBS_CERT`, and `SPACE_NOVA_SBS_KEY`.
+The certificate and key are read from
+`apps/darkorbit_web/priv/cert/localhost.pem` and
+`localhost-key.pem`. **Never commit those files or bypass TLS validation.**
+The Galaxy S21 must already trust the mkcert issuing CA, as it does for
+local Phoenix HTTPS on port 4443.
+
+On the **bundled Tauri launcher**, choose **SBS relay test → Start secure LAN
+test**. Copy the generated one-time URL to the phone. Open it with the
+phone's regular browser on the same Wi-Fi. The page clears the invitation
+fragment before making one same-origin HTTPS POST, then displays
+`SECURE LAN LINK CONFIRMED`. The Tauri launcher should show
+`Phone verified over local HTTPS`. The invitation expires in ten minutes,
+is valid once, and is NOT a player credential.
+
+This is only a **transport/authentication smoke test**: the service does
+not expose files, game state, webcam, sensors or flight commands, and no
+Phoenix path is changed. The existing phone pairing and SBS rendering
+continue using Phoenix during this milestone. Stop the test using
+**Stop test** or by closing Tauri.
+
+Security restrictions: no default listener; no 0.0.0.0/public/loopback
+bind address; only the trusted local Tauri UI may enable the service;
+one-time 192-bit token in a URL fragment, never an HTTP URL or logs;
+strict Host check, request-size cap and short request timeouts; no CORS,
+cookies, redirects, uploads or plaintext fallback.
+
+### If connection fails
+
+Confirm the phone is on the same Wi-Fi, your laptop's LAN IP matches the
+certificate's IP SAN, port 4455 is allowed by the laptop firewall, and the
+Android browser trusts the CA. A browser certificate warning is a failure:
+do not select a bypass option. Restart the test if the link is expired or
+already used. For unusual networking, set
+`DARKORBIT_DEV_LAN_HOST=192.168.x.y` explicitly before launching the script.
+
+The next milestones (not implemented here) are authenticated asset
+delivery and the whitelist-only world-state delta relay. No EC2 changes
+are made by this test.

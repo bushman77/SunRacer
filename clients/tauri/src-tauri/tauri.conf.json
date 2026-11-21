@@ -36,7 +36,10 @@
             "allow-get-network-settings",
             "allow-save-network-settings",
             "allow-restart-client",
-            "allow-native-loopback-post"
+            "allow-native-loopback-post",
+            "allow-start-sbs-relay-probe",
+            "allow-sbs-relay-probe-status",
+            "allow-stop-sbs-relay-probe"
           ]
         }
       ]

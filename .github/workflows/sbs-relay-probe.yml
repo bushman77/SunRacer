@@ -1,0 +1,49 @@
+name: Verify SBS LAN TLS pairing proof
+
+on:
+  push:
+    branches: [star_base]
+    paths:
+      - "clients/tauri/src-tauri/src/sbs_relay_probe.rs"
+      - "clients/tauri/src-tauri/src/main.rs"
+      - "clients/tauri/src-tauri/Cargo.toml"
+      - "clients/tauri/src-tauri/Cargo.lock"
+      - "clients/tauri/src-tauri/build.rs"
+      - "clients/tauri/src-tauri/tauri.conf.json"
+      - "clients/tauri/ui/sbs_relay_probe.mjs"
+      - "clients/tauri/ui/index.html"
+      - "clients/tauri/scripts/dev-sbs-relay.sh"
+      - "clients/tauri/tests/sbs_relay_probe.test.mjs"
+      - ".github/workflows/sbs-relay-probe.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  launcher-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: |
+          node --check clients/tauri/ui/sbs_relay_probe.mjs
+          node --test clients/tauri/tests/launcher_markup.test.mjs clients/tauri/tests/sbs_relay_probe.test.mjs
+          bash -n clients/tauri/scripts/dev-sbs-relay.sh
+  rust-probe-tests:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: clients/tauri/src-tauri
+      - name: Install Tauri Linux toolchain dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev libssl-dev libxdo-dev patchelf
+      - name: Compile and run native LAN relay tests with locked dependencies
+        run: cargo test --locked --manifest-path clients/tauri/src-tauri/Cargo.toml sbs_relay_probe::tests -- --nocapture

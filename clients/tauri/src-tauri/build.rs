@@ -6,6 +6,9 @@ fn main() {
                 "save_network_settings",
                 "restart_client",
                 "native_loopback_post",
+                "start_sbs_relay_probe",
+                "sbs_relay_probe_status",
+                "stop_sbs_relay_probe",
             ]),
         ),
     )
