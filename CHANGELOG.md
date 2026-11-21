@@ -2,6 +2,73 @@
 
 ## Unreleased
 
+### Pilot HMD smoothing and comfort fixes; predicted mouse look (2026-11-20)
+
+#### Fixed
+
+- Headset entities are smoothed between world updates (Phoenix ~10 Hz, LAN
+  relay ~16 Hz) with the same presentation smoothing the laptop uses
+  (`entity_smoothing.mjs`). Previously each update replaced every entity and
+  the headset camera stepped at the update rate. Fresh snapshots, resyncs,
+  map changes and jumps over 1,500 world units snap instead of sweeping.
+- The headset render loop holds a single animation-frame request
+  (`frame_scheduler.mjs`). A frame queued before the page was hidden used to
+  resume alongside the new loop after wake, adding another full stereo render
+  per vsync on every screen sleep/wake.
+- `/helmet` sets `viewport-fit=cover` (that page only), so Android no longer
+  letterboxes the camera cutout in landscape fullscreen; the canvas was
+  narrower than the screen and both eye centres sat off the lenses.
+- Planetary proximity warnings now reach the headset HUD (computed from the
+  world map the phone already receives).
+- Encounter holds and surrender offers are drawn only in the stereo cockpit
+  HUD; the flat 50/50 DOM cards ignored lens calibration.
+- Laser beams reuse pooled meshes over shared unit geometry instead of
+  allocating and disposing geometry/materials every frame.
+- SBS pointer picking follows the calibrated eye gap.
+
+#### Changed
+
+- SBS eye cameras are parallel (`camera.focus` effectively infinite); lens
+  alignment is left to the calibrated centre gap.
+- The sight ring is drawn at the depth of what it points at: the cockpit
+  control under the head-gaze, otherwise 60 units ahead (same angular size).
+- Headset render resolution cap 2.0 (was 1.5); override with localStorage
+  `darkorbit:pilot_hmd_max_dpr` (1-3). Laptop cap unchanged.
+- First-run centre gap -48 CSS px (was +8). Saved calibration unchanged.
+- Laptop manual flight: the own ship's orientation and position are predicted
+  between server ticks by running the server's turn rules
+  (`FlightDynamics.advance_angular_rate`, keyboard and mouse profiles) forward
+  from the last authoritative update while replaying the pilot's recorded
+  input (`own_ship_prediction.mjs`, capped at 200 ms). Each update restarts
+  the prediction; a 45 ms settle absorbs the correction. The existing mouse
+  steering filter (`f021007`) is unchanged. Presentation only.
+
+#### Added
+
+- Optional lens distortion correction (beta, off by default): a checkbox on
+  the headset setup screen enables a per-eye barrel pre-distortion pass
+  centred on the calibrated lens centre. Defaults k1=0.10, k2=0.05; override
+  with localStorage `darkorbit:pilot_hmd_lens_k` ("k1,k2").
+
+#### Not changed
+
+- Strategic fly-by contacts are still not sent to the headset: the viewer
+  channel deliberately withholds contact identities and route state.
+
+#### Verification
+
+- Browser JavaScript suite: 392 tests pass (366 before; 26 added in
+  `entity_smoothing_test`, `frame_scheduler_test`, `helmet_display_test`,
+  `lens_distortion_test`, `own_ship_prediction_test`, `stereo_math_test`).
+- esbuild bundles `js/app.js`.
+- Added an ExUnit test (`/helmet` uses `viewport-fit=cover`, `/` does not);
+  Elixir suites were **not run** (the sandbox could not reach hex.pm). Changed
+  Elixir files were syntax-parsed only.
+- No device, headset or browser manual verification has been performed. The
+  lens distortion pass has not run on real WebGL hardware.
+- `own_ship_prediction.mjs` mirrors `@turn_limits`/`@mouse_turn_limits` in
+  `flight_dynamics.ex`; change both together.
+
 ### Repository-generated artifact cleanup (2026-11-06)
 
 #### Removed

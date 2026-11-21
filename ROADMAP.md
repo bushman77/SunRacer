@@ -1260,3 +1260,22 @@ See `docs/space-nova-release.md` for the distribution procedure.
   so both SBS eyes can render the same local environmental scenery.
 - [x] Add regression tests for paired-device privacy and scene metadata; include
   environmental Core/Node tests and JS syntax checking in SOL free-flight CI.
+
+### Pilot HMD smoothing/comfort fixes and predicted mouse look (2026-11-20)
+
+- [x] Smooth headset entities between Phoenix/relay updates.
+- [x] Single animation-frame request on the headset across sleep/wake.
+- [x] `viewport-fit=cover` on `/helmet`.
+- [x] Proximity warnings, encounter hold and surrender in the stereo HUD.
+- [x] Pooled beam meshes; gap-aware SBS picking; parallel SBS eye axes;
+  depth-correct sight ring; headset DPR cap 2.0; inward first-run gap.
+- [x] Optional lens distortion pass (beta, off by default).
+- [x] Laptop own-ship prediction between server ticks (mouse and keyboard).
+- [ ] Run `mix test` / `mix precommit` (new controller test added).
+- [ ] Manually verify on the S21 headset: full-width eye viewports, smooth
+  motion on Phoenix and LAN relay, no frame-rate drop after sleep/wake,
+  gaze cursor depth on NAV/HUD controls, HUD readability at DPR 2.0,
+  distortion on/off.
+- [ ] Browser-verify mouse-look feel on LAN and EC2.
+- [ ] Calibrate lens distortion coefficients and per-headset FOV; consider
+  storing them with the gap/IPD calibration.

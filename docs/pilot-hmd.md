@@ -178,3 +178,24 @@ after installing this update.
 
 New versions persist the credential via `POST /helmet/pair` before the viewer
 socket joins; the same failure cannot consume a QR unnoticed during joining.
+
+## Display smoothing and comfort settings (2026-11-20)
+
+- `/helmet` uses `viewport-fit=cover`, so both eye viewports split the full
+  physical screen, including the camera-cutout strip.
+- Entities are smoothed between world updates exactly as on the laptop
+  (`entity_smoothing.mjs`); snapshots, resyncs, map changes and jumps beyond
+  1,500 world units snap.
+- SBS cameras are parallel; image alignment is entirely the centre gap. The
+  first-run gap is -48 CSS px.
+- The sight ring sits at the depth of the gazed cockpit control, otherwise
+  far ahead.
+- Proximity warnings, encounter holds and surrender offers appear in the
+  stereo cockpit HUD.
+- Phone-only local settings (not stored on the server yet):
+  - `darkorbit:pilot_hmd_max_dpr`: render resolution cap, 1-3 (default 2).
+  - `darkorbit:pilot_hmd_lens_distortion`: `"1"` enables the beta barrel
+    pre-distortion pass (also the setup-screen checkbox).
+  - `darkorbit:pilot_hmd_lens_k`: `"k1,k2"` (default `0.10,0.05`).
+  None of these have been verified on a headset yet.
+

@@ -1,7 +1,8 @@
 import * as THREE from "three"
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js"
 import {pointerNdc, toScene, toWorld} from "./stereo_math.mjs"
-import {stereoViewports, applyTransientStereoOffset} from "./stereo_viewport.mjs"
+import {stereoViewports, applyTransientStereoOffset, inwardStereoProjectionOffset} from "./stereo_viewport.mjs"
+import {LensDistortionPass, lensCenterU} from "./lens_distortion.mjs"
 import {cockpitHudFit, HUD_GEOMETRY} from "./stereo_layout.mjs"
 import {flightBasis, degrees} from "./flight_basis.mjs"
 import {orientationTelemetry} from "./orientation_interpolation.mjs"
@@ -93,6 +94,16 @@ function disposeMesh(root) {
   })
 }
 
+// Ring geometry is sized for 5 units; scaling by distance/5 keeps the same
+// angular size at any depth.
+const SIGHT_BASE_DISTANCE = 5
+export const SIGHT_FAR_DISTANCE = 60
+// SBS is viewed through headset lenses: parallel eye axes (zero parallax at
+// infinity). Lens alignment is handled by the calibrated centre gap, not by
+// converging the virtual cameras on a plane 10 units ahead.
+export const SBS_PARALLEL_FOCUS = 1e6
+const MONO_FOCUS = 10
+
 export class StereoSpaceView {
   constructor(canvas) {
     this.canvas = canvas
@@ -105,6 +116,10 @@ export class StereoSpaceView {
     this.stereo.eyeSep = 0.064
     this.eyeGapPx = 0
     this.mode = "3d"
+    // Laptop keeps the historical 1.5 cap; the headset raises it because the
+    // lenses magnify every pixel (see helmet_display.mjs).
+    this.maxPixelRatio = 1.5
+    this.lensDistortion = null
     this.size = {width: 1, height: 1, dpr: 1}
     this.scene.add(this.camera)
     this.nodes = new Map()
@@ -238,11 +253,16 @@ export class StereoSpaceView {
     framing.add(this.dockingCountdownMesh)
     this.lastCountdownNumber = null
 
+    // The sight is drawn at the depth of what it points at (see
+    // placeSight): far ahead in space so both eyes converge on it like on a
+    // distant target, or on the cockpit control under the head-gaze. A ring
+    // fixed at 5 units was seen doubled whenever you focused past it.
     const sight = new THREE.Mesh(
       new THREE.RingGeometry(0.025, 0.035, 40),
       new THREE.MeshBasicMaterial({color: 0x78e6fc, transparent: true, opacity: 0.8, depthTest: false}),
     )
-    sight.position.z = -5
+    sight.position.z = -SIGHT_FAR_DISTANCE
+    sight.scale.setScalar(SIGHT_FAR_DISTANCE / SIGHT_BASE_DISTANCE)
     sight.renderOrder = 50
     // A center-screen sight belongs to the headset camera. The cockpit
     // itself must NOT follow head rotation; it remains ship-fixed below.
@@ -411,7 +431,16 @@ export class StereoSpaceView {
     old?.dispose()
   }
 
+  // Same angular size at any depth; converges where the pilot is looking.
+  placeSight(distance) {
+    if (!this.sight) return
+    const d = Number.isFinite(distance) && distance > 0.5 ? distance : SIGHT_FAR_DISTANCE
+    this.sight.position.z = -d
+    this.sight.scale.setScalar(d / SIGHT_BASE_DISTANCE)
+  }
+
   gazeTarget() {
+    this.gazeHitDistance = null
     if (!this.helmetGazeEnabled || !this.helmetHeadRotation) return null
     const candidates = this.helmetNavOpen ?
       [this.helmetNavClose, this.helmetNavRecenter, this.helmetNavFlight,
@@ -424,6 +453,7 @@ export class StereoSpaceView {
     const hits = this.raycaster.intersectObjects(
       candidates.filter(candidate => candidate?.visible), false)
     if (!hits.length || hits[0].distance >= 6) return null
+    this.gazeHitDistance = hits[0].distance
     const target = hits[0].object
     if (target === this.helmetNavClose) return "nav_close"
     if (target === this.helmetNavRecenter) return "recenter"
@@ -454,11 +484,25 @@ export class StereoSpaceView {
 
   setMode(mode) {
     this.mode = mode === "sbs" ? "sbs" : "3d"
+    this.camera.focus = this.mode === "sbs" ? SBS_PARALLEL_FOCUS : MONO_FOCUS
     this.resize(this.size.width, this.size.height, this.size.dpr)
   }
 
+  // Optional barrel pre-distortion for phone-headset lenses (beta, off by
+  // default). Without it the lenses show pincushion distortion at the edges.
+  setLensDistortion(enabled, coefficients) {
+    if (!enabled) {
+      this.lensDistortion?.dispose()
+      this.lensDistortion = null
+      return
+    }
+    if (!this.lensDistortion) this.lensDistortion = new LensDistortionPass(THREE, coefficients)
+    else if (coefficients) this.lensDistortion.setCoefficients(coefficients)
+  }
+
   resize(width, height, dpr) {
-    this.size = {width: Math.max(1, width), height: Math.max(1, height), dpr: Math.min(1.5, dpr)}
+    this.size = {width: Math.max(1, width), height: Math.max(1, height),
+      dpr: Math.max(0.5, Math.min(this.maxPixelRatio, Number(dpr) || 1))}
     this.renderer.setPixelRatio(this.size.dpr)
     this.renderer.setSize(this.size.width, this.size.height, false)
     // StereoCamera.aspect is 1 by default; it takes this camera\'s per-eye
@@ -576,11 +620,37 @@ export class StereoSpaceView {
     this.pickables = [...this.nodes.values()].filter(node => node.userData.kind === "npc")
   }
 
-  syncBeams(client, time) {
-    for (const child of [...this.beamGroup.children]) {
-      this.beamGroup.remove(child)
-      disposeMesh(child)
+  // Beams reuse pooled meshes over shared unit geometry. The previous version
+  // built and disposed new cylinders, spheres and materials for every beam on
+  // every frame, which on a phone means GC stutter during combat.
+  beamSlot(index) {
+    if (!this.beamPool) {
+      this.beamPool = []
+      this.beamUnitCylinder = new THREE.CylinderGeometry(1, 1, 1, 8)
+      this.beamUnitSphere = new THREE.SphereGeometry(1, 12, 8)
     }
+    let slot = this.beamPool[index]
+    if (!slot) {
+      const additive = () => new THREE.MeshBasicMaterial({
+        transparent: true, blending: THREE.AdditiveBlending, depthWrite: false,
+      })
+      slot = {
+        core: new THREE.Mesh(this.beamUnitCylinder, additive()),
+        glow: new THREE.Mesh(this.beamUnitCylinder, additive()),
+        flash: new THREE.Mesh(this.beamUnitSphere, additive()),
+      }
+      this.beamGroup.add(slot.core, slot.glow, slot.flash)
+      this.beamPool[index] = slot
+    }
+    return slot
+  }
+
+  syncBeams(client, time) {
+    const up = this.beamUp || (this.beamUp = new THREE.Vector3(0, 1, 0))
+    const start = this.beamStart || (this.beamStart = new THREE.Vector3())
+    const line = this.beamLine || (this.beamLine = new THREE.Vector3())
+    const dir = this.beamDir || (this.beamDir = new THREE.Vector3())
+    let used = 0
     for (const beamData of client.beams) {
       if (beamData.expiresAt <= time) continue
       const from = toScene(beamData.from)
@@ -591,31 +661,33 @@ export class StereoSpaceView {
 
       // Never invent local muzzle offsets here. These endpoints come from
       // the authoritative world event, including real hit/miss geometry.
-      const start = [from.x, from.y, from.z]
-      const finish = [to.x, to.y, to.z]
-      const core = beam(start, finish, 0.13, new THREE.MeshBasicMaterial({
-        color: laserColor, transparent: true, opacity: fraction,
-        blending: THREE.AdditiveBlending, depthWrite: false,
-      }))
-      const glow = beam(start, finish, 0.32, new THREE.MeshBasicMaterial({
-        color: laserColor, transparent: true, opacity: fraction * 0.32,
-        blending: THREE.AdditiveBlending, depthWrite: false,
-      }))
-      this.beamGroup.add(core, glow)
-
-      if (beamData.hit) {
-        const flash = new THREE.Mesh(
-          new THREE.SphereGeometry(1.1, 12, 8),
-          new THREE.MeshBasicMaterial({
-            color: beamData.hostile ? 0xffd08d : 0xffe2d8,
-            transparent: true, opacity: fraction * 0.92,
-            blending: THREE.AdditiveBlending, depthWrite: false,
-          }),
-        )
-        flash.position.set(to.x, to.y, to.z)
-        flash.scale.setScalar(0.9 + (1 - fraction) * 1.7)
-        this.beamGroup.add(flash)
+      start.set(from.x, from.y, from.z)
+      line.set(to.x, to.y, to.z).sub(start)
+      const length = line.length()
+      if (!(length > 1e-6)) continue
+      dir.copy(line).divideScalar(length)
+      const slot = this.beamSlot(used++)
+      for (const [mesh, radius, opacity] of [
+        [slot.core, 0.13, fraction], [slot.glow, 0.32, fraction * 0.32],
+      ]) {
+        mesh.visible = true
+        mesh.material.color.setHex(laserColor)
+        mesh.material.opacity = opacity
+        mesh.position.copy(start).addScaledVector(line, 0.5)
+        mesh.quaternion.setFromUnitVectors(up, dir)
+        mesh.scale.set(radius, length, radius)
       }
+      slot.flash.visible = Boolean(beamData.hit)
+      if (beamData.hit) {
+        slot.flash.material.color.setHex(beamData.hostile ? 0xffd08d : 0xffe2d8)
+        slot.flash.material.opacity = fraction * 0.92
+        slot.flash.position.set(to.x, to.y, to.z)
+        slot.flash.scale.setScalar(1.1 * (0.9 + (1 - fraction) * 1.7))
+      }
+    }
+    for (let i = used; i < (this.beamPool?.length || 0); i++) {
+      const slot = this.beamPool[i]
+      slot.core.visible = slot.glow.visible = slot.flash.visible = false
     }
   }
 
@@ -667,18 +739,22 @@ export class StereoSpaceView {
     const nav = client.navComputer?.solarNavigation
     const flyby = nav?.tactical_encounter ? null : nav?.encounter
     const planetWarning = client.planetaryWarningDisplay
+    const hold = client.encounterHold
     // This canvas is a stereo-correct 3D HUD surface shared by both SBS
     // eyes. Render the hazard inside the instrument rather than a flat
     // non-stereoscopic banner that would be uncomfortable in a headset.
     ctx.fillStyle = planetWarning
       ? planetWarning.level === "critical" ? "#ff8f90" : "#ffcf7a"
       : surrenderLabel ? "#81ffaf"
+      : hold ? "#fcd34d"
       : flyby ? "#7eead6"
       : range?.inRange === false ? "#ff9b96" : "#9fc7df"
     ctx.font = "bold 22px monospace"
     ctx.fillText(planetWarning
       ? planetWarning.level.toUpperCase() + " · " + planetWarning.detail
       : surrenderLabel ? "SURRENDER OFFER · ACCEPT OR RETREAT ON LAPTOP"
+      : hold ? "CRUISE PAUSED · " + String(hold.call_sign).slice(0, 20) +
+        " · HAIL OR RESUME ON LAPTOP"
       : flyby ? "CLOSE PASS · " + String(flyby.call_sign).slice(0, 24) +
         " · HAIL VIA ATLAS"
       : range ? range.label :
@@ -762,11 +838,13 @@ export class StereoSpaceView {
       this.camera.quaternion.multiply(this.helmetHeadRotation)
       this.camera.updateMatrixWorld(true)
     }
+    this.gazeHitDistance = null
     if (this.helmetGazeEnabled && this.onHelmetGaze) {
       // In the station the laptop retains service control. Do not allow
       // invisible cockpit NAV meshes to trigger head-gaze actions.
       this.onHelmetGaze(docked ? null : this.gazeTarget(), time)
     }
+    this.placeSight(this.gazeHitDistance)
     if (!docked) {
       // Real outer-space rendering is retained unchanged after launch.
       this.stars?.position.copy(this.camera.position)
@@ -801,13 +879,22 @@ export class StereoSpaceView {
         // Clear the center strip instead of leaving stale pixels from a prior frame.
         this.renderer.setScissorTest(false)
         this.renderer.clear(true, true, true)
-        this.renderer.setScissorTest(true)
-        this.renderer.setViewport(left.x, left.y, left.width, left.height)
-        this.renderer.setScissor(left.x, left.y, left.width, left.height)
-        this.renderer.render(activeScene, this.stereo.cameraL)
-        this.renderer.setViewport(right.x, right.y, right.width, right.height)
-        this.renderer.setScissor(right.x, right.y, right.width, right.height)
-        this.renderer.render(activeScene, this.stereo.cameraR)
+        if (this.lensDistortion) {
+          // The lens centre follows the calibrated inward image shift.
+          const shift = inwardStereoProjectionOffset(this.eyeGapPx, left.width)
+          this.lensDistortion.renderEye(this.renderer, activeScene, this.stereo.cameraL,
+            left, this.size.dpr, lensCenterU("left", shift))
+          this.lensDistortion.renderEye(this.renderer, activeScene, this.stereo.cameraR,
+            right, this.size.dpr, lensCenterU("right", shift))
+        } else {
+          this.renderer.setScissorTest(true)
+          this.renderer.setViewport(left.x, left.y, left.width, left.height)
+          this.renderer.setScissor(left.x, left.y, left.width, left.height)
+          this.renderer.render(activeScene, this.stereo.cameraL)
+          this.renderer.setViewport(right.x, right.y, right.width, right.height)
+          this.renderer.setScissor(right.x, right.y, right.width, right.height)
+          this.renderer.render(activeScene, this.stereo.cameraR)
+        }
       } finally {
         restore()
         this.renderer.setScissorTest(false)
@@ -819,7 +906,7 @@ export class StereoSpaceView {
   }
 
   rayFromPointer(pointer, rect) {
-    const pos = pointerNdc(pointer, rect, this.mode)
+    const pos = pointerNdc(pointer, rect, this.mode, this.eyeGapPx)
     if (!pos) return false
     this.camera.updateMatrixWorld(true)
     this.stereo.update(this.camera)

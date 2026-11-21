@@ -22,6 +22,20 @@ test("SBS keeps left and right eye pointer projections independent", () => {
   assert.deepEqual(pointerNdc({clientX: 10, clientY: 20}, rect, "sbs"), {x: -1, y: 1, eye: "left"})
 })
 
+test("SBS picking follows the calibrated eye gap", () => {
+  // Positive gap: 100px black strip in the middle belongs to neither eye.
+  assert.equal(pointerNdc({clientX: 510, clientY: 320}, rect, "sbs", 100), null)
+  assert.deepEqual(pointerNdc({clientX: 235, clientY: 320}, rect, "sbs", 100), {x: 0, y: 0, eye: "left"})
+  assert.deepEqual(pointerNdc({clientX: 785, clientY: 320}, rect, "sbs", 100), {x: 0, y: 0, eye: "right"})
+  // Negative gap: images are shifted inward by 25px each, so the physical
+  // viewport centre maps to the left of the left eye's optical centre.
+  const left = pointerNdc({clientX: 260, clientY: 320}, rect, "sbs", -50)
+  assert.equal(left.eye, "left")
+  assert.ok(Math.abs(left.x - (-0.1)) < 1e-9)
+  const right = pointerNdc({clientX: 760, clientY: 320}, rect, "sbs", -50)
+  assert.ok(Math.abs(right.x - 0.1) < 1e-9)
+})
+
 test("invalid and outside-viewport pointers are rejected", () => {
   assert.equal(pointerNdc({clientX: -10, clientY: 100}, rect), null)
   assert.equal(pointerNdc({clientX: Infinity, clientY: 100}, rect), null)

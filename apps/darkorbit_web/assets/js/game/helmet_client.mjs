@@ -8,8 +8,7 @@ import {laserFeedback} from "./laser_feedback.mjs"
 import {helmetSocketParams} from "./helmet_auth.mjs"
 import {adjustedHelmetAlignment, HELMET_GAP_MIN, HELMET_GAP_MAX} from "./helmet_alignment.mjs"
 import {restoredHelmetCalibration} from "./helmet_calibration_restore.mjs"
-import {renderHelmetEncounter} from "./helmet_encounter_view.mjs"
-import {renderHelmetSurrender, helmetSurrenderFromEntities} from "./helmet_surrender_view.mjs"
+import {helmetSurrenderFromEntities} from "./helmet_surrender_view.mjs"
 import {helmetPlanetaryNavigation} from "./helmet_planetary_navigation.mjs"
 import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
@@ -21,12 +20,21 @@ import {
   HELMET_BANDWIDTH_HUD, renderHelmetBandwidth,
 } from "./helmet_bandwidth_hud.mjs"
 import {headsetScreenTapRecenterAllowed} from "./helmet_screen_recenter.mjs"
+import {upsertHelmetEntity, smoothEntityPresentation, smoothHeading} from "./entity_smoothing.mjs"
+import {ownPlanetaryWarning, planetaryWarningView} from "./planetary_warning.mjs"
+import {helmetMaxPixelRatio, HELMET_DEFAULT_GAP_PX} from "./helmet_display.mjs"
+import {parseLensCoefficients} from "./lens_distortion.mjs"
+import {FrameScheduler} from "./frame_scheduler.mjs"
 
 const STORAGE_KEY = "darkorbit:pilot_hmd_credential"
 const GAP_KEY = "darkorbit:pilot_hmd_eye_gap"
 const EYE_SEP_KEY = "darkorbit:pilot_hmd_eye_sep"
 const CALIBRATION_DIRTY_KEY = "darkorbit:pilot_hmd_calibration_unsynced"
 const CALIBRATION_SAVE_DELAY_MS = 350
+const MAX_DPR_KEY = "darkorbit:pilot_hmd_max_dpr"
+const DISTORTION_KEY = "darkorbit:pilot_hmd_lens_distortion"
+// Optional per-headset "k1,k2" override for the distortion pass.
+const LENS_K_KEY = "darkorbit:pilot_hmd_lens_k"
 const key = value => String(value)
 
 // Read-only Phoenix companion. Head tracking and navigation gaze act only on
@@ -36,8 +44,6 @@ export class HelmetClient {
     this.root = root
     this.canvas = root.querySelector("#helmet-viewport")
     this.messageNode = root.querySelector("#helmet-message")
-    this.encounterNode = root.querySelector("#helmet-encounter")
-    this.surrenderNode = root.querySelector("#helmet-surrender")
     this.pairCode = root.dataset.pairCode || null
     this.credential = localStorage.getItem(STORAGE_KEY)
     // Keep the QR invitation until the saved token has been verified.
@@ -45,7 +51,11 @@ export class HelmetClient {
     this.mode = "standby"
     this.immersiveReady = false
     this.windowed = false
-    this.eyeGapPx = Math.max(HELMET_GAP_MIN, Math.min(HELMET_GAP_MAX, Number(localStorage.getItem(GAP_KEY) ?? 8)))
+    // First run: the S21's two half-screen centres are ~72 mm apart, wider
+    // than most phone-headset lenses, so start with an inward shift.
+    const savedGap = Number(localStorage.getItem(GAP_KEY) ?? HELMET_DEFAULT_GAP_PX)
+    this.eyeGapPx = Math.max(HELMET_GAP_MIN, Math.min(HELMET_GAP_MAX,
+      Number.isFinite(savedGap) ? savedGap : HELMET_DEFAULT_GAP_PX))
     this.eyeSepMm = Math.max(40, Math.min(85, Number(localStorage.getItem(EYE_SEP_KEY)) || 64))
     this.calibrationRevision = 0
     this.calibrationSaveTimer = null
@@ -58,6 +68,10 @@ export class HelmetClient {
     this.helmetResyncInFlight = false
     this.lastHelmetResyncAt = -Infinity
     this.selfId = null
+    // Same field the laptop sets; StereoSpaceView draws it in the 3D HUD.
+    this.planetaryWarningDisplay = null
+    // Encounter hold drawn inside the stereo HUD, not a flat DOM card.
+    this.encounterHold = null
     this.selectedTargetId = null
     this.helmetSurrender = null
     this.beams = []
@@ -79,6 +93,11 @@ export class HelmetClient {
     })
     this.running = false
     this.frameCount = 0
+    // One animation-frame request at a time. A frame queued before the page
+    // was hidden otherwise resumes alongside the new loop, and every
+    // sleep/wake cycle adds another full stereo render per vsync.
+    this.frames = new FrameScheduler()
+    this.lastFrameAt = null
     this.lastScreenRecenterAt = -Infinity
     this.lastSbsBandwidthUpdateAt = -Infinity
     this.localRelayActive = false
@@ -146,7 +165,7 @@ export class HelmetClient {
       // after changing orbital regions or reconnecting the headset.
       this.worldStream = new WorldStreamDelta(map)
       this.helmetResyncInFlight = false
-      this.applyWorld(map)
+      this.applyWorld(map, {snap: true})
     })
     this.channel.on("world_delta", delta => {
       if (this.mode !== "combat" || this.localRelayActive) return
@@ -163,7 +182,7 @@ export class HelmetClient {
     this.channel.on("world_state", map => {
       if (this.mode !== "combat" || this.localRelayActive) return
       this.worldStream = new WorldStreamDelta(map)
-      this.applyWorld(map)
+      this.applyWorld(map, {snap: true})
     })
     // Explicit status is pushed on changes and reconnect; the world snapshot
     // remains a second path so the paired phone never depends on target lock.
@@ -172,7 +191,10 @@ export class HelmetClient {
     })
     this.channel.on("laser_fired", shot => this.laserFired(shot))
     this.channel.on("helmet_encounter", payload => {
-      renderHelmetEncounter(this.encounterNode, payload)
+      // Drawn inside the stereo HUD (StereoSpaceView.updateHud). A flat DOM
+      // card split 50/50 ignores lens calibration and sits at screen depth.
+      this.encounterHold = payload?.paused === true && payload.encounter
+        ? {call_sign: String(payload.encounter.call_sign || "CONTACT")} : null
     })
     this.channel.on("helmet_navigation", payload => {
       this.navComputer.solarNavigation = helmetPlanetaryNavigation(payload)
@@ -251,6 +273,7 @@ export class HelmetClient {
         // Best-effort write before the OS backgrounds the browser.
         this.persistCalibration()
         this.running = false
+        this.cancelFrame()
         this.report(false)
       } else if (this.mode === "combat" && this.immersiveReady) {
         this.startRendering()
@@ -351,6 +374,14 @@ export class HelmetClient {
     const hint = this.root.querySelector("#helmet-fullscreen-hint")
     const fullscreen = this.root.querySelector("#helmet-fullscreen")
     const windowed = this.root.querySelector("#helmet-windowed")
+    const distortion = this.root.querySelector("#helmet-lens-distortion")
+    if (distortion) {
+      distortion.checked = this.lensDistortionEnabled()
+      distortion.addEventListener("change", () => {
+        localStorage.setItem(DISTORTION_KEY, distortion.checked ? "1" : "0")
+        this.applyLensDistortion()
+      })
+    }
 
     // The mechanical VR button presses the phone display like a finger.
     // Capture touchscreen/pen presses at the root so an encounter overlay
@@ -428,6 +459,15 @@ export class HelmetClient {
         if (setup) setup.hidden = false
       }
     })
+  }
+
+  lensDistortionEnabled() {
+    return localStorage.getItem(DISTORTION_KEY) === "1"
+  }
+
+  applyLensDistortion() {
+    this.view?.setLensDistortion(this.lensDistortionEnabled(),
+      parseLensCoefficients(localStorage.getItem(LENS_K_KEY)))
   }
 
   recenterFromPilot() {
@@ -547,7 +587,7 @@ export class HelmetClient {
 
   setMode(mode) {
     this.mode = mode === "combat" ? "combat" : "standby"
-    if (this.mode !== "combat") renderHelmetEncounter(this.encounterNode, null)
+    if (this.mode !== "combat") this.encounterHold = null
     if (this.mode === "combat") {
       if (this.latestRelayMap &&
           performance.now() - this.localRelayLastSeen < 10_000) {
@@ -617,6 +657,8 @@ export class HelmetClient {
     if (!this.view) {
       try {
         this.view = new StereoSpaceView(this.canvas)
+        this.view.maxPixelRatio = helmetMaxPixelRatio(localStorage.getItem(MAX_DPR_KEY))
+        this.applyLensDistortion()
         this.view.setMode("sbs")
         this.view.setHelmetGazeEnabled(true)
         this.view.onHelmetGaze = (target, time) => this.updateHelmetGaze(target, time)
@@ -641,7 +683,16 @@ export class HelmetClient {
     this.resize()
     this.message("")
     this.running = true
-    requestAnimationFrame(time => this.frame(time))
+    this.lastFrameAt = null
+    this.requestFrame()
+  }
+
+  requestFrame() {
+    this.frames.request(time => this.frame(time))
+  }
+
+  cancelFrame() {
+    this.frames.cancel()
   }
 
   stop() {
@@ -649,8 +700,10 @@ export class HelmetClient {
     this.view?.setHelmetHeadRotation(null)
     this.view?.setHelmetNavOpen(false)
     this.running = false
+    this.cancelFrame()
     this.frameCount = 0
-    renderHelmetEncounter(this.encounterNode, null)
+    this.encounterHold = null
+    this.planetaryWarningDisplay = null
     this.updateSurrender(null)
     this.helmetSurrender = null
     this.canvas.hidden = true
@@ -673,7 +726,9 @@ export class HelmetClient {
 
   resize() {
     if (!this.view) return
-    this.view.resize(window.innerWidth, window.innerHeight, Math.min(window.devicePixelRatio || 1, 1.5))
+    // The view applies its own maxPixelRatio cap (2.0 on the headset):
+    // the lenses magnify every pixel, and 1.5 left the HUD text soft.
+    this.view.resize(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1)
   }
 
   updateSurrender(payload) {
@@ -682,14 +737,18 @@ export class HelmetClient {
     this.helmetSurrender = payload?.surrendered === true
       ? {surrendered: true, call_sign: payload.call_sign}
       : {surrendered: false}
-    renderHelmetSurrender(this.surrenderNode, this.helmetSurrender)
+    // The HUD already shows the surrender line in stereo; the old flat DOM
+    // overlay duplicated it at screen depth.
   }
 
-  applyWorld(map) {
+  applyWorld(map, {snap = false} = {}) {
     if (!map?.entities || this.mode !== "combat") return
     // The helmet uses its pilot's server-subscribed orbital region, not a
     // phone-provided map ID. Green Starbase must only appear in deep space.
+    const previousMapId = this.mapId
     this.mapId = typeof map.map_id === "string" ? map.map_id : null
+    // A different map is a new place: never sweep the camera across it.
+    if (previousMapId && this.mapId !== previousMapId) snap = true
     const wasDocked = this.docked
     this.docked = pilotDockedInWorld(map, this.selfId)
     this.stationPosition = this.docked ?
@@ -706,41 +765,29 @@ export class HelmetClient {
     this.orbitalBase = map.orbital_base || null
     const active = new Set()
     for (const e of map.entities) {
-      const id = key(e.id)
-      active.add(id)
-      const pos = e.position_3d || e.position || {x: 0, y: 0, z: 0}
-      const dest = e.destination_3d || e.destination
-      this.entities.set(id, {
-        id,
-        kind: e.kind,
-        npcTypeId: e.npc_type_id,
-        shipClass: e.ship_class || null,
-        course: e.course || null,
-        displayName: e.display_name,
-        state: e.state,
-        status: e.status,
-        render: {...pos, z: pos.z || 0},
-        destination: dest,
-        angle: e.angle || 0,
-        attitude: e.attitude,
-        orientation: e.orientation,
-        velocity: e.velocity,
-        throttle: e.throttle,
-        flightMode: e.flight_mode,
-        targetId: e.target_id == null ? null : key(e.target_id),
-        hull: e.hull,
-        maxHull: e.max_hull,
-        shields: e.shields,
-        maxShields: e.max_shields,
-        attackRange: e.attack_range,
-        angularVelocity: e.angular_velocity,
-      })
+      // Keep one object per entity so smoothing state survives updates.
+      const entity = upsertHelmetEntity(this.entities, e, key, {snap})
+      active.add(entity.id)
     }
     for (const id of this.entities.keys()) {
       if (!active.has(id)) this.entities.delete(id)
     }
     this.selectedTargetId = this.entities.get(this.selfId)?.targetId || null
+    this.planetaryWarningDisplay = planetaryWarningView(ownPlanetaryWarning(map, this.selfId))
     this.updateSurrender(helmetSurrenderFromEntities(this.entities, this.selfId))
+  }
+
+  // Same presentation smoothing the laptop uses between world updates.
+  // Without it the headset camera steps at the update rate (10 Hz from
+  // Phoenix, ~16 Hz from the LAN relay), the main cause of judder in VR.
+  smooth(time) {
+    const deltaSeconds = this.lastFrameAt === null ? 0
+      : Math.min(0.25, Math.max(0, (time - this.lastFrameAt) / 1000))
+    this.lastFrameAt = time
+    for (const entity of this.entities.values()) {
+      smoothEntityPresentation(entity, deltaSeconds)
+      entity.angle = smoothHeading(entity.angle, entity.targetAngle, deltaSeconds)
+    }
   }
 
   laserFired(shot) {
@@ -777,7 +824,7 @@ export class HelmetClient {
         this.helmetResyncInFlight = false
         if (!map || this.mode !== "combat") return
         this.worldStream = new WorldStreamDelta(map)
-        this.applyWorld(map)
+        this.applyWorld(map, {snap: true})
       })
       .receive("error", () => { this.helmetResyncInFlight = false })
       .receive("timeout", () => { this.helmetResyncInFlight = false })
@@ -790,6 +837,7 @@ export class HelmetClient {
       this.beams = this.beams.filter(beam => beam.expiresAt > time)
       this.stationDockingSeconds = this.docked ? null :
         dockingSeconds(this.stationDockingHold, time)
+      this.smooth(time)
       this.view.setHelmetHeadRotation(this.headTracking.rotation(time))
       this.view.render(this, time)
       this.frameCount++
@@ -799,7 +847,7 @@ export class HelmetClient {
       this.message("Headset rendering stopped. Check WebGL support.")
       return
     }
-    requestAnimationFrame(next => this.frame(next))
+    this.requestFrame()
   }
 
   updateHelmetGaze(target, time) {

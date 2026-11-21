@@ -81,4 +81,12 @@ defmodule DarkorbitWeb.HelmetControllerTest do
 
     assert %{"valid" => false} = json_response(without_header, 401)
   end
+
+  test "headset page draws under the camera cutout; other pages do not", %{conn: conn} do
+    helmet = html_response(get(conn, "/helmet"), 200)
+    assert helmet =~ "viewport-fit=cover"
+
+    home = html_response(get(build_conn(), "/"), 200)
+    refute home =~ "viewport-fit=cover"
+  end
 end

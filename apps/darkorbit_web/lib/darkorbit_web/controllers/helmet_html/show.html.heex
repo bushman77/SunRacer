@@ -27,50 +27,9 @@
     </div>
   </div>
 
-  <%!-- Read-only encounter decision mirror: two independent eye panels.
-       The authenticated laptop provides the Hail and Resume controls. --%>
-  <section id="helmet-encounter" hidden class="helmet-encounter-overlay"
-    aria-label="Encounter hold" role="status">
-    <div class="helmet-encounter-eye">
-      <div class="helmet-encounter-card">
-        <p class="helmet-encounter-kicker">SOL / ENCOUNTER DETECTED</p>
-        <strong data-helmet-encounter-title>Unidentified vessel</strong>
-        <p data-helmet-encounter-faction class="helmet-encounter-instruction">FACTION / Unknown</p>
-        <p data-helmet-encounter-kind>INTERPLANETARY CRUISE PAUSED</p>
-        <p class="helmet-encounter-instruction">Choose HAIL or RESUME on the laptop</p>
-      </div>
-    </div>
-    <div class="helmet-encounter-eye" aria-hidden="true">
-      <div class="helmet-encounter-card">
-        <p class="helmet-encounter-kicker">SOL / ENCOUNTER DETECTED</p>
-        <strong data-helmet-encounter-title>Unidentified vessel</strong>
-        <p data-helmet-encounter-faction class="helmet-encounter-instruction">FACTION / Unknown</p>
-        <p data-helmet-encounter-kind>INTERPLANETARY CRUISE PAUSED</p>
-        <p class="helmet-encounter-instruction">Choose HAIL or RESUME on the laptop</p>
-      </div>
-    </div>
-  </section>
-
-  <%!-- A separate read-only surrender instrument on the paired phone.
-       Each SBS eye gets the same notification, independent of laptop target
-       selection. It does not obscure the cockpit or accept input. --%>
-  <section id="helmet-surrender" hidden class="helmet-surrender-overlay"
-           role="status" aria-live="polite" aria-label="Tactical surrender">
-    <div class="helmet-surrender-eye">
-      <div class="helmet-surrender-card">
-        <span>TARGET SURRENDERED</span>
-        <strong data-helmet-surrender-name>CONTACT</strong>
-        <small>ACCEPT OR RETREAT ON LAPTOP</small>
-      </div>
-    </div>
-    <div class="helmet-surrender-eye" aria-hidden="true">
-      <div class="helmet-surrender-card">
-        <span>TARGET SURRENDERED</span>
-        <strong data-helmet-surrender-name>CONTACT</strong>
-        <small>ACCEPT OR RETREAT ON LAPTOP</small>
-      </div>
-    </div>
-  </section>
+  <%!-- Encounter holds and surrender offers are drawn inside the stereo
+       cockpit HUD (StereoSpaceView.updateHud), so they follow lens
+       calibration and have real depth instead of flat 50/50 DOM cards. --%>
 
   <div id="helmet-message" hidden
        class="pointer-events-none absolute inset-x-0 top-1/2 z-20 mx-auto max-w-md -translate-y-1/2 px-6 text-center text-sm text-cyan-100"
@@ -99,6 +58,11 @@
          class="text-xs text-amber-200"></p>
       <p id="helmet-fullscreen-hint" hidden role="status"
          class="text-xs text-amber-200"></p>
+
+      <label class="flex items-center justify-center gap-2 text-xs text-slate-400">
+        <input id="helmet-lens-distortion" type="checkbox" class="accent-cyan-500" />
+        Lens distortion correction (beta)
+      </label>
 
       <%!-- Emergency browser fallback: only exposed after a fullscreen error. --%>
       <button id="helmet-windowed" hidden type="button"

@@ -65,6 +65,10 @@ defmodule DarkorbitWeb.HelmetController do
     |> put_resp_header("referrer-policy", "no-referrer")
     |> render(:show,
       page_title: "Pilot Helmet",
+      # Draw under the phone's camera cutout. Without this Android keeps that
+      # strip black in landscape fullscreen, so the canvas is narrower than
+      # the screen and both eye images sit off the lens centres.
+      viewport_fit_cover: true,
       pairing_code: Map.get(params, "pair", "")
     )
   end
