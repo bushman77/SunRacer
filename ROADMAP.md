@@ -1301,3 +1301,27 @@ See `docs/space-nova-release.md` for the distribution procedure.
 - [ ] Consider per-ship-class hit radii (Scow and freighters are larger
   than the 40-unit sphere).
 
+### Story prologue: "First Run" (story-driven tutorial) — design only (2026-11-21)
+
+Design: `docs/story-first-run.md`. An original SOL story whose prologue (a
+first Helios courier run, Earth to Mars, interrupted by a raider attack on
+Vesper-02) teaches flight, cargo, navigation, encounters, combat, surrender,
+docking, station walking and mission completion. Nothing implemented yet.
+
+- [x] Story premise, cast, nine-step prologue with server triggers, failure
+  rules and the Chapter 1 hook written down; Brad's decisions recorded.
+- [ ] Story progress store: per-pilot chapter/step in PostgreSQL, advanced
+  only by server events, idempotent.
+- [ ] Tutorial prompts and in-character comms lines in the cockpit HUD and
+  the headset stereo HUD; skip option.
+- [ ] Credits payout with a once-only receipt (first credit income in the
+  game), courier license flag and Helios standing gain.
+- [ ] Staged encounters for one pilot: forced Vesper-02 close pass (step 4)
+  and one beatable surrendering raider, Corsair-17 (step 5), without
+  enabling raiders in the live game.
+- [ ] Juno Rook Mission Office topics driven by story state.
+- [ ] Green Starbase merchant gear unlocks tied to story progress.
+- [ ] Open design questions: the leaker, first payout amount, which station
+  character sells gear and the first item, raider visibility to other
+  pilots, crate reissue rule.
+

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+### Story prologue design: "First Run" (2026-11-21)
+
+#### Added
+
+- `docs/story-first-run.md`: design for an original Solar System storyline
+  whose prologue is the new-pilot tutorial. Covers principles (server-verified
+  steps, one prompt at a time, skippable), setting, cast, the nine-step
+  prologue with the server trigger for each step, failure rules, the Chapter 1
+  "Leaked Routes" hook, the systems still to build, and decisions made so far.
+- ROADMAP milestone tracking the build.
+
+#### Verification
+
+- Documentation only; no code or tests changed.
+
 ### Manual lasers converge on the central sight (2026-11-21)
 
 #### Fixed
