@@ -21,6 +21,13 @@ test("secure relay proof is disabled by default and explicitly bound to private 
   assert.match(native, /SocketAddr::V4\(a\) if a\.port\(\) >= 1024 && private_lan/)
   assert.match(native, /tls_config\(\)\?/)
   assert.match(native, /TlsAcceptor::from\(config\)/)
+  assert.match(native, /ServerConfig::builder_with_provider\(Arc::new\(/)
+  assert.match(native, /rustls::crypto::ring::default_provider\(\)/)
+  assert.match(native, /\.with_safe_default_protocol_versions\(\)/)
+  assert.doesNotMatch(native, /^\s*let config = ServerConfig::builder\(\)/m,
+    "default provider selection panics when aws-lc-rs and ring are both enabled")
+  assert.doesNotMatch(native, /CryptoProvider::install_default\(/,
+    "relay must not modify cryptography defaults for the entire Tauri process")
   assert.doesNotMatch(native, /danger_accept_invalid_certs|no_certificate_verification/)
   assert.doesNotMatch(native, /HttpServer|TcpListener::bind\("0\.0\.0\.0/)
 })

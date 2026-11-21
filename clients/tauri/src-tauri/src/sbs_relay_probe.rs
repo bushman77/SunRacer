@@ -94,7 +94,7 @@ fn active() -> &'static Mutex<Option<Active>> {
 }
 
 fn private_lan(ip: Ipv4Addr) -> bool {
-    let [a,b,c,d] = ip.octets();
+    let [a,b,_c,d] = ip.octets();
     d != 0 && d != 255 &&
         (a == 10 || (a == 172 && (16..=31).contains(&b)) ||
          (a == 192 && b == 168) || (a == 100 && (64..=127).contains(&b)))
@@ -121,7 +121,17 @@ fn tls_config() -> Result<Arc<ServerConfig>, String> {
     if certs.is_empty() {return Err("SBS certificate PEM is empty.".into())}
     let key = PrivateKeyDer::from_pem_file(&key)
         .map_err(|error| format!("SBS key cannot be loaded: {error}"))?;
-    let config = ServerConfig::builder().with_no_client_auth()
+    // Both aws-lc-rs and ring are enabled transitively by the Tauri/
+    // reqwest dependency graph. ServerConfig::builder() panics when rustls
+    // cannot choose a process-wide CryptoProvider automatically.
+    // Select ring for THIS LAN listener rather than changing the global
+    // cryptographic provider used by other parts of the desktop client.
+    let config = ServerConfig::builder_with_provider(Arc::new(
+        tokio_rustls::rustls::crypto::ring::default_provider(),
+    ))
+        .with_safe_default_protocol_versions()
+        .map_err(|error| format!("SBS TLS protocol configuration invalid: {error}"))?
+        .with_no_client_auth()
         .with_single_cert(certs, key)
         .map_err(|error| format!("SBS TLS certificate/key invalid: {error}"))?;
     Ok(Arc::new(config))
@@ -313,6 +323,17 @@ async fn respond<S: AsyncWrite + Unpin>(
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test]
+    fn local_tls_selects_ring_without_requiring_a_global_crypto_provider() {
+        // Reproduces the previously panicking initial configuration step:
+        // the binary enables both rustls crypto backends transitively.
+        let config = ServerConfig::builder_with_provider(Arc::new(
+            tokio_rustls::rustls::crypto::ring::default_provider(),
+        ))
+        .with_safe_default_protocol_versions();
+        assert!(config.is_ok(), "explicit ring TLS provider must be usable");
+    }
+
     #[test]
     fn listener_accepts_only_explicit_private_addresses() {
         for ip in ["8.8.8.8", "127.0.0.1", "0.0.0.0", "169.254.1.10"] {

@@ -209,3 +209,20 @@ that credential, the phone automatically sends the one-time native proof and
 the laptop status changes to `LOCAL LINK / VERIFIED`. This avoids forgetting
 an otherwise working headset just to test LAN transport. The QR disappears
 from the paired panel once the proof succeeds.
+
+
+### Rustls TLS CryptoProvider startup regression
+
+When both `aws-lc-rs` and `ring` are active in the desktop's transitive
+Rust dependency graph, rustls 0.23 cannot select a default process-wide
+provider for `ServerConfig::builder()` and panics before the relay listener
+starts. The native HTTPS-only LAN probe now constructs its `ServerConfig`
+with `builder_with_provider(rustls::crypto::ring::default_provider())`
+plus safe TLS protocol versions. This does not alter the cryptography
+provider chosen by other Tauri libraries and never falls back to HTTP.
+
+The CI suite contains a focused native test for provider construction and
+an additional source-level check to prevent reintroducing the ambiguous
+builder. To apply the fix, pull `star_base` and restart/rebuild Tauri;
+restarting Phoenix or refreshing the S21 page alone cannot fix a Rust
+process panic. Normal Hex advisory warnings are separate from this panic.
