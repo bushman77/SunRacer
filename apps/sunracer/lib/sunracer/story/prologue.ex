@@ -350,8 +350,9 @@ defmodule Sunracer.Story.Prologue do
     line(
       @varga,
       "Vesper-02",
-      "That was flying, rookie. I owe you one. Your hull's chewed up, though: divert to " <>
-        "the Green Starbase and let Mara Venn look at it. I'll limp on to Mars.",
+      "That was flying, rookie. I owe you one. Your ship's been in a fight: " <>
+        "divert to the Green Starbase and let Mara Venn look it over. " <>
+        "I'll limp on to Mars.",
       "Dock at the Green Starbase: line up and hold still"
     )
   end

@@ -86,6 +86,8 @@ defmodule Sunracer.StoryTest do
 
     assert {:ok, %{story: %{step: 8}}} = record!(id, :docked_starbase)
     assert [%{id: "story"}] = Story.topics(id, "repair")
+    assert [] = Story.topics(id, "missions")
+    assert {:error, :invalid_station_topic} = Story.talk(id, "missions")
 
     capture_log(fn ->
       assert {:ok, patch_line} = Story.talk(id, "repair")

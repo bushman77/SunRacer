@@ -2,8 +2,9 @@
 
 Design draft, decisions as of 2026-11-21 (Brad). Editable working copy:
 https://claude.ai/artifact/KcvCtJ1QRxaoBAuAiAdRRW — keep this file in sync
-when the design changes. The prologue (steps 1 to 9, payout and failure
-rules) is implemented on branch `story_line`; see "Implementation" at the end
+when the design changes. The prologue (steps 1 to 9, payout, failure rules, and scripted dialogue)
+is implemented on branch `story_line`; the full player playthrough is in
+[`story-first-run-playthrough.md`](story-first-run-playthrough.md). See "Implementation" at the end
 and ROADMAP.md "Story prologue: First Run" for status.
 
 ## Purpose and principles
@@ -72,11 +73,11 @@ Your first solo Helios delivery, Earth to Mars, goes wrong in a way that teaches
 
 **5. The distress call.** Eno Kade at the Green Starbase breaks in on comms: Vesper-02 is under attack nearby and you're the closest ship. You divert and drop into combat against Corsair-17. This is the first fight, against a raider tuned to be beatable, so the pilot learns to aim with the sight, manage shields, and choose to attack.
 
-**6. The surrender.** Corsair-17 breaks off and offers surrender. You accept, and its hold has stolen cargo plus a data chip you seize without looking at it yet. Varga thanks you and limps on toward Mars.
+**6. The surrender.** Corsair-17 breaks off at 50% hull and offers surrender. Accepting it retrieves verified route telemetry as story evidence, regardless of the separately optional cargo-seizure choice (which requires spare hold capacity). The existing `data_chip` progress flag is retained for compatibility but represents the surrender's recovered navigation record, **not** a physical inventory item. Varga thanks you and limps on toward Mars.
 
 **7. Limping in.** Your hull is chewed up and the Green Starbase is close. You line up on the bay and hold still to dock: the docking lesson, with a reason to do it.
 
-**8. The station.** You walk the concourse for the first time. Mara Venn patches the Sunracer and remarks that the raider's weapons were too good for a small-time outfit. In the Mission Office, Juno Rook takes your report, plugs in the chip, and goes quiet. It holds your route plan, filed with Helios dispatch before you launched. She asks you to say nothing for now.
+**8. The station.** You walk the concourse for the first time. Mara Venn inspects and patches the Sunracer and identifies military-grade emitters. Only after Mara's inspection can Juno Rook receive the report and the verified navigation evidence. It contains your flight plan filed with Helios dispatch before launch. Juno asks you to keep the leak quiet.
 
 **9. Mars.** You launch, finish the run, and deliver the crates. You get your first pay, your courier license, and a message from Juno Rook: come back to the Green Starbase when you can. That message opens Chapter 1.
 
@@ -148,7 +149,10 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 - `Sunracer.Story`: applies the engine under a `story_progress` row lock. Crates, credits, the `story_rewards` receipt and the faction event commit with the step change; staging, the hull patch and the cached standing run after commit.
 - `Core.Universe.StoryTraffic` plus `Navigation.stage_story_contact/3` and `clear_story_contacts/2` (apps/core): the private Vesper-02 and Corsair-17. Core stays database-free.
 - Hooks: `Sunracer.World` (hail, resolve, tactical start and finish, station talk, story actions) and `SunracerWeb.WorldChannel` (accepted flight commands, the pilot's own navigation snapshots, docking). The channel pre-filters with the engine so high-rate events skip the database.
-- Client: `story_hud.mjs` (cockpit objective card `#story-comms`), the stereo HUD objective line, and `helmet_story` for the phone headset. Ross issues the assignment via `story_dispatch_offer` and `story_dispatch_accept`, with a separate NPC dialogue; the generic `story_action: accept_consignment` is rejected.
+- Client: `story_hud.mjs` (cockpit objective card `#story-comms`), `story_radio.mjs` (dismissible, multi-line scripted transmissions delivered only on committed step changes), the stereo HUD objective line, and `helmet_story` for the phone headset. Ross issues the assignment via `story_dispatch_offer` and `story_dispatch_accept`, with a separate NPC dialogue; the generic `story_action: accept_consignment` is rejected.
+- `Sunracer.Story.Scenes`: nine narrated step transitions plus a rescue-retry scene. A story event carries its scene only on commit; reconnect snapshots do not replay old transmissions. Hailing Vesper-02 or Corsair-17 has separate scripted lines, and Corsair's surrender plea requires the authoritative surrendered ship state.
+- The station debrief is strictly ordered: Mara's repair/inspection must be complete and the verified surrender evidence flag must be present before Juno's story topic is offered.
+- The one-time First Run payout remains **500 credits**. Extra and repeatable missions remain disabled by design until the current storyline is fully play-tested and signed off.
 
 **Design changes made while building.**
 
@@ -160,7 +164,7 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 - **Timing.** Vesper-02 closes in once the Earth–Mars cruise passes 12%. The distress call fires when the pilot cruises within 2.5 million game-km of the Green Starbase, in either direction. After a failed rescue it waits for a later voyage.
 - **Skip** pauses the whole prologue (no staging, no prompts); *Resume story* continues from the same step.
 
-**Not built yet.** Chapter 1, non-story missions, and a documented end-to-end manual First Run play-through. Ilya Quill now has a credit-priced shop.
+**Not built yet.** Chapter 1, non-story missions, and human-verified end-to-end gameplay signoff. An executable First Run sequence, unique server-verified radio scenes, and the manual test script are in place; see [the playthrough](story-first-run-playthrough.md). Ilya Quill has a credit-priced outfitting shop.
 
 **Known gap in the step 6 fight (2026-11-21).** Corsair-17 bee-lines at the
 pilot and has no tactical states, so once the pilot establishes the 420-540 gap
