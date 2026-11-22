@@ -378,8 +378,15 @@ class SpaceClient {
       root: this.root.querySelector("#pilot-inventory-panel"),
       fetch: done => this.fetchPilotInventory(done),
       onOpen: () => {
+        const manualFlight = this.channel?.state === "joined" &&
+          !this.navComputer?.isOpen && !this.docked && !this.inSystemCruise()
+        const axes = this.flightControls?.axes()
+        const turning = Boolean(axes?.yaw || axes?.pitch || axes?.roll)
         this.exitMouseSteering({silent: true})
         this.flightControls?.release({silent: true})
+        // Neutralize any held turn before the panel blocks keyboard input.
+        // Preserve throttle and never send flight controls during Atlas cruise.
+        if (manualFlight && turning) this.sendFlightControls(this.flightControls.payload())
         this.stationWalking?.release()
         this.manualLaserPointerHeld = false
         this.spaceLaser?.release()
