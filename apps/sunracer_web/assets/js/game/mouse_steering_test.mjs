@@ -45,7 +45,10 @@ test("mouse filter smooths acceleration but never amplifies or delays slowdown",
   assert.ok(first > 0 && first < faster)
   assert.ok(faster <= 0.6 && steady <= 0.6 && steady >= faster)
   now += 8
-  assert.deepEqual(mouse.move(1, -1), {yaw: 0.3, pitch: 0.3})
+  const slightSlowdown = mouse.move(1, -1)
+  assert.ok(slightSlowdown.yaw > 0.3 && slightSlowdown.yaw < steady,
+    "minor same-direction reductions are damped instead of becoming visible jitter")
+  assert.equal(slightSlowdown.pitch, 0.3)
   now += 8
   assert.deepEqual(mouse.move(-5, 0), {yaw: -1, pitch: 0})
 })
