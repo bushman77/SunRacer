@@ -12,7 +12,7 @@ use tauri::WebviewWindow;
 use tokio::{
     io::{AsyncReadExt, AsyncWrite, AsyncWriteExt},
     net::{TcpListener, TcpStream},
-    sync::{Mutex as AsyncMutex, Semaphore},
+    sync::{Mutex as AsyncMutex, Notify, Semaphore},
     time::timeout,
 };
 use tokio_rustls::{
@@ -114,6 +114,9 @@ struct Shared {
     token: AsyncMutex<Option<String>>,
     session: AsyncMutex<Option<String>>,
     latest: AsyncMutex<Option<RelayFrame>>,
+    // Wake authenticated LAN readers immediately when a new visual frame arrives.
+    // A 100ms sleep here previously added latency on top of server ticks.
+    updated: Notify,
     expires: Instant,
     session_expires: Instant,
     verified: AtomicBool,
@@ -198,6 +201,7 @@ pub async fn start_sbs_relay_probe(window: WebviewWindow) -> Result<ProbeInfo, S
         token: AsyncMutex::new(Some(token.clone())),
         session: AsyncMutex::new(None),
         latest: AsyncMutex::new(None),
+        updated: Notify::new(),
         expires: Instant::now() + TTL,
         session_expires: Instant::now() + SESSION_TTL,
         verified: AtomicBool::new(false),
@@ -275,6 +279,8 @@ pub async fn publish_sbs_relay_world(window: WebviewWindow, world: Value) -> Res
         return Err("Relay world exceeds maximum LAN payload.".into());
     }
     *latest = Some(RelayFrame { seq, body });
+    drop(latest);
+    shared.updated.notify_waiters();
     Ok(())
 }
 
@@ -476,8 +482,14 @@ async fn serve_one(socket: TcpStream, acceptor: TlsAcceptor,
             let since = since.unwrap_or(0);
             let started = Instant::now();
             loop {
-                // A single current-state buffer; slow phones do not queue
-                // an unbounded backlog of world snapshots.
+                // Register the waiter BEFORE inspecting the latest frame.
+                // Tokio Notify::enable prevents a wake-up from being lost if
+                // the desktop publishes between our snapshot check and wait.
+                let notified = shared.updated.notified();
+                tokio::pin!(notified);
+                notified.as_mut().enable();
+
+                // Single current-state buffer; slow phones never build queues.
                 let response = {
                     let frame = shared.latest.lock().await;
                     frame.as_ref().filter(|f| f.seq > since)
@@ -491,10 +503,18 @@ async fn serve_one(socket: TcpStream, acceptor: TlsAcceptor,
                     }
                     return outcome;
                 }
-                if started.elapsed() >= Duration::from_secs(4) {
+                let remaining = Duration::from_secs(4).saturating_sub(started.elapsed());
+                if remaining.is_zero() {
                     return respond(&mut stream, 204, "text/plain", "").await;
                 }
-                tokio::time::sleep(Duration::from_millis(100)).await;
+                // No busy-poll interval: send the next published frame as soon
+                // as it is available, with the same 4s idle heartbeat limit.
+                tokio::select! {
+                    _ = &mut notified => {},
+                    _ = tokio::time::sleep(remaining) => {
+                        return respond(&mut stream, 204, "text/plain", "").await;
+                    }
+                }
             }
         }
         _ => respond(&mut stream, 404, "text/plain", "Not found.").await,
