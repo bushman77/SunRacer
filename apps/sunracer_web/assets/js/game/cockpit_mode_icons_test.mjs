@@ -23,6 +23,8 @@ test("both modes paint a small transparent ship icon, without a green text panel
       [0, 0, 256, 256])
     assert.ok(ctx.calls.filter(call => call.method === "stroke").length >= 3)
     assert.ok(ctx.calls.some(call => call.method === "fill"))
+    assert.equal(ctx.calls.some(call => call.method === "quadraticCurveTo"), false,
+      "mode control must not draw a rounded green rectangle")
   }
 })
 

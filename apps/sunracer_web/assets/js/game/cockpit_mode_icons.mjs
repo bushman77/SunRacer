@@ -10,25 +10,9 @@ export function paintCockpitModeIcon(ctx, {mode, selected = false, pending = fal
   ctx.save()
   ctx.clearRect(0, 0, n, n)
 
-  // Compact rounded control surface with a thin outline, rather than the
-  // generic high-contrast green rectangle formerly used for every HMD label.
-  ctx.beginPath()
-  ctx.moveTo(66, 24)
-  ctx.lineTo(190, 24)
-  ctx.quadraticCurveTo(232, 24, 232, 66)
-  ctx.lineTo(232, 190)
-  ctx.quadraticCurveTo(232, 232, 190, 232)
-  ctx.lineTo(66, 232)
-  ctx.quadraticCurveTo(24, 232, 24, 190)
-  ctx.lineTo(24, 66)
-  ctx.quadraticCurveTo(24, 24, 66, 24)
-  ctx.closePath()
-  ctx.fillStyle = selected ? "rgba(20,83,45,0.35)" : "rgba(3,12,26,0.25)"
-  ctx.fill()
-  ctx.strokeStyle = pending ? "#efc987" : selected ? "#62ebb0" : "#54899e"
-  ctx.lineWidth = selected ? 9 : 6
-  ctx.stroke()
-
+  // No green box, border or opaque backing. The cockpit already provides a
+  // dark surface behind these standalone symbols; a highlight is sufficient
+  // to distinguish active mode without stealing precious stereo view space.
   // Both buttons are recognizably the same right-facing ship.
   ctx.beginPath()
   ctx.moveTo(104, 88)
@@ -38,10 +22,10 @@ export function paintCockpitModeIcon(ctx, {mode, selected = false, pending = fal
   ctx.lineTo(78, 128)
   ctx.lineTo(122, 116)
   ctx.closePath()
-  ctx.fillStyle = selected ? "#d8ffe9" : "#b1d8ed"
+  ctx.fillStyle = pending ? "#ffe4ab" : selected ? "#99f6c6" : "#b1d8ed"
   ctx.fill()
   ctx.lineWidth = 5
-  ctx.strokeStyle = selected ? "#64e6b0" : "#71a9ca"
+  ctx.strokeStyle = pending ? "#fbbf72" : selected ? "#64e6b0" : "#71a9ca"
   ctx.stroke()
 
   ctx.strokeStyle = selected ? "#b0ffda" : "#8bbbd6"
@@ -75,6 +59,15 @@ export function paintCockpitModeIcon(ctx, {mode, selected = false, pending = fal
     ctx.moveTo(102, 179)
     ctx.lineTo(81, 196)
     ctx.lineTo(102, 213)
+    ctx.stroke()
+  }
+  if (selected || pending) {
+    // Tiny underline denotes active/switching; it is NOT a surrounding box.
+    ctx.beginPath()
+    ctx.moveTo(99, 233)
+    ctx.lineTo(157, 233)
+    ctx.strokeStyle = pending ? "#fbbf72" : "#60eba9"
+    ctx.lineWidth = 7
     ctx.stroke()
   }
   ctx.restore()
