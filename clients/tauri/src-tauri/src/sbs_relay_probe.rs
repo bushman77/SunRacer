@@ -367,11 +367,12 @@ fn sanitize_world(raw: &Value) -> Result<Value, String> {
     let mut clean = Map::new();
     clean.insert("map_id".into(), Value::String(map_id.into()));
     clean.insert("tick".into(), Value::Number(tick.into()));
-    clean.insert("entities".into(), Value::Array(clean_entities));
+    // Borrow while still owned locally; inserting the array moves it.
     if let Some(pose) = raw.get("visual_pose")
         .and_then(|pose| sanitized_visual_pose(pose, &clean_entities)) {
         clean.insert("visual_pose".into(), pose);
     }
+    clean.insert("entities".into(), Value::Array(clean_entities));
     if let Some(value) = raw.get("tick_ms") {
         if value.is_number() {clean.insert("tick_ms".into(), value.clone());}
     }
