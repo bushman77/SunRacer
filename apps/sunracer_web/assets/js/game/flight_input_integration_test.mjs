@@ -22,3 +22,11 @@ test("cockpit shows an explicit manual helm takeover instead of silently alterin
   assert.match(markup, /id="cockpit-take-helm"/)
   assert.match(client, /this\.solarEnterFreeFlight\(\(ok, navigation, reason\) =>/)
 })
+
+test("laser hold during cruise transfers manual helm before firing in the new region", () => {
+  assert.match(client, /const takeover = input === "cruise" && this\.inSystemCruise\(\)/)
+  assert.match(client, /this\.laserTakeoverPending = true[\s\S]*?this\.solarEnterFreeFlight\(/)
+  assert.match(client, /this\.manualLaserPointerHeld && this\.flightInputState\(\) === "ready"/)
+  assert.match(client, /regionTransferring: Boolean\(navigation\?\.free_flight\)/)
+  assert.match(client, /this\.spaceLaser\?\.resetForWorld\(\)/)
+})

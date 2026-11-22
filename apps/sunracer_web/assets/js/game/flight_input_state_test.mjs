@@ -14,11 +14,13 @@ test("blocked flight input reports a specific truthful reason", () => {
   assert.equal(state({...ready, docked: true}), "docked")
   assert.equal(state({...ready, encounterHeld: true, cruiseLocked: true}), "encounter")
   assert.equal(state({...ready, cruiseLocked: true}), "cruise")
+  assert.equal(state({...ready, regionTransferring: true}), "transferring")
+  assert.equal(state({...ready, regionTransferring: true, cruiseLocked: true}), "transferring")
   assert.equal(state({...ready, cruiseLocked: true, sectorJoined: false}), "disconnected")
   assert.equal(state({...ready, sectorJoined: false}), "disconnected")
   assert.equal(state({...ready, ship: null}), "synchronizing")
   assert.equal(state({...ready, ship: {status: "destroyed"}}), "destroyed")
-  for (const reason of ["docked", "encounter", "cruise", "disconnected", "synchronizing", "destroyed"]) {
+  for (const reason of ["docked", "encounter", "cruise", "transferring", "disconnected", "synchronizing", "destroyed"]) {
     assert.ok(FLIGHT_INPUT_LABELS[reason].length > 10)
   }
 })

@@ -11,6 +11,7 @@ export class SpaceLaserTrigger {
     this.inFlight = false
     this.lastAttemptTick = -1
     this.retryAfter = -Infinity
+    this.generation = 0
   }
 
   press() {
@@ -23,6 +24,15 @@ export class SpaceLaserTrigger {
     this.held = false
   }
 
+  resetForWorld() {
+    // Tick counters are local to each map, and old responses may arrive late.
+    this.generation++
+    this.held = false
+    this.inFlight = false
+    this.lastAttemptTick = -1
+    this.retryAfter = -Infinity
+  }
+
   update(time) {
     if (!this.held || !this.active() || this.inFlight ||
         time < this.retryAfter) return false
@@ -33,7 +43,9 @@ export class SpaceLaserTrigger {
 
     this.inFlight = true
     this.lastAttemptTick = tick
+    const generation = this.generation
     this.fire((ok, reason) => {
+      if (generation !== this.generation) return
       this.inFlight = false
       if (!ok) {
         // Throttle rejects rather than spamming the channel every tick.

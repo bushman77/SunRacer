@@ -166,6 +166,9 @@ jobs:
         run: |
           node --test apps/sunracer_web/assets/js/game/solar_atlas_view_test.mjs
           node --test apps/sunracer_web/assets/js/game/solar_atlas_test.mjs
+          node --test apps/sunracer_web/assets/js/game/flight_input_state_test.mjs
+          node --test apps/sunracer_web/assets/js/game/flight_input_integration_test.mjs
+          node --test apps/sunracer_web/assets/js/game/space_laser_trigger_test.mjs
           node --test apps/sunracer_web/assets/js/game/bandwidth_probe_test.mjs
           node --test apps/sunracer_web/assets/js/game/bandwidth_panel_test.mjs
           node --test apps/sunracer_web/assets/js/game/space_environment_field_test.mjs

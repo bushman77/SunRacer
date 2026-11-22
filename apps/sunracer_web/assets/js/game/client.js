@@ -128,14 +128,19 @@ class SpaceClient {
     this.lastDockingCountdownLabel = null
     this.respawnPending = false
     this.lastFlightInputState = null
+    this.manualLaserPointerHeld = false
+    this.laserTakeoverPending = false
   }
 
   flightInputState() {
+    const navigation = this.navComputer?.solarNavigation
     return flightInputState({
       atlasOpen: Boolean(this.navComputer?.isOpen),
       docked: this.docked,
       encounterHeld: Boolean(this.solarEncounter),
       cruiseLocked: Boolean(this.inSystemCruise()),
+      regionTransferring: Boolean(navigation?.free_flight) &&
+        this.mapId !== `sol:free_${this.selfId}`,
       sectorJoined: this.channel?.state === "joined",
       ship: this.entities.get(this.selfId) || null,
     })
@@ -200,6 +205,7 @@ class SpaceClient {
       this.helmetAlignmentKeys.release()
       this.exitMouseSteering()
       this.flightControls.release()
+      this.manualLaserPointerHeld = false
       this.spaceLaser?.release()
     })
     document.addEventListener("visibilitychange", () => {
@@ -207,6 +213,7 @@ class SpaceClient {
         this.helmetAlignmentKeys.release()
         this.exitMouseSteering()
         this.flightControls.release()
+        this.manualLaserPointerHeld = false
         this.spaceLaser?.release()
       }
     })
@@ -344,6 +351,7 @@ class SpaceClient {
         this.helmet?.setCombat(false)
         this.navigation?.cancel()
         this.flightControls.release({silent: true})
+        this.manualLaserPointerHeld = false
         this.spaceLaser?.release()
       },
       onClose: () => {
@@ -394,9 +402,15 @@ class SpaceClient {
       fire: done => this.fireReadyWeapon(done),
     })
     window.addEventListener("pointerup", event => {
-      if (event.button === 2) this.spaceLaser.release()
+      if (event.button === 2) {
+        this.manualLaserPointerHeld = false
+        this.spaceLaser.release()
+      }
     })
-    window.addEventListener("pointercancel", () => this.spaceLaser.release())
+    window.addEventListener("pointercancel", () => {
+      this.manualLaserPointerHeld = false
+      this.spaceLaser.release()
+    })
     for (const slot of this.root.querySelectorAll("[data-hotbar-slot]")) {
       slot.addEventListener("click", () => this.activateHotbarSlot(Number(slot.dataset.hotbarSlot)))
     }
@@ -680,6 +694,8 @@ class SpaceClient {
       this.entities.get(this.selfId)?.status === "destroyed",
       "Your ship has been destroyed. Respawn in Earth orbit.")
 
+    // Region clocks restart independently; never carry old shot ticks forward.
+    this.spaceLaser?.resetForWorld()
     this.flightControls.resetThrottle()
     this.flightControls.mode = "cruise"
     this.populateHud()
@@ -1171,12 +1187,34 @@ class SpaceClient {
   }
 
   handleLaserPointerDown(event) {
-    const active = this.flightInputState() === "ready"
-    if (!manualLaserPointerIntent(event, active)) return
+    const input = this.flightInputState()
+    const active = input === "ready"
+    const takeover = input === "cruise" && this.inSystemCruise()
+    if (!manualLaserPointerIntent(event, active || takeover)) return
 
     event.preventDefault()
     this.canvas.focus({preventScroll: true})
-    this.spaceLaser?.press()
+    this.manualLaserPointerHeld = true
+    if (active) {
+      this.spaceLaser?.press()
+      return
+    }
+
+    // Shooting during cruise explicitly requests manual helm. Do not fire in
+    // the old sector: the private flight region must join before any shots.
+    if (this.laserTakeoverPending) return
+    this.laserTakeoverPending = true
+    this.setCombatMessage("Pausing SOL cruise and transferring manual helm…")
+    this.solarEnterFreeFlight((ok, navigation, reason) => {
+      this.laserTakeoverPending = false
+      if (ok && navigation) {
+        this.applySolarNavigation(navigation)
+        this.setCombatMessage("SOL cruise paused. Establishing deep-space combat link…")
+      } else {
+        this.manualLaserPointerHeld = false
+        this.setCombatMessage("Manual laser takeover unavailable: " + (reason || "relay error"))
+      }
+    })
   }
 
   selectTargetAtPointer(pointer) {
@@ -1807,6 +1845,9 @@ class SpaceClient {
     this.updateDockingCountdown(time)
     this.flightControls?.heartbeat(time)
     this.updateFlightInputStatus()
+    if (this.manualLaserPointerHeld && this.flightInputState() === "ready") {
+      this.spaceLaser?.press()
+    }
     this.spaceLaser?.update(time)
     this.draw(time)
     this.minimap?.draw(time)
