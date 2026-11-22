@@ -18,6 +18,7 @@ import {MinimapRenderer} from "./minimap_renderer.mjs"
 import {PointerNavigation} from "./pointer_navigation.mjs"
 import {StereoSpaceView} from "./stereo_view.js"
 import {StoryHud} from "./story_hud.mjs"
+import {StoryRadio} from "./story_radio.mjs"
 import {HelmetControl} from "./helmet_control.mjs"
 import {SbsRelayWorldPublisher} from "./sbs_relay_world.mjs"
 import {HelmetAlignmentKeyGate} from "./helmet_alignment_keys.mjs"
@@ -238,7 +239,11 @@ class SpaceClient {
           const manifest = Object.entries(communication.cargo || {})
             .map(([item, count]) => item.replaceAll("_", " ") + ": " + count)
             .join(", ")
-          this.encounterMessage(String(communication.message || "Communications established.") +
+          const transcript = Array.isArray(communication.transcript) &&
+            communication.transcript.length
+            ? communication.transcript.map(line => line.speaker + ": " + line.text).join("\n\n")
+            : String(communication.message || "Communications established.")
+          this.encounterMessage(transcript +
             (manifest ? "\nManifest: " + manifest : ""))
         })
       } else if (choice === "engage") {
@@ -489,6 +494,7 @@ class SpaceClient {
 
     // The HUD tracks a story objective; it cannot accept a mission.
     // Ross offers the consignment in a separate, explicit NPC dialogue.
+    this.storyRadio = new StoryRadio(this.root)
     this.storyHud = new StoryHud(this.root, action => {
       if (this.channel?.state !== "joined") return null
       if (action === "contact_dispatch") {
@@ -604,7 +610,10 @@ class SpaceClient {
     })
     channel.on("world_region_changed", payload => this.switchOrbitalRegion(payload?.map_id))
     channel.on("story_updated", story => {
-      if (this.channel === channel) this.storyHud?.apply(story)
+      if (this.channel !== channel) return
+      this.storyStep = story?.step
+      this.storyHud?.apply(story)
+      this.storyRadio?.receive(story?.scene)
     })
     // Open the pilot's decision at first contact, without waiting for another
     // navigation tick. The authoritative snapshot also restores it on reconnect.
@@ -772,7 +781,10 @@ class SpaceClient {
     this.pilots = new Map(Object.entries(response.pilots || {}))
 
     if(response.solar_navigation)this.applySolarNavigation(response.solar_navigation)
-    if ("story" in response) this.storyHud?.apply(response.story)
+    if ("story" in response) {
+      this.storyStep = response.story?.step
+      this.storyHud?.apply(response.story)
+    }
     for (const entity of response.map.entities) this.upsertEntity(entity, true)
     this.applyPlanetaryWarning(ownPlanetaryWarning(response.map, this.selfId))
     this.applyStationWarning(ownStationWarning(response.map, this.selfId))
@@ -1137,6 +1149,22 @@ class SpaceClient {
       entity.npcTypeId === "solar-scow-" + this.player?.pilot?.id)
     const accept = panel.querySelector("[data-solar-tactical-surrender]")
     const seize = panel.querySelector("[data-solar-tactical-seize]")
+    // Only the authoritative world entity's surrender state opens this line.
+    // Showing it does not settle combat, claim cargo or change story progress.
+    if (surrendered && this.storyStep === 6 &&
+        String(tactical.id).includes("corsair-17") &&
+        this.surrenderAnnouncedFor !== tactical.id) {
+      this.surrenderAnnouncedFor = tactical.id
+      this.storyRadio?.receive({
+        id: "first_run:corsair_surrender:" + tactical.id,
+        lines: [{
+          speaker: "Corsair-17",
+          channel: "Raider distress / open channel",
+          text: "Hold your fire! We've had enough! Our weapons are cold. " +
+            "Take the freight, take the navigation records, just let us live."
+        }]
+      })
+    }
     for (const button of [accept, seize]) {
       if (button) {
         button.hidden = !surrendered
@@ -1146,7 +1174,7 @@ class SpaceClient {
     const message = panel.querySelector("[data-solar-tactical-message]")
     if (message && !this.tacticalRetreating) {
       message.textContent = surrendered
-        ? "Captain offers surrender. Release them or seize cargo (4-tonne hold limits apply)."
+        ? "Corsair-17: Hold your fire! We surrender. Release them or seize the cargo (4-tonne hold limits apply)."
         : "Defeat the opposing vessel, accept surrender if offered, or retreat."
     }
   }

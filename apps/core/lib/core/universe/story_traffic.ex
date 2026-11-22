@@ -108,7 +108,8 @@ defmodule Core.Universe.StoryTraffic do
       purpose: vessel.purpose,
       state: vessel.state,
       cargo: vessel.cargo,
-      message: vessel.message
+      message: vessel.message,
+      transcript: hail_transcript(Map.get(vessel, :story_script), vessel.message)
     }
   end
 
@@ -123,6 +124,25 @@ defmodule Core.Universe.StoryTraffic do
         :math.pow(position.z - center.z, 2)
     )
   end
+
+  # Scripted comms are read-only and tied to the contact's server-owned
+  # story identity; they never constitute a mission offer or tactical result.
+  defp hail_transcript(:vesper_pass, greeting), do: [
+    %{speaker: "Captain Ines Varga", channel: "Vesper-02", text: greeting},
+    %{speaker: "Captain Ines Varga", channel: "Vesper-02",
+      text: "There's been strange interference around the Green Starbase. " <>
+        "Somebody knows exactly when our shipments leave. Keep a hand " <>
+        "near the flight controls, rookie."}
+  ]
+
+  defp hail_transcript(:corsair_raid, greeting), do: [
+    %{speaker: "Corsair-17", channel: "Unregistered raider", text: greeting},
+    %{speaker: "Corsair-17", channel: "Open channel",
+      text: "Walk away and Vesper's cargo changes hands without you getting hurt. " <>
+        "Stay and you'll learn what our guns can do."}
+  ]
+
+  defp hail_transcript(_, _), do: []
 
   defp spec(:vesper_pass) do
     %{
