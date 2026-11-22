@@ -119,7 +119,7 @@ test("HUD gaze inspects read-only flight, contacts and space pages", () => {
   // literal -- every new conditional target would otherwise break this.
   assert.match(view, /\[this\.navSwitch, this\.hudPanel(, \.\.\.\w+)*\]/)
   assert.match(view, /const surrender = this\.helmetSurrenderArmed \?/)
-  assert.match(view, /const mode = this\.helmetModeArmed/)
+  assert.match(view, /const mode = this\.helmetModeCurrent/)
   assert.match(view, /return target === this\.hudPanel \? "hud_inspect"/)
   for (const key of ["hud_inspect", "hud_flight", "hud_contacts", "hud_space"]) {
     assert.ok(helmet.includes('"' + key + '"'))
