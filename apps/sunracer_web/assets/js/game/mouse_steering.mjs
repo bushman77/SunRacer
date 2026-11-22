@@ -18,6 +18,11 @@ export const MOUSE_STEERING_FILTER = 0.65
 // Filter same-direction packet quantization, not reversals or hard stops.
 export const MOUSE_STEERING_JITTER_BAND = 0.5
 export const MOUSE_STEERING_JITTER_FILTER = 0.38
+// Integer mouse events often report only one component of an ongoing
+// diagonal movement. Do not turn a single zero-component packet into a
+// stop/restart command. Sustained movement on the other axis still releases
+// the inactive axis promptly.
+export const MOUSE_STEERING_AXIS_GAP_MS = 36
 export const MOUSE_STEERING_HARD_SLOWDOWN_RATIO = 0.4
 // New pilots get a responsive baseline; existing saved preferences remain valid.
 export const MOUSE_STEERING_DEFAULT_SENSITIVITY = 1.5
@@ -65,6 +70,7 @@ export class MouseSteering {
     this.pitch = 0
     this.lastMovementAt = -Infinity
     this.packetGapMs = null
+    this.lastAxisMotionAt = {yaw: -Infinity, pitch: -Infinity}
   }
 
   // For a pointer stream at 20-30Hz, one missing packet can exceed 85ms.
@@ -98,6 +104,7 @@ export class MouseSteering {
       this.yaw = 0
       this.pitch = 0
       this.packetGapMs = null
+      this.lastAxisMotionAt = {yaw: -Infinity, pitch: -Infinity}
     } else {
       // Widen immediately for slower 30Hz/20Hz pointer packets, but shorten
       // gradually when event timing fluctuates to avoid turning chatter.
@@ -125,8 +132,20 @@ export class MouseSteering {
         : reducing ? 1 : MOUSE_STEERING_FILTER
       return clamp(previous + (raw - previous) * weight, -1, 1)
     }
-    this.yaw = smoothAxis(this.yaw, yaw)
-    this.pitch = smoothAxis(this.pitch, pitch)
+    const axisValue = (axis, raw) => {
+      if (raw !== 0) {
+        this.lastAxisMotionAt[axis] = time
+        return smoothAxis(this[axis], raw)
+      }
+      // A raw zero component means "no X in THIS packet", not necessarily
+      // "the user stopped X". This distinction matters on WebKitGTK where
+      // continuous diagonal input arrives as alternating X-only/Y-only
+      // integer packets. Hold for at most 36ms, never indefinitely.
+      return time - this.lastAxisMotionAt[axis] <= MOUSE_STEERING_AXIS_GAP_MS
+        ? this[axis] : 0
+    }
+    this.yaw = axisValue("yaw", yaw)
+    this.pitch = axisValue("pitch", pitch)
     this.lastMovementAt = time
     return this.axes()
   }
@@ -142,6 +161,7 @@ export class MouseSteering {
     // that looked like the cursor/ship continued moving after the hand stopped.
     this.yaw = 0
     this.pitch = 0
+    this.lastAxisMotionAt = {yaw: -Infinity, pitch: -Infinity}
     return this.axes()
   }
 
@@ -150,6 +170,7 @@ export class MouseSteering {
     this.pitch = 0
     this.lastMovementAt = -Infinity
     this.packetGapMs = null
+    this.lastAxisMotionAt = {yaw: -Infinity, pitch: -Infinity}
     return this.axes()
   }
 }

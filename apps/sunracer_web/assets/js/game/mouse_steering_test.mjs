@@ -7,6 +7,7 @@ import {
   MOUSE_STEERING_DEFAULT_SENSITIVITY, MOUSE_STEERING_PIXELS_PER_AXIS,
   validMouseSensitivity, enabledMouseSteering, calibratedMouseSensitivity,
   MOUSE_STEERING_JITTER_BAND, MOUSE_STEERING_JITTER_FILTER,
+  MOUSE_STEERING_AXIS_GAP_MS,
 } from "./mouse_steering.mjs"
 
 test("preserve native mouse-on default and saved opt out", () => {
@@ -50,7 +51,7 @@ test("mouse filter smooths acceleration but never amplifies or delays slowdown",
     "minor same-direction reductions are damped instead of becoming visible jitter")
   assert.equal(slightSlowdown.pitch, 0.3)
   now += 8
-  assert.deepEqual(mouse.move(-5, 0), {yaw: -1, pitch: 0})
+  assert.deepEqual(mouse.move(-5, 0), {yaw: -1, pitch: 0.3})
 })
 
 test("continuous 60Hz movement has one bounded neutral after packet silence", () => {
@@ -155,7 +156,7 @@ test("slowing, reversing and releasing still react immediately", () => {
   const slow = mouse.move(1, -1)
   assert.deepEqual(slow, {yaw: 0.15, pitch: 0.15})
   now += 16
-  assert.deepEqual(mouse.move(-2, 0), {yaw: -0.3, pitch: 0})
+  assert.deepEqual(mouse.move(-2, 0), {yaw: -0.3, pitch: 0.15})
   assert.deepEqual(mouse.release(), {yaw: 0, pitch: 0})
   assert.equal(mouse.expire(now + 100), null)
 })
@@ -209,16 +210,53 @@ test("large slowdown, reversal and genuine stop bypass the new jitter filter", (
   assert.equal(mouse.expire(time + 300), null)
 })
 
-test("one-axis cessation never leaks stale yaw into pitch-only motion", () => {
-  let time = 1000
-  const mouse = new MouseSteering({now: () => time, sensitivity: 8})
-  mouse.move(2, -2)
-  time += 16
-  const pitchOnly = mouse.move(0, -2)
-  assert.equal(pitchOnly.yaw, 0)
-  assert.ok(pitchOnly.pitch > 0)
-  time += mouse.stopDelayMs()
-  assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
+test("a single axis-free packet cannot stop an ongoing diagonal turn", () => {
+  let time=1000
+  const mouse=new MouseSteering({now:()=>time,sensitivity:8})
+  const initial=mouse.move(2,-2)
+  time+=8
+  const verticalOnly=mouse.move(0,-2)
+  assert.equal(verticalOnly.yaw,initial.yaw,
+    "one Y-only packet must not make yaw zero")
+  assert.ok(verticalOnly.pitch>0)
+  time+=8
+  const horizontalOnly=mouse.move(2,0)
+  assert.ok(horizontalOnly.yaw>0)
+  assert.ok(horizontalOnly.pitch>0,
+    "one X-only packet must not make pitch zero")
+})
+
+test("actual pitch-only movement drops old yaw after a bounded component gap", () => {
+  let time=1000
+  const mouse=new MouseSteering({now:()=>time,sensitivity:8})
+  const initial=mouse.move(2,-2)
+  for(let elapsed=8;elapsed<=MOUSE_STEERING_AXIS_GAP_MS;elapsed+=8) {
+    time+=8
+    const moved=mouse.move(0,-2)
+    assert.equal(moved.yaw,initial.yaw)
+  }
+  time+=8
+  const onlyPitch=mouse.move(0,-2)
+  assert.equal(onlyPitch.yaw,0)
+  assert.ok(onlyPitch.pitch>0)
+  time+=mouse.stopDelayMs()
+  assert.deepEqual(mouse.expire(time),{yaw:0,pitch:0})
+})
+
+test("integer-quantized diagonal packets do not repeatedly pulse yaw to zero", () => {
+  let time=1000
+  const mouse=new MouseSteering({now:()=>time,sensitivity:1.5})
+  mouse.move(2,-2)
+  const observed=[]
+  for(let n=0;n<30;n++) {
+    time+=8
+    observed.push(mouse.move(n%2===0 ? 0:2,n%2===0 ? -2:0).yaw)
+  }
+  assert.ok(observed.every(v=>v>0),
+    "steady diagonal input must not produce yaw 0/ramp/0/ramp pulses")
+  assert.deepEqual(mouse.release(),{yaw:0,pitch:0})
+  time+=8
+  assert.ok(mouse.move(0,-2).yaw===0,"capture release clears axis history")
 })
 
 test("irregular 70-110ms pointer gaps do not make received movement restart", () => {
