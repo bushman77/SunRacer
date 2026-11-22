@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {applyOwnShipMovementPreview} from "./own_ship_movement_preview.mjs"
+import {readFileSync} from "node:fs"
 
 test("own-ship previews update mode and throttle without rewinding camera state", () => {
   const orientation = {x: 0, y: 0.23, z: 0, w: 0.9732}
@@ -45,8 +46,6 @@ test("invalid previews cannot corrupt local flight metadata", () => {
     {flight_mode: "unknown", throttle: Infinity}), true)
   assert.deepEqual(own, {flightMode: "cruise", throttle: 0.5})
 })
-
-import {readFileSync} from "node:fs"
 
 test("client previews never call upsertEntity for an existing local ship", () => {
   const client = readFileSync(new URL("./client.js", import.meta.url), "utf8")

@@ -5,6 +5,8 @@ on:
     branches: [native_client, story_line]
     paths:
       - "apps/sunracer_web/assets/js/game/world_stream_delta*"
+      - "apps/sunracer_web/assets/js/game/own_ship_movement_preview*"
+      - "apps/sunracer_web/assets/js/game/flight_input_integration_test.mjs"
       - "apps/sunracer_web/assets/js/game/client.js"
       - ".github/workflows/world-stream-tests.yml"
   workflow_dispatch:
@@ -21,4 +23,8 @@ jobs:
         with:
           node-version: "22"
       - name: Verify state reconstruction and resync behavior
-        run: node --test apps/sunracer_web/assets/js/game/world_stream_delta_test.mjs
+        run: |
+          node --test \
+            apps/sunracer_web/assets/js/game/world_stream_delta_test.mjs \
+            apps/sunracer_web/assets/js/game/own_ship_movement_preview_test.mjs \
+            apps/sunracer_web/assets/js/game/flight_input_integration_test.mjs
