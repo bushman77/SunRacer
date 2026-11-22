@@ -45,6 +45,7 @@ import {predictOrientation, predictPosition, InputHistory} from "./own_ship_pred
 import {smoothEntityPresentation} from "./entity_smoothing.mjs"
 import {applyOwnShipMovementPreview} from "./own_ship_movement_preview.mjs"
 import {acceptOwnShipPose} from "./own_ship_pose_policy.mjs"
+import {OwnShipCameraReconciler} from "./own_ship_camera_reconciler.mjs"
 import {headsetRendering, pauseDesktop3D, preferredVrOnly} from "./vr_only_rendering.mjs"
 import {planetaryImpactMessage} from "./planetary_impact.mjs"
 import {
@@ -95,6 +96,7 @@ class SpaceClient {
     this.mouseFallbackPoint = null
     this.helmetAlignmentKeys = new HelmetAlignmentKeyGate()
     this.entities = new Map()
+    this.ownShipCameraReconciler = new OwnShipCameraReconciler()
     this.pilots = new Map()
     this.boundaries = {width: 20000, height: 12000}
     this.volume = {altitude_min: -3000, altitude_max: 3000}
@@ -842,6 +844,7 @@ class SpaceClient {
     this.spaceLaser?.release()
     this.selectedTargetId = null
     this.commandDestination = null
+    this.ownShipCameraReconciler.reset()
     this.entities.clear()
     this.worldStream = null
     this.worldResyncInFlight = false
@@ -861,6 +864,7 @@ class SpaceClient {
     // Join replies are not delivered to channel.on listeners.
     this.bandwidth.record("in", "world", "join_ack", response)
     this.mapId = response.map.map_id
+    this.ownShipCameraReconciler.reset()
     this.worldStream = response.stream === "delta_v1"
       ? new WorldStreamDelta(response.map) : null
     this.sbsRelayWorld.publish(response.map, true)
@@ -993,6 +997,12 @@ class SpaceClient {
     // Arrival time of this authoritative state: own-ship prediction runs the
     // server's turn rules forward from here until the next update.
     const authoritativeAt = performance.now()
+    // Read the continuous, *old* visual goal before replacing its server
+    // baseline. This prevents a delayed snapshot from making the camera
+    // jump back and accelerate forward again on each 100ms tick.
+    const beforeTickVisual = existing && id === this.selfId &&
+      fromWorldTick && acceptPose && !snap
+      ? this.predictOwnShip(existing, authoritativeAt)?.orientation : null
 
     if (existing) {
       if (acceptPose) {
@@ -1095,6 +1105,14 @@ class SpaceClient {
     }
 
     if (id === this.selfId) {
+      if (beforeTickVisual) {
+        const freshPredicted = this.predictOwnShip(existing, authoritativeAt,
+          {uncorrected: true})?.orientation
+        this.ownShipCameraReconciler.rebase(
+          beforeTickVisual, freshPredicted, authoritativeAt)
+      } else if (fromWorldTick && (snap || existing?.destination)) {
+        this.ownShipCameraReconciler.reset()
+      }
       this.commandDestination = entity.status !== "destroyed" && validDestination(destination, this.boundaries)
         ? {...destination}
         : null
@@ -2221,16 +2239,19 @@ class SpaceClient {
   // authoritative update, replaying the pilot's recorded input, so the camera
   // moves every frame instead of every 100 ms server tick. Presentation only;
   // each new update restarts the prediction from server state.
-  predictOwnShip(entity, now) {
+  predictOwnShip(entity, now, {uncorrected = false} = {}) {
     if (entity.id !== this.selfId || entity.destination || !entity.orientation ||
         !Number.isFinite(entity.authoritativeAt) || !this.flightControls?.active()) return null
     const seconds = Math.max(0, (now - entity.authoritativeAt) / 1000)
+    const predictedOrientation = predictOrientation(entity.orientation,
+      entity.angularVelocity,
+      this.flightInputHistory?.entries.length
+        ? this.flightInputHistory.since(entity.authoritativeAt)
+        : this.flightControls.axes(),
+      {mouseMode: this.flightControls.mouseMode, seconds})
     return {
-      orientation: predictOrientation(entity.orientation, entity.angularVelocity,
-        this.flightInputHistory?.entries.length
-          ? this.flightInputHistory.since(entity.authoritativeAt)
-          : this.flightControls.axes(),
-        {mouseMode: this.flightControls.mouseMode, seconds}),
+      orientation: uncorrected ? predictedOrientation :
+        this.ownShipCameraReconciler.apply(predictedOrientation, now),
       target: predictPosition(entity.target, entity.velocity, seconds),
       positionSettleSeconds: PREDICTED_OWN_SHIP_SETTLE_SECONDS,
     }
