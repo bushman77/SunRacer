@@ -1,54 +1,57 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
-import {modeForGazeTarget, modeGazeTarget, modeSelectionAction}
+import {MODE_GAZE_TARGET, nextFlightMode, modeSelectionAction}
   from "./helmet_mode_gaze.mjs"
+import {HelmetGazeDwell} from "./helmet_gaze_dwell.mjs"
 import {cockpitModePlacement} from "./cockpit_mode_layout.mjs"
 
 const source = path => readFileSync(new URL(path, import.meta.url), "utf8")
 
-test("the two ship icons have distinct, explicit authenticated mode intents", () => {
-  assert.equal(modeGazeTarget("cruise"), "flight_mode_cruise")
-  assert.equal(modeGazeTarget("newtonian"), "flight_mode_newtonian")
-  assert.equal(modeForGazeTarget("flight_mode_cruise"), "cruise")
-  assert.equal(modeForGazeTarget("flight_mode_newtonian"), "newtonian")
+test("one stable gaze target toggles from the authoritative flight mode", () => {
+  assert.equal(MODE_GAZE_TARGET, "flight_mode")
+  assert.equal(nextFlightMode("cruise"), "newtonian")
+  assert.equal(nextFlightMode("newtonian"), "cruise")
+  assert.equal(nextFlightMode(null), null)
+  assert.equal(nextFlightMode("unknown"), null)
   assert.equal(modeSelectionAction("cruise"), "select_cruise_mode")
   assert.equal(modeSelectionAction("newtonian"), "select_newtonian_mode")
-  for (const invalid of [null, undefined, "", "flight_mode", "afterburner", "CRUISE"]) {
-    assert.equal(modeForGazeTarget(invalid), null)
-    assert.equal(modeGazeTarget(invalid), null)
-    assert.equal(modeSelectionAction(invalid), null)
-  }
+  assert.equal(modeSelectionAction(null), null)
 })
 
-test("transparent gaze targets are separate, larger than their visible icons", () => {
+test("one 3D ship symbol and one larger invisible gaze target", () => {
   const view = source("./stereo_view.js")
-  assert.match(view, /this\.helmetModeHitboxes = \{\}/)
-  assert.match(view, /hitbox\.visible = Boolean\(this\.helmetModeCurrent\)/)
-  assert.match(view, /const mode = this\.helmetModeCurrent/)
+  assert.match(view, /this\.helmetModeIcon = new THREE\.Mesh\(/)
+  assert.match(view, /this\.helmetModeHitbox = new THREE\.Mesh\(/)
   assert.match(view, /new THREE\.PlaneGeometry\(0\.265, 0\.34\)/)
   assert.match(view, /transparent: true, opacity: 0/)
   assert.match(view, /side: THREE\.DoubleSide/)
-  assert.match(view, /Object\.values\(this\.helmetModeHitboxes \|\| \{\}\)/)
-  assert.match(view, /this\.helmetModeHitboxes\?\.\[requestedMode\]/)
-  assert.match(view, /return modeGazeTarget\(requestedMode\)/)
-
+  assert.match(view, /this\.helmetModeHitbox\.visible = Boolean\(this\.helmetModeCurrent\)/)
+  assert.match(view, /if \(target === this\.helmetModeHitbox\) return MODE_GAZE_TARGET/)
+  assert.doesNotMatch(view, /this\.helmetModeHitboxes = \{\}/)
   for (const scale of [0.2, 0.5, 1]) {
     const p = cockpitModePlacement(scale)
-    const delta = p.newtonian.x - p.cruise.x
-    assert.ok(delta > 0.265,
-      "the selectable hitboxes must not overlap and misidentify the intended mode")
-    assert.ok(0.265 > p.side && 0.34 > p.side,
-      "head-gaze targets should be larger than visual symbols")
+    assert.ok(0.265 > p.side && 0.34 > p.side)
   }
 })
 
-test("phone only sends an allowlisted mode intent; laptop owns the flight command", () => {
+test("one continuous gaze cannot automatically toggle the icon twice", () => {
+  const gaze = new HelmetGazeDwell({armMs: 10, confirmMs: 10})
+  gaze.update(MODE_GAZE_TARGET, 0)
+  assert.equal(gaze.update(MODE_GAZE_TARGET, 20).activated, MODE_GAZE_TARGET)
+  assert.equal(gaze.update(MODE_GAZE_TARGET, 40).activated, null)
+  gaze.update(null, 50)
+  gaze.update(MODE_GAZE_TARGET, 60)
+  assert.equal(gaze.update(MODE_GAZE_TARGET, 80).activated, MODE_GAZE_TARGET)
+})
+
+test("headset still relays explicit authenticated intent to the desktop", () => {
   const headset = source("./helmet_client.mjs")
   const manager = readFileSync(new URL(
     "../../../lib/sunracer_web/helmet_manager.ex", import.meta.url), "utf8")
   const desktop = source("./client.js")
-  assert.match(headset, /requestFlightModeSelection\(mode\)/)
+  assert.match(headset, /update\.activated === MODE_GAZE_TARGET/)
+  assert.match(headset, /nextFlightMode\(this\.entities\.get\(this\.selfId\)\?\.flightMode\)/)
   assert.match(headset, /old\.push\("helmet_action", \{action\}, 5_000\)/)
   assert.match(manager, /@gaze_actions ~w\(toggle_flight_mode select_cruise_mode select_newtonian_mode\)/)
   assert.match(desktop, /this\.flightControls\?\.setMode\("cruise"\)/)

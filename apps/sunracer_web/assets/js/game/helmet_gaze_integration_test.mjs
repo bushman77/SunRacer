@@ -258,9 +258,9 @@ test("the flight mode icon is an intent relayed to the laptop, not a command", (
   // The headset asks over its own channel and never sends flight controls.
   assert.match(helmet, /old\.push\("helmet_action", \{action\}, 5_000\)/)
   assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"/)
-  assert.match(view, /this\.helmetModeHitboxes = \{\}/)
-  assert.match(view, /return modeGazeTarget\(requestedMode\)/)
-  assert.match(helmet, /requestFlightModeSelection\(modeForGazeTarget\(update\.activated\)\)/)
+  assert.match(view, /this\.helmetModeHitbox = new THREE\.Mesh\(/)
+  assert.match(view, /if \(target === this\.helmetModeHitbox\) return MODE_GAZE_TARGET/)
+  assert.match(helmet, /nextFlightMode\(this\.entities\.get\(this\.selfId\)\?\.flightMode\)/)
 
   // The server relays a name from an allowlist, only while in the cockpit.
   assert.match(channel, /def handle_in\("helmet_action", %\{"action" => action\}/)
