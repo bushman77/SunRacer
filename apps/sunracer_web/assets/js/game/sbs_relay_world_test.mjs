@@ -102,3 +102,12 @@ test("coalesced publisher retains latest visual pose without allocating a frame 
   assert.equal(calls[0].visual_pose.position_3d.x, 3)
   p.clear()
 })
+
+test("string-normalized local client IDs match numeric authoritative IDs exactly at Rust boundary", () => {
+  const input = map()
+  const pose = {id: "12", orientation: {x:0, y:0, z:0, w:1},
+    position_3d: {x: 1, y: 2, z: 3}}
+  const local = projectLocalVisualPose(input, pose)
+  assert.equal(local.id, 12)
+  assert.equal(projectSbsRelayWorld(input, pose).visual_pose.id, 12)
+})

@@ -36,8 +36,9 @@ const object = (value, keys) => {
 // Presentation-only own-ship pose; it never updates simulation state or
 // changes server-owned entity orientation. It is scoped to the current map.
 export function projectLocalVisualPose(map, pose) {
-  if (!pose || !map?.entities?.some(entity =>
-    entity?.id != null && String(entity.id) === String(pose.id))) return null
+  const member = pose && map?.entities?.find(entity =>
+    entity?.id != null && String(entity.id) === String(pose.id))
+  if (!member) return null
   const coordinate = v => Number.isFinite(v) && Math.abs(v) <= 1e12
   const pos = pose.position_3d
   const rotation = pose.orientation
@@ -47,7 +48,9 @@ export function projectLocalVisualPose(map, pose) {
   const norm = Math.hypot(rotation.x, rotation.y, rotation.z, rotation.w)
   if (norm < 0.9 || norm > 1.1) return null
   return {
-    id: pose.id,
+    // Mirror the original authoritative entity ID type. Rust's second
+    // allowlist requires an exact JSON identity match, not string coercion.
+    id: member.id,
     position_3d: {x: pos.x, y: pos.y, z: pos.z},
     orientation: {
       x: rotation.x / norm, y: rotation.y / norm,
