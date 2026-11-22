@@ -161,7 +161,13 @@ defmodule Sunracer.Story.PrologueTest do
       assert speaker != "" and text != "" and objective != ""
     end
 
-    assert Prologue.prompt(at(2)).action.id == "accept_consignment"
+    assert Prologue.prompt(at(2)).action.id == "contact_dispatch"
+    assert {:ok, %{npc_id: "helios_dispatch", cargo: %{count: 3}, reward_credits: 500}} =
+      Prologue.mission_offer(at(2))
+    assert {:error, :mission_unavailable} = Prologue.mission_offer(at(1))
+    assert {:error, :mission_unavailable} = Prologue.mission_offer(at(3))
+    assert {:error, :mission_unavailable} =
+      Prologue.mission_offer(%{at(2) | skipped: true})
   end
 
   test "every objective fits the stereo HUD's 58-character budget" do

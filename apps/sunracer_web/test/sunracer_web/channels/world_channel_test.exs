@@ -1390,14 +1390,30 @@ defmodule SunracerWeb.WorldChannelTest do
     # Step 1: the flight server confirms throttle and steering.
     ref = push(cockpit, "flight_controls", %{"throttle" => 0.6, "yaw" => 0.5})
     assert_reply ref, :ok, _
-    assert_push "story_updated", %{step: 2, prompt: %{action: %{id: "accept_consignment"}}}
+    assert_push "story_updated", %{step: 2, prompt: %{action: %{id: "contact_dispatch"}}}
 
-    # A choice the step does not offer is refused; the offered one loads crates.
+    # The HUD cannot accept the mission; explicit NPC contact is required.
     ref = push(cockpit, "story_action", %{"action" => "launch_missiles"})
     assert_reply ref, :error, %{reason: "invalid_story_action"}
     ref = push(cockpit, "story_action", %{"action" => "accept_consignment"})
+    assert_reply ref, :error, %{reason: "invalid_story_action"}
+    ref = push(cockpit, "story_dispatch_accept", %{})
+    assert_reply ref, :error, %{reason: "dispatcher_contact_required"}
+    assert %{step: 2} = Sunracer.Story.snapshot(account.id)
+    assert Map.get(Sunracer.Inventory.cargo_manifest(account.id), "medical_supplies", 0) == 0
+
+    # The authenticated Helios dispatcher issues the first assignment.
+    ref = push(cockpit, "story_dispatch_offer", %{})
+    assert_reply ref, :ok, %{offer: %{npc_id: "helios_dispatch",
+      title: "First Run: Medical Consignment", reward_credits: 500,
+      cargo: %{id: "medical_supplies", count: 3}}}
+    ref = push(cockpit, "story_dispatch_accept", %{})
     assert_reply ref, :ok, %{story: %{step: 3}}
     assert Map.get(Sunracer.Inventory.cargo_manifest(account.id), "medical_supplies") == 3
+    ref = push(cockpit, "story_dispatch_accept", %{})
+    assert_reply ref, :error, %{reason: "dispatcher_contact_required"}
+    ref = push(cockpit, "story_dispatch_offer", %{})
+    assert_reply ref, :error, %{reason: "mission_unavailable"}
 
     ref = push(cockpit, "solar_set_course", %{"body_id" => "mars"})
     assert_reply ref, :ok, %{navigation: %{status: :traveling}}

@@ -10,9 +10,9 @@ const story = (attrs = {}) => ({
   license: false, reward: null,
   prompt: {
     speaker: "Dispatcher Halden Ross", station: "Helios dispatch, Earth orbit",
-    text: "Systems look clean.", objective: "Accept the Mars consignment",
+    text: "Systems look clean.", objective: "Contact Dispatcher Ross to receive your first mission",
     checks: [{label: "Throttle", done: true}, {label: "Steering", done: false}],
-    action: {id: "accept_consignment", label: "Accept consignment"},
+    action: {id: "contact_dispatch", label: "Contact Dispatcher Ross"},
   },
   ...attrs,
 })
@@ -23,8 +23,8 @@ test("the model renders one prompt with its step, checks and offered action", ()
   assert.equal(model.stepLabel, "FIRST RUN · 2 / 9")
   assert.equal(model.speaker, "Dispatcher Halden Ross")
   assert.deepEqual(model.checks, [{label: "Throttle", done: true}, {label: "Steering", done: false}])
-  assert.deepEqual(model.action, {id: "accept_consignment", label: "Accept consignment"})
-  assert.equal(model.stereoLine, "OBJ · ACCEPT THE MARS CONSIGNMENT")
+  assert.deepEqual(model.action, {id: "contact_dispatch", label: "Contact Dispatcher Ross"})
+  assert.equal(model.stereoLine, "OBJ · CONTACT DISPATCHER ROSS TO RECEIVE YOUR FIRST MISSION")
   assert.equal(model.canSkip, true)
 })
 
@@ -58,15 +58,15 @@ test("choices go to the server once at a time and adopt its reply", () => {
   const push = {receive(kind, fn) { handlers[kind] = fn; return push }}
   const hud = new StoryHud(null, action => { sent.push(action); return push })
   hud.apply(story())
-  hud.choose("accept_consignment")
-  hud.choose("accept_consignment")
-  assert.deepEqual(sent, ["accept_consignment"])
+  hud.choose("contact_dispatch")
+  hud.choose("contact_dispatch")
+  assert.deepEqual(sent, ["contact_dispatch"])
   handlers.ok({story: story({step: 3, prompt: {...story().prompt, action: null,
     objective: "Plot a course to Mars"}})})
   assert.equal(hud.model.stepLabel, "FIRST RUN · 3 / 9")
   assert.equal(hud.model.action, null)
   hud.choose("launch_missiles")
-  assert.deepEqual(sent, ["accept_consignment"])
+  assert.deepEqual(sent, ["contact_dispatch"])
 })
 
 test("cockpit markup, client wiring and the stereo HUD line are present", () => {
@@ -79,6 +79,11 @@ test("cockpit markup, client wiring and the stereo HUD line are present", () => 
   }
   assert.match(client, /channel\.on\("story_updated"/)
   assert.match(client, /this\.channel\.push\("story_action", \{action\}/)
+  assert.match(client, /this\.channel\.push\("story_dispatch_offer", \{\}/)
+  assert.match(client, /this\.channel\.push\("story_dispatch_accept", \{\}/)
+  assert.match(markup, /id="story-dispatch-dialogue"/)
+  assert.match(markup, /id="story-dispatch-accept"/)
+  assert.match(markup, /id="story-dispatch-decline"/)
   assert.match(stereo, /client\.storyHud\?\.stereoLine/)
   const helmet = read("./helmet_client.mjs")
   assert.match(helmet, /channel\.on\("helmet_story"/)
