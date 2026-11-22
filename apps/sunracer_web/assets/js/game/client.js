@@ -2418,7 +2418,7 @@ class SpaceClient {
           !this.flightControls?.active()) return
       const expired = this.mouseSteering.expire(performance.now())
       if (expired) this.flightControls.setMouseSteering(expired)
-    }, MOUSE_STEERING_IDLE_MS)
+    }, this.mouseSteering.stopDelayMs())
   }
 
   enableNativeMouseFallback() {
