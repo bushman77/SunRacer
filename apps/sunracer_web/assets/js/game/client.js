@@ -39,6 +39,8 @@ import {smoothOrientation, orientationTelemetry} from "./orientation_interpolati
 import {SpaceLaserTrigger} from "./space_laser_trigger.mjs"
 import {applyLaserBurstDamage, visualLaserRays} from "./laser_burst.mjs"
 import {laserFeedback, LASER_FEEDBACK_MS} from "./laser_feedback.mjs"
+import {instantLaserPreview,takePreviewForConfirmedShot,
+  LOCAL_LASER_MATCH_MS,REMOTE_LASER_DISPLAY_MS} from "./instant_laser_preview.mjs"
 import {nextFlightMode, validFlightMode} from "./display_modes.mjs"
 import {cameraSettleSeconds, PREDICTED_OWN_SHIP_SETTLE_SECONDS} from "./camera_response.mjs"
 import {predictOrientation, predictPosition, InputHistory} from "./own_ship_prediction.mjs"
@@ -131,6 +133,7 @@ class SpaceClient {
     this.worldStream = null
     this.worldResyncInFlight = false
     this.beams = []
+    this.pendingLocalLaserPreviews = []
     this.lastLaserFeedback = null
     this.lastFrame = performance.now()
     // Experimental presentation preference. Only actual, server-confirmed
@@ -865,6 +868,7 @@ class SpaceClient {
     this.worldStream = null
     this.worldResyncInFlight = false
     this.beams = []
+    this.pendingLocalLaserPreviews = []
     this.setSolarEncounter(null)
     this.applyPlanetaryWarning(null, {announce: false})
     this.applyStationWarning(null, {announce: false})
@@ -924,6 +928,7 @@ class SpaceClient {
 
     // Region clocks restart independently; never carry old shot ticks forward.
     this.spaceLaser?.resetForWorld()
+    this.pendingLocalLaserPreviews = []
     this.flightControls.resetThrottle()
     // The server may restore a previously saved Newtonian mode on reconnect.
     // Avoid emitting a stale default Cruise command on the next control tick.
@@ -1573,6 +1578,20 @@ class SpaceClient {
       return
     }
 
+    // Render the pilot's shot immediately from the same local quaternion
+    // driving the reticle. This preview never predicts hits or damage.
+    const startedAt = performance.now()
+    const own = this.entities.get(this.selfId)
+    const preview = instantLaserPreview(own, startedAt)
+    if (preview.length) {
+      this.pendingLocalLaserPreviews =
+        this.pendingLocalLaserPreviews.filter(p => startedAt-p.at<=LOCAL_LASER_MATCH_MS)
+      this.pendingLocalLaserPreviews.push({at:startedAt})
+      this.beams.push(...preview.map(ray => ({
+        ...ray,shooterId:this.selfId,hostile:false,
+      })))
+    }
+
     this.channel
       .push("fire_ready_weapon", {}, 3000)
       .receive("ok", shot => {
@@ -1582,10 +1601,18 @@ class SpaceClient {
         done(true)
       })
       .receive("error", response => {
+        this.pendingLocalLaserPreviews =
+          this.pendingLocalLaserPreviews.filter(p => p.at !== startedAt)
+        this.beams = this.beams.filter(
+          beam => !(beam.preview && beam.startedAt === startedAt))
         this.setCombatMessage(this.attackError(response.reason))
         done(false, response.reason)
       })
       .receive("timeout", () => {
+        this.pendingLocalLaserPreviews =
+          this.pendingLocalLaserPreviews.filter(p => p.at !== startedAt)
+        this.beams = this.beams.filter(
+          beam => !(beam.preview && beam.startedAt === startedAt))
         this.setCombatMessage("Manual laser command timed out.")
         done(false, "timeout")
       })
@@ -1691,14 +1718,22 @@ class SpaceClient {
     this.worldTick = Math.max(this.worldTick, Number(attack.tick) || 0)
 
     const startedAt = performance.now()
-    for (const ray of visualLaserRays(attack, attacker, target)) {
-      this.beams.push({
-        ...ray,
-        hostile: attacker?.kind === "npc",
-        shooterId: entityKey(attack.attacker_id),
-        startedAt,
-        expiresAt: startedAt + 550,
-      })
+    const localPreview = entityKey(attack.attacker_id) === this.selfId
+      ? takePreviewForConfirmedShot(this.pendingLocalLaserPreviews,startedAt)
+      : null
+    // The locally aimed manual shot is already visible. A second, delayed
+    // world-space beam would appear behind the pointer during a turn.
+    // All server hit/miss/damage and feedback are still applied below.
+    if (!localPreview) {
+      for (const ray of visualLaserRays(attack, attacker, target)) {
+        this.beams.push({
+          ...ray,
+          hostile: attacker?.kind === "npc",
+          shooterId: entityKey(attack.attacker_id),
+          startedAt,
+          expiresAt: startedAt + REMOTE_LASER_DISPLAY_MS,
+        })
+      }
     }
 
     if (entityKey(attack.attacker_id) === this.selfId) {
