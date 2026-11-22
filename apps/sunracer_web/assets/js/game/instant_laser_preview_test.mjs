@@ -52,7 +52,7 @@ test("server owns weapon, damage and hit confirmation",()=>{
   assert.match(source,/\.push\("fire_ready_weapon", \{\}, 3000\)/)
   assert.match(source,/instantLaserPreview\(own, startedAt\)/)
   assert.match(source,/this\.pendingLocalLaserPreviews\.push\(/)
-  assert.match(source,/takePreviewForConfirmedShot\(this\.pendingLocalLaserPreviews, startedAt\)/)
+  assert.match(source,/takePreviewForConfirmedShot\(this\.pendingLocalLaserPreviews,\s*startedAt\)/)
   assert.match(source,/applyLaserBurstDamage\(this\.entities, attack\)/)
   assert.match(source,/this\.lastLaserFeedback = laserFeedback\(attack, this\.entities, startedAt\)/)
   assert.match(source,/this\.beams = this\.beams\.filter\(/)
