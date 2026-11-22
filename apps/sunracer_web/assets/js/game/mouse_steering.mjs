@@ -18,6 +18,18 @@ export const MOUSE_STEERING_DEFAULT_SENSITIVITY = 1.5
 // One captured mouse pixel now commands more angular input at every setting.
 // The server still clamps actual rotation to a safe mouse-only turn rate.
 export const MOUSE_STEERING_PIXELS_PER_AXIS = 10
+export const MOUSE_STEERING_PRECISION_KNEE = 1.5
+
+// The old strictly linear 10x setting made ONE pixel command full yaw/pitch.
+// Keep the familiar low-end feel; above the knee compress gain so high slider
+// settings offer meaningful sub-pixel/slow-aim control instead of quantization
+// jumps. The value is a sensitivity setting, not a literal multiplier.
+export function calibratedMouseSensitivity(value) {
+  const sensitivity = validMouseSensitivity(value) ? value : 1
+  return sensitivity <= MOUSE_STEERING_PRECISION_KNEE ? sensitivity :
+    MOUSE_STEERING_PRECISION_KNEE +
+      Math.log1p(sensitivity - MOUSE_STEERING_PRECISION_KNEE)
+}
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value))
 // Native clients have their own storage origin. Do not silently disable
@@ -29,7 +41,7 @@ export const validMouseSensitivity = value => Number.isFinite(value) &&
   value >= 0.4 && value <= 10.0
 
 export function mouseSteeringAxes(movementX, movementY, sensitivity = 1) {
-  const factor = validMouseSensitivity(sensitivity) ? sensitivity : 1
+  const factor = calibratedMouseSensitivity(sensitivity)
   const yaw = clamp((Number(movementX) || 0) * factor / MOUSE_STEERING_PIXELS_PER_AXIS, -1, 1)
   // Browser Y increases downwards. Moving mouse UP pitches nose UP.
   const pitch = clamp(-(Number(movementY) || 0) * factor / MOUSE_STEERING_PIXELS_PER_AXIS, -1, 1)

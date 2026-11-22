@@ -5,7 +5,7 @@ import {
   MOUSE_STEERING_FAST_STOP_MS, MOUSE_STEERING_MIN_STOP_MS,
   MOUSE_STEERING_SAMPLE_MS,
   MOUSE_STEERING_DEFAULT_SENSITIVITY, MOUSE_STEERING_PIXELS_PER_AXIS,
-  validMouseSensitivity, enabledMouseSteering,
+  validMouseSensitivity, enabledMouseSteering, calibratedMouseSensitivity,
 } from "./mouse_steering.mjs"
 
 test("preserve native mouse-on default and saved opt out", () => {
@@ -25,7 +25,8 @@ test("precise mouse mapping, adjustable sensitivity, and bounded axes", () => {
   assert.deepEqual(mouseSteeringAxes(2000, -2000), {yaw: 1, pitch: 1})
   assert.equal(mouseSteeringAxes(7, 0, 2).yaw, 1)
   assert.ok(Math.abs(mouseSteeringAxes(5.5, 0, 0.4).yaw - 0.22) < 1e-10)
-  assert.equal(mouseSteeringAxes(2, 0, 10).yaw, 1)
+  assert.ok(mouseSteeringAxes(2, 0, 10).yaw < 1)
+  assert.ok(mouseSteeringAxes(2, 0, 10).yaw > 0.7)
   assert.equal(mouseSteeringAxes(5.5, 0, Infinity).yaw, 0.55)
   assert.equal(validMouseSensitivity(10), true)
   assert.equal(validMouseSensitivity(10.1), false)
@@ -153,4 +154,17 @@ test("slowing, reversing and releasing still react immediately", () => {
   assert.deepEqual(mouse.move(-2, 0), {yaw: -0.3, pitch: 0})
   assert.deepEqual(mouse.release(), {yaw: 0, pitch: 0})
   assert.equal(mouse.expire(now + 100), null)
+})
+
+test("high sensitivity does not saturate a one-pixel movement", () => {
+  const gentle = mouseSteeringAxes(1, 0, 1.5).yaw
+  const high = mouseSteeringAxes(1, 0, 10).yaw
+  assert.equal(gentle, 0.15)
+  assert.ok(high > gentle && high < 0.4,
+    "one pixel at maximum sensitivity must leave precision headroom")
+  assert.ok(calibratedMouseSensitivity(10) < 4)
+  assert.equal(calibratedMouseSensitivity(1.5), 1.5)
+  assert.ok(calibratedMouseSensitivity(10) > calibratedMouseSensitivity(5))
+  const low = mouseSteeringAxes(1, 0, 0.4).yaw
+  assert.equal(low, 0.04)
 })

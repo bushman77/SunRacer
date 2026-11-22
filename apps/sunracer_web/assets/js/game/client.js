@@ -2567,7 +2567,7 @@ class SpaceClient {
         slider.value = String(Math.round(this.mouseSteeringSensitivity * 100))
       }
       for (const output of outputs) {
-        output.textContent = this.mouseSteeringSensitivity.toFixed(1) + "×"
+        output.textContent = this.mouseSteeringSensitivity.toFixed(1) + " / 10"
       }
     }
     for (const toggle of toggles) toggle.checked = this.mouseSteeringEnabled
