@@ -46,6 +46,7 @@ import {smoothEntityPresentation} from "./entity_smoothing.mjs"
 import {applyOwnShipMovementPreview} from "./own_ship_movement_preview.mjs"
 import {acceptOwnShipPose} from "./own_ship_pose_policy.mjs"
 import {OwnShipCameraReconciler} from "./own_ship_camera_reconciler.mjs"
+import {DesktopMouseFrameSampler, DesktopMouseTimingProbe} from "./desktop_mouse_sampling.mjs"
 import {headsetRendering, pauseDesktop3D, preferredVrOnly} from "./vr_only_rendering.mjs"
 import {planetaryImpactMessage} from "./planetary_impact.mjs"
 import {
@@ -90,6 +91,11 @@ class SpaceClient {
     this.mouseSteeringSensitivity = validMouseSensitivity(savedSensitivity)
       ? savedSensitivity : MOUSE_STEERING_DEFAULT_SENSITIVITY
     this.mouseSteering = new MouseSteering({sensitivity: this.mouseSteeringSensitivity})
+    this.mouseFrameSamplingKey = "sunracer:mouse-frame-sampling:" + root.dataset.layoutPlayerId
+    this.mouseFrameSamplingEnabled = localStorage.getItem(this.mouseFrameSamplingKey) === "1"
+    this.mouseFrameSampler = new DesktopMouseFrameSampler()
+    this.mouseTimingProbe = new DesktopMouseTimingProbe()
+    this.lastMouseTimingReport = -Infinity
     this.mouseIdleTimer = null
     this.mouseCaptureLost = false
     this.mouseFallback = false
@@ -844,6 +850,7 @@ class SpaceClient {
     this.spaceLaser?.release()
     this.selectedTargetId = null
     this.commandDestination = null
+    this.mouseFrameSampler.clear()
     this.ownShipCameraReconciler.reset()
     this.entities.clear()
     this.worldStream = null
@@ -1108,8 +1115,10 @@ class SpaceClient {
       if (beforeTickVisual) {
         const freshPredicted = this.predictOwnShip(existing, authoritativeAt,
           {uncorrected: true})?.orientation
-        this.ownShipCameraReconciler.rebase(
-          beforeTickVisual, freshPredicted, authoritativeAt)
+        if (this.ownShipCameraReconciler.rebase(
+          beforeTickVisual, freshPredicted, authoritativeAt)) {
+          this.mouseTimingProbe.correction()
+        }
       } else if (fromWorldTick && (snap || existing?.destination)) {
         this.ownShipCameraReconciler.reset()
       }
@@ -2144,6 +2153,21 @@ class SpaceClient {
   frame(time) {
     const deltaSeconds = Math.min((time - this.lastFrame) / 1000, 0.1)
     this.lastFrame = time
+    this.mouseTimingProbe.frame(time)
+    // In the opt-in experiment, one 60Hz-ish draw uses all the mouse deltas
+    // received since the preceding frame. The server command cap is unchanged.
+    if (this.mouseFrameSamplingEnabled) {
+      const packet = this.mouseFrameSampler.drain()
+      if (packet) {
+        if (packet.dx === 0 && packet.dy === 0) {
+          this.mouseSteering.release()
+          this.flightControls?.setMouseSteering({yaw:0,pitch:0})
+          this.flightInputHistory?.record(time,this.flightControls.axes())
+        } else {
+          this.applyDesktopMouseDelta(packet.dx, packet.dy, time)
+        }
+      }
+    }
     // Expire mouse commands before advancing the visible cockpit. The
     // independent idle timer can stop them between rendered frames as well.
     if (this.mouseSteeringEnabled &&
@@ -2174,6 +2198,7 @@ class SpaceClient {
     this.navComputer?.draw(time)
     this.updateCoordinates()
     this.updateCombatHud()
+    this.updateDesktopMouseTiming(time)
     requestAnimationFrame(nextTime => this.frame(nextTime))
   }
 
@@ -2593,6 +2618,18 @@ class SpaceClient {
     }
     for (const toggle of toggles) toggle.checked = this.mouseSteeringEnabled
     syncSensitivity()
+    const frameSampling = this.root.querySelector("#cockpit-mouse-frame-sampling")
+    if (frameSampling) {
+      frameSampling.checked = this.mouseFrameSamplingEnabled
+      frameSampling.addEventListener("change", () => {
+        this.mouseFrameSamplingEnabled = frameSampling.checked
+        localStorage.setItem(this.mouseFrameSamplingKey, frameSampling.checked ? "1" : "0")
+        this.mouseFrameSampler.clear()
+        this.mouseSteering.release()
+        this.flightControls?.setMouseSteering({yaw:0,pitch:0})
+        this.flightInputHistory?.record(performance.now(), this.flightControls.axes())
+      })
+    }
     for (const slider of sliders) slider.addEventListener("input", () => {
       const sensitivity = Number(slider.value) / 100
       if (!validMouseSensitivity(sensitivity)) return
@@ -2669,12 +2706,13 @@ class SpaceClient {
       // last physical movement. In particular, do not restart the timer.
       if (!Number.isFinite(dx) || !Number.isFinite(dy) ||
           (dx === 0 && dy === 0)) return
-      const axes = this.mouseSteering.move(dx, dy)
-      this.flightControls.setMouseSteering(axes)
-      // Record actual input-event time, not just the next animation frame,
-      // so own-ship prediction knows exactly when steering started or stopped.
-      this.flightInputHistory?.record(performance.now(), this.flightControls.axes())
-      this.scheduleMouseStop()
+      const receivedAt = performance.now()
+      this.mouseTimingProbe.mouse(receivedAt)
+      if (this.mouseFrameSamplingEnabled) {
+        this.mouseFrameSampler.push(dx, dy)
+      } else {
+        this.applyDesktopMouseDelta(dx, dy, receivedAt)
+      }
     })
     this.canvas.addEventListener("mouseleave", () => {
       if (!this.mouseFallback) return
@@ -2702,6 +2740,7 @@ class SpaceClient {
       // Use the faster mouse-only angular rate profile on the server ONLY
       // during pointer capture, reverting when the cursor is released.
       if (!captured) {
+        this.mouseFrameSampler.clear()
         this.mouseSteering.release()
         this.flightControls.clearMouseSteering({silent: true})
       }
@@ -2728,6 +2767,28 @@ class SpaceClient {
     this.updateMouseSteeringStatus()
   }
 
+  applyDesktopMouseDelta(dx, dy, time = performance.now()) {
+    const axes = this.mouseSteering.move(dx, dy)
+    this.flightControls.setMouseSteering(axes)
+    this.flightInputHistory?.record(time, this.flightControls.axes())
+    this.scheduleMouseStop()
+  }
+
+  updateDesktopMouseTiming(time) {
+    if (time - this.lastMouseTimingReport < 1000) return
+    this.lastMouseTimingReport = time
+    const stats = this.mouseTimingProbe.summary()
+    const panel = this.root.querySelector("#cockpit-mouse-jitter-metrics")
+    if (!panel) return
+    const fmt = n => n ? n.toFixed(1) + "ms" : "—"
+    const captured = document.pointerLockElement === this.canvas
+      ? "POINTER LOCK" : this.mouseFallback ? "NATIVE FALLBACK" : "NOT CAPTURED"
+    panel.textContent = (this.mouseFrameSamplingEnabled ? "FRAME-SAMPLED" : "EVENT-DRIVEN") +
+      " · " + captured + " · mouse gap p95 " + fmt(stats.mouseP95Ms) +
+      " · frame gap p95 " + fmt(stats.frameP95Ms) +
+      " · server camera corrections " + stats.serverCorrections + "/s"
+  }
+
   mouseSteeringMessage(message) {
     const node = this.root.querySelector("#cockpit-mouse-steering-status")
     if (!node || !this.mouseSteeringEnabled) return
@@ -2751,6 +2812,7 @@ class SpaceClient {
   }
 
   exitMouseSteering({silent = false} = {}) {
+    this.mouseFrameSampler.clear()
     this.mouseFallback = false
     this.mouseFallbackPoint = null
     window.clearTimeout(this.mouseIdleTimer)
