@@ -426,13 +426,17 @@ defmodule SunracerWeb.WorldChannel do
     {:reply, {:error, %{reason: "invalid_action_slot"}}, socket}
   end
 
-  def handle_in("fire_ready_weapon", _payload, socket) do
-    # Ship identity, heading and cooldown all come from the channel session.
-    case World.fire_ready_weapon(socket.assigns.world_session_id) do
+  def handle_in("fire_ready_weapon", input, socket) when is_map(input) do
+    # Authenticated session still determines pilot, weapon and collision.
+    # Recent, bounded client orientation determines the pilot's shot aim.
+    case World.fire_ready_weapon(socket.assigns.world_session_id, input, []) do
       {:ok, shot} -> {:reply, {:ok, shot}, socket}
       {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
     end
   end
+
+  def handle_in("fire_ready_weapon", _payload, socket),
+    do: {:reply, {:error, %{reason: "invalid_shot_aim"}}, socket}
 
   def handle_in("laser_attack", _payload, socket) do
     case World.attack(socket.assigns.world_session_id) do

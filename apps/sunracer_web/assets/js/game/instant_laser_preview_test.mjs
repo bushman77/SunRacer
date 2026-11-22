@@ -49,7 +49,9 @@ test("ignore stale manual previews and only consume one confirmed shot",()=>{
 
 test("server owns weapon, damage and hit confirmation",()=>{
   const source=read("./client.js")
-  assert.match(source,/\.push\("fire_ready_weapon", \{\}, 3000\)/)
+  assert.match(source,/\.push\("fire_ready_weapon", request, 3000\)/)
+  assert.match(source,/shot_sequence: \+\+this\.manualShotSequence/)
+  assert.match(source,/aim_orientation: \{\.\.\.aim\}/)
   assert.match(source,/instantLaserPreview\(own, startedAt\)/)
   assert.match(source,/this\.pendingLocalLaserPreviews\.push\(/)
   assert.match(source,/takePreviewForConfirmedShot\(this\.pendingLocalLaserPreviews,\s*startedAt\)/)

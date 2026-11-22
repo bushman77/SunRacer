@@ -134,6 +134,7 @@ class SpaceClient {
     this.worldResyncInFlight = false
     this.beams = []
     this.pendingLocalLaserPreviews = []
+    this.manualShotSequence = 0
     this.lastLaserFeedback = null
     this.lastFrame = performance.now()
     // Experimental presentation preference. Only actual, server-confirmed
@@ -1592,8 +1593,16 @@ class SpaceClient {
       })))
     }
 
+    // The client supplies the aim seen at the instant of fire, not a target
+    // or a claimed hit. Phoenix validates the quaternion/tick against its
+    // ship state and determines all collision and damage outcomes.
+    const aim = own?.renderOrientation || own?.orientation
+    const request = aim && this.worldTick >= 0
+      ? {aim_orientation: {...aim}, client_tick: this.worldTick,
+          shot_sequence: ++this.manualShotSequence}
+      : {}
     this.channel
-      .push("fire_ready_weapon", {}, 3000)
+      .push("fire_ready_weapon", request, 3000)
       .receive("ok", shot => {
         const own = this.entities.get(this.selfId)
         if (own) own.nextAttackTick = shot.next_attack_tick

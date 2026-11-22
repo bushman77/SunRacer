@@ -547,15 +547,20 @@ defmodule Core.World do
     end
   end
 
-  @doc "Fire the ready laser along the authenticated ship's current nose."
+  @doc "Manual laser shot: accept recent, physically plausible client aim."
   @spec fire_ready_weapon(pos_integer(), keyword()) :: {:ok, map()} | {:error, term()}
-  def fire_ready_weapon(session_id, opts \\ []) do
+  def fire_ready_weapon(session_id, opts \\ []) when is_list(opts),
+    do: fire_ready_weapon(session_id, %{}, opts)
+
+  @spec fire_ready_weapon(pos_integer(), map(), keyword()) ::
+          {:ok, map()} | {:error, term()}
+  def fire_ready_weapon(session_id, aim, opts) when is_map(aim) and is_list(opts) do
     registry = Keyword.get(opts, :registry, Core.World.Registry)
     sessions = Keyword.get(opts, :sessions, SessionManager)
 
     with {:ok, session} <- fetch_session(sessions, session_id),
          :ok <- require_conventional(session, opts) do
-      MapServer.fire_ready_weapon(registry, session.map_id, session.id, session.entity_id)
+      MapServer.fire_ready_weapon(registry, session.map_id, session.id, session.entity_id, aim)
     end
   end
 

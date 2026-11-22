@@ -8,6 +8,7 @@ defmodule Core.World.MapServer do
 
   alias Core.Combat
   alias Core.Combat.ActionCatalog
+  alias Core.Combat.ShotAim
   alias Core.NPC.AI
   alias Core.NPC.Catalog, as: NPCCatalog
   alias Core.NPC.CruiseRoute
@@ -198,10 +199,11 @@ defmodule Core.World.MapServer do
     call_map(registry, map_id, {:activate_action, session_id, entity_id, slot})
   end
 
-  @spec fire_ready_weapon(atom(), String.t(), pos_integer(), term()) ::
+  @spec fire_ready_weapon(atom(), String.t(), pos_integer(), term(), map()) ::
           {:ok, map()} | {:error, term()}
-  def fire_ready_weapon(registry, map_id, session_id, entity_id) do
-    call_map(registry, map_id, {:fire_ready_weapon, session_id, entity_id})
+  def fire_ready_weapon(registry, map_id, session_id, entity_id, input \\ %{})
+      when is_map(input) do
+    call_map(registry, map_id, {:fire_ready_weapon, session_id, entity_id, input})
   end
 
   @spec attack(atom(), String.t(), pos_integer(), term()) ::
@@ -311,6 +313,7 @@ defmodule Core.World.MapServer do
       auto_respawn?: Keyword.get(opts, :auto_respawn?, false),
       event_sink: Keyword.fetch!(opts, :event_sink),
       tick: 0,
+      manual_shot_sequences: %{},
       tick_ms: tick_ms,
       auto_tick?: Keyword.get(opts, :auto_tick, true)
     }
@@ -1057,23 +1060,57 @@ defmodule Core.World.MapServer do
     end
   end
 
-  def handle_call({:fire_ready_weapon, session_id, entity_id}, _from, state) do
+  def handle_call({:fire_ready_weapon, session_id, entity_id}, from, state),
+    do: handle_call({:fire_ready_weapon, session_id, entity_id, %{}}, from, state)
+
+  def handle_call({:fire_ready_weapon, session_id, entity_id, input}, _from, state)
+      when is_map(input) do
     with {:ok, attacker} <- authorized_entity(state, session_id, entity_id),
          :ok <- living_attacker(attacker),
          :ok <- armed_weapon(attacker),
-         true <- Combat.cooldown_ready?(state.tick, attacker.next_attack_tick) do
-      orientation = attacker.orientation || Orientation.from_angles(attacker.attitude)
+         true <- Combat.cooldown_ready?(state.tick, attacker.next_attack_tick),
+         :ok <- valid_manual_shot_sequence(state, session_id, attacker.id, input),
+         {:ok, aim} <- ShotAim.resolve(
+           attacker.orientation || Orientation.from_angles(attacker.attitude),
+           input, state.tick, state.tick_ms) do
       shots =
         Core.Combat.LineOfFire.trace_pair(
-          attacker.position, orientation, tactical_weapon_targets(state, attacker),
+          attacker.position, aim, tactical_weapon_targets(state, attacker),
           attacker.attack_range
         )
 
       {next_state, payload} = resolve_manual_wing_burst(state, attacker, shots)
+      next_state = track_manual_shot_sequence(next_state, session_id, attacker.id, input)
       {:reply, {:ok, payload}, next_state}
     else
       false -> {:reply, {:error, :weapon_cooldown}, state}
       error -> {:reply, error, state}
+    end
+  end
+
+  defp valid_manual_shot_sequence(state, session_id, entity_id, input) do
+    case Map.fetch(input, "aim_orientation") do
+      :error -> :ok
+      {:ok, _} ->
+        sequence = Map.get(input, "shot_sequence")
+        previous = Map.get(state.manual_shot_sequences, entity_id)
+        cond do
+          not is_integer(sequence) or sequence <= 0 or
+              sequence > 9_007_199_254_740_991 -> {:error, :invalid_shot_sequence}
+          match?(%{session_id: ^session_id, sequence: last}
+              when last >= sequence, previous) -> {:error, :invalid_shot_sequence}
+          true -> :ok
+        end
+    end
+  end
+
+  defp track_manual_shot_sequence(state, session_id, entity_id, input) do
+    case Map.get(input, "shot_sequence") do
+      sequence when is_integer(sequence) and sequence > 0 ->
+        sequences = Map.put(state.manual_shot_sequences, entity_id,
+          %{session_id: session_id, sequence: sequence})
+        %{state | manual_shot_sequences: sequences}
+      _ -> state
     end
   end
 
