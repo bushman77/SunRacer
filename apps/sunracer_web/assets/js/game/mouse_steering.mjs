@@ -13,6 +13,12 @@ export const MOUSE_STEERING_MIN_STOP_MS = 50
 export const MOUSE_STEERING_SAMPLE_MS = 16
 export const MOUSE_STEERING_ACCUMULATE_MS = 45
 export const MOUSE_STEERING_FILTER = 0.65
+// A tiny up/down difference between adjacent captured mouse packets is not
+// necessarily a change of pilot intent, especially at high sensitivity.
+// Filter same-direction packet quantization, not reversals or hard stops.
+export const MOUSE_STEERING_JITTER_BAND = 0.5
+export const MOUSE_STEERING_JITTER_FILTER = 0.38
+export const MOUSE_STEERING_HARD_SLOWDOWN_RATIO = 0.4
 // New pilots get a responsive baseline; existing saved preferences remain valid.
 export const MOUSE_STEERING_DEFAULT_SENSITIVITY = 1.5
 // One captured mouse pixel now commands more angular input at every setting.
@@ -100,12 +106,23 @@ export class MouseSteering {
     }
     const adjacent = elapsed >= 0 && elapsed < MOUSE_STEERING_ACCUMULATE_MS
     const smoothAxis = (previous, raw) => {
-      // Delayed low-pass reductions are a source of overshoot: a smaller or
-      // reversed mouse movement must immediately reduce/flip turn command.
+      // A hard stop or reversal must not pass through any smoothing.
       if (raw === 0 || !adjacent || previous === 0 ||
-          Math.sign(previous) !== Math.sign(raw) ||
-          Math.abs(raw) <= Math.abs(previous)) return raw
-      return clamp(previous + (raw - previous) * MOUSE_STEERING_FILTER, -1, 1)
+          Math.sign(previous) !== Math.sign(raw)) return raw
+      const reducing = Math.abs(raw) < Math.abs(previous)
+      // Deliberately slowing the mouse a lot remains immediate: do not
+      // keep steering toward the old target after a clear hand slowdown.
+      if (reducing &&
+          Math.abs(raw) <= Math.abs(previous) *
+            MOUSE_STEERING_HARD_SLOWDOWN_RATIO) return raw
+      const change = Math.abs(raw - previous)
+      // Symmetric filtering ONLY in the jitter band eliminates the
+      // 1px/2px sawtooth at high sensitivity. No extra filtering is
+      // applied to large reductions or direction changes.
+      const weight = change <= MOUSE_STEERING_JITTER_BAND
+        ? MOUSE_STEERING_JITTER_FILTER
+        : reducing ? 1 : MOUSE_STEERING_FILTER
+      return clamp(previous + (raw - previous) * weight, -1, 1)
     }
     this.yaw = smoothAxis(this.yaw, yaw)
     this.pitch = smoothAxis(this.pitch, pitch)

@@ -6,6 +6,7 @@ import {
   MOUSE_STEERING_SAMPLE_MS,
   MOUSE_STEERING_DEFAULT_SENSITIVITY, MOUSE_STEERING_PIXELS_PER_AXIS,
   validMouseSensitivity, enabledMouseSteering, calibratedMouseSensitivity,
+  MOUSE_STEERING_JITTER_BAND, MOUSE_STEERING_JITTER_FILTER,
 } from "./mouse_steering.mjs"
 
 test("preserve native mouse-on default and saved opt out", () => {
@@ -167,4 +168,52 @@ test("high sensitivity does not saturate a one-pixel movement", () => {
   assert.ok(calibratedMouseSensitivity(10) > calibratedMouseSensitivity(5))
   const low = mouseSteeringAxes(1, 0, 0.4).yaw
   assert.equal(low, 0.04)
+})
+
+test("one-pixel packet quantization is damped at high sensitivity without steady input lag", () => {
+  let time = 1000
+  const sensitivity = 10
+  const mouse = new MouseSteering({now: () => time, sensitivity})
+  const rawHigh = mouseSteeringAxes(2, 0, sensitivity).yaw
+  const rawLow = mouseSteeringAxes(1, 0, sensitivity).yaw
+  assert.ok(rawHigh - rawLow < MOUSE_STEERING_JITTER_BAND)
+  assert.ok(MOUSE_STEERING_JITTER_FILTER < 0.5)
+  mouse.move(2, 0)
+  const observed = []
+  // Physical hand speed is steady, integer cursor packets alternate 1 and 2px.
+  for (let i = 0; i < 30; i++) {
+    time += 16
+    observed.push(mouse.move(i % 2 ? 2 : 1, 0).yaw)
+  }
+  const stable = observed.slice(10)
+  const span = Math.max(...stable) - Math.min(...stable)
+  assert.ok(span < (rawHigh - rawLow) * 0.55,
+    "small packet-to-packet changes must not reach the ship as full rate oscillation")
+  assert.ok(stable.every(x => x >= rawLow && x <= rawHigh))
+})
+
+test("large slowdown, reversal and genuine stop bypass the new jitter filter", () => {
+  let time = 1000
+  const mouse = new MouseSteering({now: () => time, sensitivity: 10})
+  mouse.move(3, 0) // full yaw
+  time += 16
+  const slow = mouse.move(0.5, 0)
+  assert.equal(slow.yaw, mouseSteeringAxes(0.5, 0, 10).yaw)
+  time += 16
+  const opposite = mouse.move(-2, 0)
+  assert.equal(opposite.yaw, mouseSteeringAxes(-2, 0, 10).yaw)
+  assert.deepEqual(mouse.release(), {yaw: 0, pitch: 0})
+  assert.equal(mouse.expire(time + 300), null)
+})
+
+test("one-axis cessation never leaks stale yaw into pitch-only motion", () => {
+  let time = 1000
+  const mouse = new MouseSteering({now: () => time, sensitivity: 8})
+  mouse.move(2, -2)
+  time += 16
+  const pitchOnly = mouse.move(0, -2)
+  assert.equal(pitchOnly.yaw, 0)
+  assert.ok(pitchOnly.pitch > 0)
+  time += mouse.stopDelayMs()
+  assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
 })
