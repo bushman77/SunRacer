@@ -509,11 +509,8 @@ async fn serve_one(socket: TcpStream, acceptor: TlsAcceptor,
                 }
                 // No busy-poll interval: send the next published frame as soon
                 // as it is available, with the same 4s idle heartbeat limit.
-                tokio::select! {
-                    _ = &mut notified => {},
-                    _ = tokio::time::sleep(remaining) => {
-                        return respond(&mut stream, 204, "text/plain", "").await;
-                    }
+                if tokio::time::timeout(remaining, &mut notified).await.is_err() {
+                    return respond(&mut stream, 204, "text/plain", "").await;
                 }
             }
         }
