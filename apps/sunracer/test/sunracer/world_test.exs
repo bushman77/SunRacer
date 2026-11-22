@@ -256,4 +256,67 @@ defmodule Sunracer.WorldTest do
   end
 
 
+
+  test "Mara repairs the docked physical hull and persists its condition" do
+    account = player_account_fixture()
+    {:ok, ship} = Sunracer.Fleet.get_active_ship(account.id)
+    {:ok, stats} = Sunracer.ShipStats.calculate(account.id, ship.id, 1)
+    {:ok, full} = Sunracer.ShipCondition.load_or_initialize(account.id, ship.id, stats)
+    damaged = %{full | hull: full.hull - 9, shields: 0}
+    assert :ok = Sunracer.ShipCondition.save_verified(account.id, ship.id, damaged)
+
+    solar = Module.concat(Core.World.SessionManager, Core.Universe.Navigation)
+    assert {:ok, _} = Core.Universe.Navigation.snapshot(solar, account.id)
+    starbase = Core.Universe.GreenStarbase.position_km()
+    :sys.replace_state(solar, fn state ->
+      voyage = Map.fetch!(state.voyages, account.id)
+      at_station = %{voyage |
+        status: :idle, location_id: nil, origin_id: nil,
+        arrival_origin_id: nil, destination_id: nil,
+        position_km: starbase, origin_position_km: starbase,
+        destination_position_km: nil}
+      %{state | voyages: Map.put(state.voyages, account.id, at_station)}
+    end)
+
+    assert {:ok, session} = World.connect(account.id)
+    on_exit(fn -> World.disconnect(session.id) end)
+    assert session.map_id == Core.Universe.FreeFlightRegion.map_id(account.id)
+    assert {:error, :not_docked} = World.station_repair(session.id)
+
+    # Position the map-owned physical ship in the real hangar for docking.
+    origin = Core.Universe.GreenStarbase.local_site()
+    hangar = %Core.World.Position{x: origin.x,
+      y: origin.y - 10.0 / 0.06, z: origin.z}
+    [{pid, _}] = Registry.lookup(Core.World.Registry, {:world_map, session.map_id})
+    :sys.replace_state(pid, fn state ->
+      pilot = Map.fetch!(state.entities, account.id)
+      %{state | entities: Map.put(state.entities, account.id,
+        %{pilot | position: hangar})}
+    end)
+
+    assert {:ok, %{docked: true}} = World.dock(session.id)
+    assert {:error, :station_attendant_out_of_range} = World.station_repair(session.id)
+
+    # The server owns the actual avatar pose; clients cannot supply it in
+    # the repair request. The restore API is server-only and used by tests.
+    assert :ok = Core.World.restore_station_position(session.id,
+      %{room_id: "repair_bay", x: -49.0, z: -143.0, yaw: 0.0})
+    assert {:ok, %{repair: repair, message: message, topics: topics}} =
+      World.station_repair(session.id)
+    assert repair.hull == full.max_hull
+    assert repair.shields == full.max_shields
+    assert message =~ "No credits charged"
+    assert Enum.any?(topics, &(&1.id == "repair"))
+
+    assert {:ok, durable} =
+      Sunracer.ShipCondition.load_or_initialize(account.id, ship.id, stats)
+    assert durable.hull == full.max_hull
+    assert durable.shields == full.max_shields
+    assert Sunracer.Accounts.get_player_account!(account.id).credits == account.credits
+
+    assert {:ok, %{docked: false, entity: launched}} = World.launch(session.id)
+    assert launched.hull == full.max_hull
+    assert launched.shields == full.max_shields
+  end
+
 end
