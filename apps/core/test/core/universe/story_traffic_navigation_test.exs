@@ -64,12 +64,11 @@ defmodule Core.Universe.StoryTrafficNavigationTest do
     refute Enum.any?(other.contacts, &(&1.id == vesper_id))
     assert {:error, :unknown_contact} = Navigation.hail(server, @other, vesper_id)
 
-    assert {:ok, %{message: message, call_sign: "Vesper-02"}} =
+    assert {:ok, %{message: message, call_sign: "Vesper-02",
+                   transcript: transcript}} =
              Navigation.hail(server, @pilot, vesper_id)
 
     assert message =~ "Ines Varga"
-    assert {:ok, %{transcript: transcript}} =
-      Navigation.hail(server, @pilot, contact.id)
     assert Enum.map(transcript, & &1.speaker) ==
       ["Captain Ines Varga", "Captain Ines Varga"]
     assert Enum.any?(transcript, &String.contains?(&1.text, "Green Starbase"))
