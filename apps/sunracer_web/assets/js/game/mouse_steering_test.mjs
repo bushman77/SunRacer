@@ -53,7 +53,7 @@ test("mouse filter smooths acceleration but never amplifies or delays slowdown",
   assert.deepEqual(mouse.move(-5, 0), {yaw: -1, pitch: 0})
 })
 
-test("continuous 60Hz movement stops promptly instead of coasting 85ms", () => {
+test("continuous 60Hz movement has one bounded neutral after packet silence", () => {
   let now = 1000
   const mouse = new MouseSteering({now: () => now})
   for (let i = 0; i < 8; i++) {
@@ -62,7 +62,7 @@ test("continuous 60Hz movement stops promptly instead of coasting 85ms", () => {
     assert.equal(mouse.expire(now), null)
   }
   assert.ok(mouse.stopDelayMs() >= MOUSE_STEERING_MIN_STOP_MS)
-  assert.ok(mouse.stopDelayMs() < 55)
+  assert.ok(mouse.stopDelayMs() <= MOUSE_STEERING_FAST_STOP_MS)
   now = mouse.lastMovementAt + mouse.stopDelayMs() - 1
   assert.equal(mouse.expire(now), null)
   now += 1
@@ -219,4 +219,31 @@ test("one-axis cessation never leaks stale yaw into pitch-only motion", () => {
   assert.ok(pitchOnly.pitch > 0)
   time += mouse.stopDelayMs()
   assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
+})
+
+test("irregular 70-110ms pointer gaps do not make received movement restart", () => {
+  let now=1000
+  const mouse=new MouseSteering({now:()=>now,sensitivity:1.5})
+  mouse.move(4,0)
+  for (const gap of [16,90,16,110,16,70,16]) {
+    now+=gap
+    if (gap < mouse.stopDelayMs()) assert.equal(mouse.expire(now),null)
+    const axes=mouse.move(4,0)
+    assert.ok(axes.yaw>0)
+    assert.ok(mouse.stopDelayMs()>=MOUSE_STEERING_MIN_STOP_MS)
+    assert.ok(mouse.stopDelayMs()<=MOUSE_STEERING_IDLE_MS)
+  }
+  now+=mouse.stopDelayMs()+1
+  assert.deepEqual(mouse.expire(now),{yaw:0,pitch:0})
+  assert.equal(mouse.expire(now+100),null)
+})
+
+test("explicit capture loss stops instantly regardless of idle grace", () => {
+  let now=1000
+  const mouse=new MouseSteering({now:()=>now})
+  mouse.move(5,0)
+  now+=20
+  assert.ok(mouse.axes().yaw>0)
+  assert.deepEqual(mouse.release(),{yaw:0,pitch:0})
+  assert.equal(mouse.expire(now+300),null)
 })

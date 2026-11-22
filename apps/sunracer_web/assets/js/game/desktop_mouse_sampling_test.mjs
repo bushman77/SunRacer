@@ -76,3 +76,16 @@ test("experiment is desktop-only, opt-in, and shares the same flight authority",
   assert.match(client,/this\.mouseFrameSampler\.clear\(\)/)
   assert.match(client,/this\.channel\.push\("flight_controls", input, 3000\)/)
 })
+
+test("zero-sum same-frame mouse deltas cannot manufacture an explicit stop", () => {
+  const source=read("./client.js")
+  const block=source.slice(source.indexOf("if (this.mouseFrameSamplingEnabled) {"),
+    source.indexOf("// Expire mouse commands before advancing"))
+  assert.match(block,/if \(packet\.dx !== 0 \|\| packet\.dy !== 0\)/)
+  assert.doesNotMatch(block,/this\.mouseSteering\.release\(\)/)
+  assert.doesNotMatch(block,/setMouseSteering\(\{yaw:0,pitch:0\}\)/)
+  const sampler=new DesktopMouseFrameSampler()
+  sampler.push(2,0)
+  sampler.push(-2,0)
+  assert.deepEqual(sampler.drain(),{dx:0,dy:0,events:2})
+})

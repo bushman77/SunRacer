@@ -1,12 +1,9 @@
 // Presentation-only prediction of the pilot's OWN ship between server ticks.
 //
-// The server simulates at 10 Hz. Smoothing alone either shows each 100 ms
-// orientation step (short settle, as pointer-lock used) or lags far behind the
-// mouse (long settle). Instead the client runs the server's own turn rules
-// (Core.World.FlightDynamics.advance_angular_rate) forward from the last
-// authoritative orientation, using the pilot's current local input. Every
-// new snapshot replaces the starting point, so prediction never accumulates:
-// the server stays authoritative and the camera just stops stepping.
+// The server simulates at 10 Hz. This presentation predictor replays the
+// server's angular-rate rules (including progressive mouse-neutral braking)
+// between snapshots. Native client-led rotation remains independently
+// continuous; other flight paths still rely on authoritative rebasing.
 //
 // Keep these limits in sync with @turn_limits / @mouse_turn_limits in
 // apps/core/lib/core/world/flight_dynamics.ex (degrees/s and degrees/s^2).
@@ -42,8 +39,6 @@ export function advanceAngularRate(current, input, limits, dt) {
 export function predictAxisAngle(rate, input, limits, seconds, {mouseAxis = false} = {}) {
   let current = finite(rate)
   const command = Math.max(-1, Math.min(1, finite(input)))
-  // Server: a neutral mouse axis stops turning immediately, no braking tail.
-  if (mouseAxis && command === 0) return 0
   let remaining = Math.max(0, Math.min(MAX_PREDICTION_SECONDS, finite(seconds)))
   let angle = 0
   while (remaining > 1e-9) {
@@ -106,11 +101,6 @@ export function predictOrientation(orientation, angularVelocity, input,
     for (const axis of AXES) {
       const mouseAxis = mouseMode && axis !== "roll"
       const value = Math.max(-1, Math.min(1, finite(command[axis])))
-      if (mouseAxis && value === 0) {
-        // Server: a neutral mouse axis stops turning at once, no braking tail.
-        rates[axis] = 0
-        continue
-      }
       const limits = mouseAxis ? MOUSE_TURN_LIMITS[axis] : TURN_LIMITS[axis]
       const next = advanceAngularRate(rates[axis], value, limits, dt)
       angles[axis] += (rates[axis] + next) * 0.5 * dt

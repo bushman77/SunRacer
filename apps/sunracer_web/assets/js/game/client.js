@@ -2228,11 +2228,9 @@ class SpaceClient {
     if (this.mouseFrameSamplingEnabled) {
       const packet = this.mouseFrameSampler.drain()
       if (packet) {
-        if (packet.dx === 0 && packet.dy === 0) {
-          this.mouseSteering.release()
-          this.flightControls?.setMouseSteering({yaw:0,pitch:0})
-          this.flightInputHistory?.record(time,this.flightControls.axes())
-        } else {
+        // Two real opposite-direction events can cancel inside one draw
+        // frame. A zero-sum batch is not an intentional pointer release.
+        if (packet.dx !== 0 || packet.dy !== 0) {
           this.applyDesktopMouseDelta(packet.dx, packet.dy, time)
         }
       }

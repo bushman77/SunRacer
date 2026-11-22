@@ -28,16 +28,22 @@ test("client camera advances steadily across server tick boundaries WITHOUT a re
     "same-direction turning must never back-step on a tick")
 })
 
-test("mouse neutral immediately stops yaw without an overshooting tail", () => {
+test("neutral brakes locally without resetting accumulated turn rate", () => {
   const camera=new ClientLedMouseCamera()
   camera.begin(identity)
   for(let i=0;i<20;i++)camera.advance({yaw:1},1/60)
-  const before=yaw(camera.orientation)
+  const priorRate=camera.rates.yaw
+  const priorYaw=yaw(camera.orientation)
   camera.advance({yaw:0},1/60)
-  approx(yaw(camera.orientation),before)
-  camera.advance({yaw:0},1/60)
-  approx(yaw(camera.orientation),before)
+  assert.ok(yaw(camera.orientation)>priorYaw)
+  assert.ok(camera.rates.yaw>0)
+  assert.ok(camera.rates.yaw<priorRate)
+  camera.advance({yaw:1},1/60)
+  assert.ok(camera.rates.yaw>0,"same-tick movement resumes from existing rate")
+  for(let i=0;i<25;i++)camera.advance({yaw:0},1/60)
   assert.equal(camera.rates.yaw,0)
+  camera.reset()
+  assert.equal(camera.active,false)
 })
 
 test("reversal changes angular velocity and does not teleport orientation", () => {

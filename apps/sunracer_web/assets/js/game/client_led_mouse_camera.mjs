@@ -41,9 +41,10 @@ export class ClientLedMouseCamera {
       for (const axis of AXES) {
         const mouseAxis = mouseMode && axis !== "roll"
         const command = clamp(finite(axes?.[axis]),-1,1)
-        // The same immediate neutral mouse brake as the authoritative
-        // simulation: no hidden angular-velocity tail after release.
-        const oldRate = mouseAxis && command === 0 ? 0 : this.rates[axis]
+        // Mirror server step/4: mouse neutral brakes from the previous rate.
+        // A brief packet gap is not a physical release. Real capture loss
+        // calls reset(), which immediately clears this local presentation.
+        const oldRate = this.rates[axis]
         const limits = mouseAxis ? MOUSE_TURN_LIMITS[axis] : TURN_LIMITS[axis]
         const nextRate = advanceAngularRate(oldRate,command,limits,dt)
         angle[axis] = (oldRate+nextRate)*0.5*dt

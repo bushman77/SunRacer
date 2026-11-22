@@ -470,49 +470,70 @@ defmodule Core.World.FlightDynamicsTest do
     assert braking.angular_velocity.pitch >= 0.0
   end
 
-  test "mouse-look neutral input stops yaw and pitch immediately on command receipt" do
+  test "mouse neutral preserves rates until tick and brakes progressively" do
     map = MapDefinition.starting_map()
     {:ok, captured} =
       FlightDynamics.controls(ship(),
         %{yaw: 1.0, pitch: -1.0, mouse_steering: true}, 0)
-    rotating = FlightDynamics.step(captured, map, 0.1, 1)
-    assert rotating.angular_velocity.yaw > 0.0
-    assert rotating.angular_velocity.pitch < 0.0
-
+    rotating = Enum.reduce(1..4, captured, fn tick, current ->
+      FlightDynamics.step(current, map, 0.1, tick)
+    end)
+    deg = 180.0 / :math.pi()
+    assert_in_delta rotating.angular_velocity.yaw * deg, 150.0, 1.0e-6
+    assert_in_delta rotating.angular_velocity.pitch * deg, -135.0, 1.0e-6
     {:ok, neutral} =
       FlightDynamics.controls(rotating,
-        %{yaw: 0.0, pitch: 0.0, mouse_steering: true}, 1)
-    # The GenServer command response already contains a frozen orientation
-    # and zero yaw/pitch rates; no extra 100ms simulation tick is required.
-    assert neutral.angular_velocity.yaw == 0.0
-    assert neutral.angular_velocity.pitch == 0.0
+        %{yaw: 0.0, pitch: 0.0, mouse_steering: true}, 4)
+    assert neutral.angular_velocity == rotating.angular_velocity
     assert neutral.orientation == rotating.orientation
     assert neutral.attitude == rotating.attitude
-    stopped = FlightDynamics.step(neutral, map, 0.1, 2)
-
+    braking = FlightDynamics.step(neutral, map, 0.1, 5)
+    assert_in_delta braking.angular_velocity.yaw * deg, 96.0, 1.0e-6
+    assert_in_delta braking.angular_velocity.pitch * deg, -85.0, 1.0e-6
+    assert braking.attitude.yaw > rotating.attitude.yaw
+    assert braking.attitude.pitch < rotating.attitude.pitch
+    stopped = Enum.reduce(6..8, braking, fn tick, current ->
+      FlightDynamics.step(current, map, 0.1, tick)
+    end)
     assert stopped.angular_velocity.yaw == 0.0
     assert stopped.angular_velocity.pitch == 0.0
-    assert_in_delta stopped.attitude.yaw, rotating.attitude.yaw, 1.0e-12
-    assert_in_delta stopped.attitude.pitch, rotating.attitude.pitch, 1.0e-12
   end
 
-  test "mouse input stops an inactive axis while allowing the other to steer" do
+  test "neutral followed by movement within ONE tick cannot restart at zero" do
     map = MapDefinition.starting_map()
-    {:ok, captured} =
-      FlightDynamics.controls(ship(),
-        %{yaw: 1.0, pitch: 1.0, mouse_steering: true}, 0)
-    rotating = FlightDynamics.step(captured, map, 0.1, 1)
+    {:ok, started} =
+      FlightDynamics.controls(ship(), %{yaw: 1.0, mouse_steering: true}, 0)
+    turning = Enum.reduce(1..3, started, fn tick, entity ->
+      FlightDynamics.step(entity, map, 0.1, tick)
+    end)
+    deg = 180.0 / :math.pi()
+    assert_in_delta turning.angular_velocity.yaw * deg, 126.0, 1.0e-6
+    {:ok, briefly_neutral} =
+      FlightDynamics.controls(turning, %{yaw: 0.0, mouse_steering: true}, 3)
+    assert briefly_neutral.angular_velocity.yaw == turning.angular_velocity.yaw
+    {:ok, resumed} =
+      FlightDynamics.controls(briefly_neutral, %{yaw: 1.0, mouse_steering: true}, 3)
+    assert resumed.angular_velocity.yaw == turning.angular_velocity.yaw
+    next = FlightDynamics.step(resumed, map, 0.1, 4)
+    assert_in_delta next.angular_velocity.yaw * deg, 150.0, 1.0e-6
+    assert next.attitude.yaw > turning.attitude.yaw
+  end
 
+  test "one neutral mouse axis brakes while other axis continues" do
+    map = MapDefinition.starting_map()
+    {:ok, started} =
+      FlightDynamics.controls(ship(), %{yaw: 1.0, pitch: 1.0, mouse_steering: true}, 0)
+    rotating = Enum.reduce(1..4, started, fn tick, entity ->
+      FlightDynamics.step(entity, map, 0.1, tick)
+    end)
     {:ok, vertical_only} =
       FlightDynamics.controls(rotating,
-        %{yaw: 0.0, pitch: 1.0, mouse_steering: true}, 1)
-    assert vertical_only.angular_velocity.yaw == 0.0
-    assert vertical_only.angular_velocity.pitch == rotating.angular_velocity.pitch
-    next = FlightDynamics.step(vertical_only, map, 0.1, 2)
-
-    assert next.angular_velocity.yaw == 0.0
-    assert next.angular_velocity.pitch > 0.0
-    assert_in_delta next.attitude.yaw, rotating.attitude.yaw, 1.0e-12
+        %{yaw: 0.0, pitch: 1.0, mouse_steering: true}, 4)
+    assert vertical_only.angular_velocity == rotating.angular_velocity
+    next = FlightDynamics.step(vertical_only, map, 0.1, 5)
+    assert next.angular_velocity.yaw > 0.0
+    assert next.angular_velocity.yaw < rotating.angular_velocity.yaw
+    assert next.angular_velocity.pitch >= rotating.angular_velocity.pitch
   end
 
   test "releasing mouse capture cancels residual mouse angular velocity" do

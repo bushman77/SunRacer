@@ -1,13 +1,13 @@
 // Optional pointer-locked cockpit steering. Mouse input is an impulse on
 // server-authoritative yaw/pitch; throttle, roll and weapons remain separate.
 //
-// Pointer events can arrive at irregular intervals (particularly WebKitGTK).
-// A 25ms idle cutoff used to send repeated turn/stop/turn commands during
-// ordinary movement. Allow a short event gap, then send ONE immediate neutral.
-// Keep cross-axis movement independent, and never coast after capture loss.
-export const MOUSE_STEERING_IDLE_MS = 85 // hard ceiling for slow native webviews
-export const MOUSE_STEERING_FAST_STOP_MS = 60
-export const MOUSE_STEERING_MIN_STOP_MS = 50
+// Native WebKitGTK pointer events can arrive in irregular bursts. Missing
+// one or two packets is not necessarily an intentional stop. Tolerate short
+// gaps, then send one neutral after genuine silence. Explicit capture loss
+// still calls release() immediately.
+export const MOUSE_STEERING_IDLE_MS = 145 // tolerate intermittent native gaps
+export const MOUSE_STEERING_FAST_STOP_MS = 95
+export const MOUSE_STEERING_MIN_STOP_MS = 95
 // Normalize event packet displacement to a consistent 60Hz reference. Without
 // this, varying mouse packet rates become visible fluctuations in turn speed.
 export const MOUSE_STEERING_SAMPLE_MS = 16
@@ -67,12 +67,13 @@ export class MouseSteering {
     this.packetGapMs = null
   }
 
-  // Allow occasional skipped pointer packets before neutralizing. A too-short
-  // timeout generated turn/stop/turn pulses (visible as cockpit jitter), while
-  // the hard 85ms ceiling still limits mouse overshoot.
+  // For a pointer stream at 20-30Hz, one missing packet can exceed 85ms.
+  // Increase tolerance without touching explicit mouse-capture release.
+  // There is no actual mouse-up event for stopping pointer movement; this
+  // idle detector necessarily trades a small stop delay for stable motion.
   stopDelayMs() {
     return this.packetGapMs === null ? MOUSE_STEERING_FAST_STOP_MS :
-      clamp(this.packetGapMs * 1.8 + 12,
+      clamp(this.packetGapMs * 2.0 + 26,
         MOUSE_STEERING_MIN_STOP_MS, MOUSE_STEERING_IDLE_MS)
   }
 

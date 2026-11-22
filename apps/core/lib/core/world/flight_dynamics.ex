@@ -69,15 +69,12 @@ defmodule Core.World.FlightDynamics do
           {entity.cruise_speed, entity.drift_velocity}
         end
 
-      # Exiting mouse-look must not leave its high angular velocity coasting
-      # under the keyboard braking profile. Only neutral axes are snapped;
-      # keyboard-held axes continue under the established controls.
+      # A brief neutral BETWEEN ticks must not erase an accumulated mouse
+      # turn rate. Only an actual mouse-capture exit hard-stops neutral axes.
+      # Ordinary mouse neutrals use bounded braking in step/4.
+      previous_mouse? = Map.get(entity.rotation_input, :mouse_steering, false)
       angular_velocity =
-        if mouse_steering? or Map.get(entity.rotation_input, :mouse_steering, false) do
-          # Mouse steering is a rate command, not inertial ship rotation.
-          # Apply a zero axis immediately when the command is received, not
-          # one simulation tick later. Nonzero keyboard overrides remain
-          # active and keyboard-only flight keeps its inertial braking.
+        if previous_mouse? and not mouse_steering? do
           entity.angular_velocity
           |> maybe_stop_mouse_axis(:yaw, yaw)
           |> maybe_stop_mouse_axis(:pitch, pitch)
@@ -124,12 +121,9 @@ defmodule Core.World.FlightDynamics do
       Enum.reduce([:yaw, :pitch, :roll], {%{}, %{}}, fn axis, {angles, rates} ->
         mouse_axis? = Map.get(input, :mouse_steering, false) and axis in [:yaw, :pitch]
         axis_input = Map.fetch!(input, axis)
-        # Mouse-look is direct angular control: when movement ends, stop
-        # turning on this server simulation tick without a braking tail.
-        old_rate =
-          if mouse_axis? and axis_input == 0.0,
-            do: 0.0,
-            else: Map.fetch!(entity.angular_velocity, axis)
+        # Every mouse input, including neutral, starts from the previous
+        # angular rate. Do not turn a skipped pointer event into a full reset.
+        old_rate = Map.fetch!(entity.angular_velocity, axis)
 
         limits =
           if mouse_axis?,

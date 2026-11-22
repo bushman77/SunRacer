@@ -24,10 +24,11 @@ test("a ship already at full rate keeps turning at that rate between ticks", () 
   close(predictAxisAngle(rate, 1, MOUSE_TURN_LIMITS.yaw, 0.05, {mouseAxis: true}), rate * 0.05)
 })
 
-test("a neutral mouse axis stops at once, like the server (no coasting)", () => {
-  assert.equal(predictAxisAngle(rad(90), 0, MOUSE_TURN_LIMITS.yaw, 0.1, {mouseAxis: true}), 0)
-  // Keyboard axes brake instead, also like the server.
-  assert.ok(predictAxisAngle(rad(40), 0, TURN_LIMITS.yaw, 0.1) > 0)
+test("mouse neutral uses bounded server braking; keyboard remains unchanged", () => {
+  const angle=predictAxisAngle(rad(90),0,MOUSE_TURN_LIMITS.yaw,0.1,{mouseAxis:true})
+  // 90 -> 36 deg/s over 100ms with 540 deg/s^2 braking, 6.3deg travelled.
+  assert.ok(angle>rad(5.9) && angle<rad(6.7))
+  assert.ok(predictAxisAngle(rad(40),0,TURN_LIMITS.yaw,0.1)>0)
 })
 
 test("prediction never runs past the cap if snapshots stall", () => {
@@ -77,10 +78,10 @@ test("stopping mid-tick keeps the turn already made instead of snapping back", (
   const atStop = noseX(predictOrientation(identity, rates, history.since(1000), opts(0.05)))
   const later = noseX(predictOrientation(identity, rates, history.since(1000), opts(0.09)))
   assert.ok(atStop > 0)
-  close(later, atStop)          // held, not rewound to the snapshot
-  // The old constant-input behaviour would have rewound to zero.
-  assert.equal(noseX(predictOrientation(identity, rates, {yaw: 0, pitch: 0, roll: 0},
-    opts(0.09))), 0)
+  assert.ok(later>atStop,"braking retains travel instead of rewinding")
+  const braking=noseX(predictOrientation(identity,rates,
+    {yaw:0,pitch:0,roll:0},opts(0.09)))
+  assert.ok(braking>0,"neutral brakes rather than erasing all rotation")
 })
 
 test("input history returns the input in effect at a time and stays bounded", () => {
@@ -119,6 +120,18 @@ test("input history timestamps physical movement and neutral without late replay
     history.since(1000), {mouseMode: true, seconds: 0.12})
   const held = predictOrientation(identity, {yaw: 0, pitch: 0, roll: 0},
     history.since(1000), {mouseMode: true, seconds: 0.05})
-  close(rotateVector(stopped, {x: 0, y: 0, z: -1}).x,
-    rotateVector(held, {x: 0, y: 0, z: -1}).x)
+  assert.ok(rotateVector(stopped,{x:0,y:0,z:-1}).x >=
+    rotateVector(held,{x:0,y:0,z:-1}).x)
+})
+
+test("neutral followed by resumed input inside one server tick keeps yaw rate", () => {
+  const history=new InputHistory()
+  history.record(1000,{yaw:1,pitch:0,roll:0})
+  history.record(1020,{yaw:0,pitch:0,roll:0})
+  history.record(1040,{yaw:1,pitch:0,roll:0})
+  const q=predictOrientation(identity,{yaw:rad(125),pitch:0,roll:0},
+    history.since(1000),{mouseMode:true,seconds:0.1})
+  const nose=rotateVector(q,{x:0,y:0,z:-1})
+  assert.ok(nose.x>Math.sin(rad(10)),
+    "short neutral cannot restart the quaternion prediction from zero")
 })
