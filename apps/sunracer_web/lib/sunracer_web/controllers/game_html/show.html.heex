@@ -508,9 +508,11 @@
             <.icon name="hero-map" class="inline size-4" /> Sector 1-1
           </button>
         </div>
-        <button id="nav-inventory-open" class="hud-nav-link atlas-loadout-link"
-          type="button" aria-controls="pilot-inventory-panel" title="View ship inventory [I]">
-          <.icon name="hero-archive-box" class="size-4" /> Inventory [I]
+        <button id="nav-inventory-open" class="nav-button hud-mini-button"
+          type="button" aria-controls="pilot-inventory-panel"
+          aria-label="View ship inventory, shortcut I" title="View ship inventory [I]">
+          <.icon name="hero-archive-box" class="size-4" />
+          <span class="hidden xl:inline">Inventory [I]</span>
         </button>
         <a class="hud-nav-link atlas-loadout-link" href={~p"/equipment"}>
           <.icon name="hero-wrench-screwdriver" class="size-4" /> Loadout
