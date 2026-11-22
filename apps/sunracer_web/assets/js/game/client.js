@@ -529,7 +529,10 @@ class SpaceClient {
     this.root.querySelector("#story-dispatch-accept")?.focus({preventScroll: true})
   }
 
-  closeDispatcherOffer() {
+  closeDispatcherOffer({clearOffer = true} = {}) {
+    if (clearOffer && this.dispatchOfferOpen && this.channel?.state === "joined") {
+      this.channel.push("story_dispatch_decline", {}, 2000)
+    }
     const panel = this.root.querySelector("#story-dispatch-dialogue")
     if (panel) panel.style.display = "none"
     this.dispatchOfferOpen = false
@@ -553,7 +556,7 @@ class SpaceClient {
       .receive("ok", reply => {
         done()
         if (reply.story) this.storyHud?.apply(reply.story)
-        this.closeDispatcherOffer()
+        this.closeDispatcherOffer({clearOffer: false})
       })
       .receive("error", reply => {
         done()

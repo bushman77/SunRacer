@@ -1407,6 +1407,15 @@ defmodule SunracerWeb.WorldChannelTest do
     assert_reply ref, :ok, %{offer: %{npc_id: "helios_dispatch",
       title: "First Run: Medical Consignment", reward_credits: 500,
       cargo: %{id: "medical_supplies", count: 3}}}
+    ref = push(cockpit, "story_dispatch_decline", %{})
+    assert_reply ref, :ok, %{}
+    ref = push(cockpit, "story_dispatch_accept", %{})
+    assert_reply ref, :error, %{reason: "dispatcher_contact_required"}
+
+    # Declining leaves the mission available but does not accept it.
+    assert %{step: 2} = Sunracer.Story.snapshot(account.id)
+    ref = push(cockpit, "story_dispatch_offer", %{})
+    assert_reply ref, :ok, %{offer: %{npc_id: "helios_dispatch"}}
     ref = push(cockpit, "story_dispatch_accept", %{})
     assert_reply ref, :ok, %{story: %{step: 3}}
     assert Map.get(Sunracer.Inventory.cargo_manifest(account.id), "medical_supplies") == 3

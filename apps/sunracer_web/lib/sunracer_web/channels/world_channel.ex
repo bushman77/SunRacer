@@ -332,6 +332,10 @@ defmodule SunracerWeb.WorldChannel do
   def handle_in("story_dispatch_accept", _payload, socket),
     do: {:reply, {:error, %{reason: "dispatcher_contact_required"}}, socket}
 
+  # Declining explicitly revokes the conversation-scoped acceptance token.
+  def handle_in("story_dispatch_decline", _payload, socket),
+    do: {:reply, {:ok, %{}}, assign(socket, :dispatch_offer, false)}
+
   # The HUD can skip/resume; it cannot issue or accept a contract.
   def handle_in("story_action", %{"action" => action}, socket) when is_binary(action) do
     case World.story_action(socket.assigns.world_session_id, action) do

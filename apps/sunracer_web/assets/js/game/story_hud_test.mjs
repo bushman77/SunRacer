@@ -81,6 +81,7 @@ test("cockpit markup, client wiring and the stereo HUD line are present", () => 
   assert.match(client, /this\.channel\.push\("story_action", \{action\}/)
   assert.match(client, /this\.channel\.push\("story_dispatch_offer", \{\}/)
   assert.match(client, /this\.channel\.push\("story_dispatch_accept", \{\}/)
+  assert.match(client, /this\.channel\.push\("story_dispatch_decline", \{\}/)
   assert.match(markup, /id="story-dispatch-dialogue"/)
   assert.match(markup, /id="story-dispatch-accept"/)
   assert.match(markup, /id="story-dispatch-decline"/)
