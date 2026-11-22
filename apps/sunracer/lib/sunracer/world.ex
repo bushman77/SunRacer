@@ -680,6 +680,8 @@ defmodule Sunracer.World do
   defdelegate activate_action(session_id, slot), to: Simulation
   defdelegate attack(session_id), to: Simulation
   defdelegate fire_ready_weapon(session_id), to: Simulation
+  def fire_ready_weapon(session_id, input) when is_map(input),
+    do: Simulation.fire_ready_weapon(session_id, input, [])
 
   @spec action_hotbar() :: [Core.Combat.ActionCatalog.slot()]
   def action_hotbar, do: Core.Combat.ActionCatalog.hotbar()
