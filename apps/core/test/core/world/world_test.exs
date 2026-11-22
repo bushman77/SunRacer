@@ -562,6 +562,46 @@ defmodule Core.WorldTest do
     assert damaged.hull == 245 - result.hull_damage
   end
 
+  @tag no_initial_encounter: true
+  test "server honors the pilot's validated firing orientation, never claimed damage", context do
+    opts = context.world_options
+    assert {:ok, pilot} = World.connect(:aim_verified_pilot, context.stats, opts)
+    local_aim = Orientation.from_angles(%{
+      yaw: 12.0 * :math.pi() / 180.0, pitch: 0.0, roll: 0.0
+    })
+    aim_json = Map.new(local_aim, fn {key, value} -> {to_string(key), value} end)
+    invalid = %{"aim_orientation" => Map.new(
+      Orientation.from_angles(%{yaw: :math.pi(), pitch: 0.0, roll: 0.0}),
+      fn {key, value} -> {to_string(key), value} end),
+      "client_tick" => 0, "shot_sequence" => 1}
+
+    assert {:error, :invalid_shot_aim} =
+      World.fire_ready_weapon(pilot.id, invalid, opts)
+
+    request = %{"aim_orientation" => aim_json,
+      "client_tick" => 0, "shot_sequence" => 1}
+    assert {:ok, first} = World.fire_ready_weapon(pilot.id, request, opts)
+    assert first.hit == false
+    assert first.hits == []
+    assert Enum.all?(first.beams, fn ray ->
+      ray.to.x > ray.from.x and ray.to.y < ray.from.y
+    end)
+
+    assert {:ok, state} = World.snapshot("1-1", opts)
+    ship = Enum.find(state.entities, &(&1.id == :aim_verified_pilot))
+    assert ship.orientation == Orientation.identity()
+    assert ship.next_attack_tick > 0
+
+    for _ <- 1..ship.next_attack_tick, do: assert({:ok, _} = World.tick("1-1", opts))
+    assert {:error, :invalid_shot_sequence} =
+      World.fire_ready_weapon(pilot.id,
+        %{request | "client_tick" => ship.next_attack_tick}, opts)
+
+    assert {:ok, second} = World.fire_ready_weapon(pilot.id,
+      %{request | "client_tick" => ship.next_attack_tick, "shot_sequence" => 2}, opts)
+    assert second.hit == false
+  end
+
   test "manual Space laser works without target lock and consumes cooldown on a miss", context do
     assert {:error, :session_not_found} =
              World.fire_ready_weapon(-1, context.world_options)
