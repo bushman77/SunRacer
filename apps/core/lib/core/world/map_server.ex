@@ -1088,32 +1088,6 @@ defmodule Core.World.MapServer do
     end
   end
 
-  defp valid_manual_shot_sequence(state, session_id, entity_id, input) do
-    case Map.fetch(input, "aim_orientation") do
-      :error -> :ok
-      {:ok, _} ->
-        sequence = Map.get(input, "shot_sequence")
-        previous = Map.get(state.manual_shot_sequences, entity_id)
-        cond do
-          not is_integer(sequence) or sequence <= 0 or
-              sequence > 9_007_199_254_740_991 -> {:error, :invalid_shot_sequence}
-          match?(%{session_id: ^session_id, sequence: last}
-              when last >= sequence, previous) -> {:error, :invalid_shot_sequence}
-          true -> :ok
-        end
-    end
-  end
-
-  defp track_manual_shot_sequence(state, session_id, entity_id, input) do
-    case Map.get(input, "shot_sequence") do
-      sequence when is_integer(sequence) and sequence > 0 ->
-        sequences = Map.put(state.manual_shot_sequences, entity_id,
-          %{session_id: session_id, sequence: sequence})
-        %{state | manual_shot_sequences: sequences}
-      _ -> state
-    end
-  end
-
   def handle_call({:attack, session_id, entity_id}, _from, state) do
     with {:ok, attacker} <- authorized_entity(state, session_id, entity_id),
          :ok <- living_attacker(attacker),
@@ -1139,6 +1113,32 @@ defmodule Core.World.MapServer do
   def handle_info(:simulation_tick, state) do
     new_state = state |> advance_tick() |> schedule_tick()
     {:noreply, new_state}
+  end
+
+  defp valid_manual_shot_sequence(state, session_id, entity_id, input) do
+    case Map.fetch(input, "aim_orientation") do
+      :error -> :ok
+      {:ok, _} ->
+        sequence = Map.get(input, "shot_sequence")
+        previous = Map.get(state.manual_shot_sequences, entity_id)
+        cond do
+          not is_integer(sequence) or sequence <= 0 or
+              sequence > 9_007_199_254_740_991 -> {:error, :invalid_shot_sequence}
+          match?(%{session_id: ^session_id, sequence: last}
+              when last >= sequence, previous) -> {:error, :invalid_shot_sequence}
+          true -> :ok
+        end
+    end
+  end
+
+  defp track_manual_shot_sequence(state, session_id, entity_id, input) do
+    case Map.get(input, "shot_sequence") do
+      sequence when is_integer(sequence) and sequence > 0 ->
+        sequences = Map.put(state.manual_shot_sequences, entity_id,
+          %{session_id: session_id, sequence: sequence})
+        %{state | manual_shot_sequences: sequences}
+      _ -> state
+    end
   end
 
   # A tactical claim binds each pilot to exactly one NPC actor in the shared
