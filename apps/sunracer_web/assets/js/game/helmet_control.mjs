@@ -5,8 +5,9 @@ import {relayQRUrl} from "./helmet_relay_test.mjs"
 // The Atlas owns enrollment; the cockpit owns the headset's operating mode.
 export class HelmetControl {
   constructor({root, socket, playerId, combatActive, publishRelayWorld = () => {},
-    onGazeAction = () => {}}) {
+    onGazeAction = () => {}, onStatusChange = () => {}}) {
     this.onGazeAction = onGazeAction
+    this.onStatusChange = onStatusChange
     this.root = root
     this.socket = socket
     this.playerId = playerId
@@ -150,7 +151,13 @@ export class HelmetControl {
     // Nothing here trusts the phone beyond the name of a known action.
     this.channel.on("helmet_gaze_action", ({action} = {}) =>
       this.onGazeAction?.(action))
-    this.channel.onError(() => this.message("Helmet link interrupted. Reconnecting…"))
+    this.channel.onError(() => {
+      this.updateStatus({...this.status, connected: false, rendering: false})
+      this.message("Helmet link interrupted. Reconnecting…")
+    })
+    this.channel.onClose(() => {
+      this.updateStatus({...this.status, connected: false, rendering: false})
+    })
     this.channel.join()
       .receive("ok", reply => {
         this.suggestNetworkHosts(reply.network_hosts || [], reply.helmet_https_origin)
@@ -318,6 +325,7 @@ export class HelmetControl {
 
   updateStatus(status = {}) {
     this.status = status
+    this.onStatusChange?.(status)
     const label = status.rendering ? "SBS ACTIVE" :
       status.connected && status.mode === "combat" ? "CONNECTED / STARTING SBS" :
       status.connected ? "CONNECTED / STANDBY" :

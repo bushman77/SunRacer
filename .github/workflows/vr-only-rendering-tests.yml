@@ -1,0 +1,30 @@
+name: VR-only desktop rendering experiment
+
+on:
+  push:
+    branches: [story_line]
+    paths:
+      - "apps/sunracer_web/assets/js/game/client.js"
+      - "apps/sunracer_web/assets/js/game/helmet_control.mjs"
+      - "apps/sunracer_web/assets/js/game/vr_only_rendering*.mjs"
+      - "apps/sunracer_web/lib/sunracer_web/controllers/game_html/show.html.heex"
+      - "apps/sunracer_web/assets/css/app.css"
+      - ".github/workflows/vr-only-rendering-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check presentation-only desktop VR optimization
+        run: |
+          node --check apps/sunracer_web/assets/js/game/client.js
+          node --check apps/sunracer_web/assets/js/game/helmet_control.mjs
+          node --test apps/sunracer_web/assets/js/game/vr_only_rendering_test.mjs

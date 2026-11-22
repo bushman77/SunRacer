@@ -44,6 +44,7 @@ import {cameraSettleSeconds, PREDICTED_OWN_SHIP_SETTLE_SECONDS} from "./camera_r
 import {predictOrientation, predictPosition, InputHistory} from "./own_ship_prediction.mjs"
 import {smoothEntityPresentation} from "./entity_smoothing.mjs"
 import {applyOwnShipMovementPreview} from "./own_ship_movement_preview.mjs"
+import {headsetRendering, pauseDesktop3D, preferredVrOnly} from "./vr_only_rendering.mjs"
 import {planetaryImpactMessage} from "./planetary_impact.mjs"
 import {
   ownPlanetaryWarning, proximityEventWarning, planetaryWarningView,
@@ -115,6 +116,14 @@ class SpaceClient {
     this.beams = []
     this.lastLaserFeedback = null
     this.lastFrame = performance.now()
+    // Experimental presentation preference. Only actual, server-confirmed
+    // SBS rendering on the phone can suppress the laptop's 3D draw call.
+    this.desktopVrOnlyKey = "sunracer:vr-only:" + root.dataset.layoutPlayerId
+    this.desktopVrOnlyPreferred = preferredVrOnly(localStorage.getItem(this.desktopVrOnlyKey))
+    this.desktopVrOnlyActive = false
+    this.desktopVrAvailable = false
+    this.desktopVrLastPreference = null
+    this.desktopVrRenderStats = {rendered: 0, skipped: 0, cpuMs: 0, lastReport: 0}
     // Read-only transport estimate; never records credentials or game state.
     this.bandwidth = new BandwidthProbe("desktop-server")
     this.sbsRelayWorld = new SbsRelayWorldPublisher({
@@ -193,6 +202,7 @@ class SpaceClient {
     })
     this.setupMouseSteering()
     this.setupFlightModeButtons()
+    this.setupDesktopVrOnlyControl()
     const takeHelm = this.root.querySelector("#cockpit-take-helm")
     takeHelm?.addEventListener("click", () => {
       if (this.flightInputState() !== "cruise" || takeHelm.disabled) return
@@ -515,6 +525,7 @@ class SpaceClient {
       playerId: this.root.dataset.layoutPlayerId,
       combatActive: !this.navComputer.isOpen,
       publishRelayWorld: () => this.sbsRelayWorld.publish(this.worldStream?.map, true),
+      onStatusChange: () => this.syncDesktopVrOnly(),
       // A gaze icon in the headset is an intent, not a command: the laptop
       // applies it through the same FlightControls the keyboard drives.
       onGazeAction: action => {
@@ -2118,6 +2129,9 @@ class SpaceClient {
         this.flightInputHistory?.record(time, this.flightControls.axes())
       }
     }
+    // Suppress only laptop WebGL draws. Input, world prediction, physics
+    // commands, LAN relay and the RAF simulation heartbeat keep running.
+    this.syncDesktopVrOnly()
     this.interpolate(deltaSeconds)
     this.stationWalking?.frame(time)
     this.updateDockingCountdown(time)
@@ -2212,11 +2226,74 @@ class SpaceClient {
     }
   }
 
+  setupDesktopVrOnlyControl() {
+    const button = this.root.querySelector("#desktop-vr-render-toggle")
+    button?.addEventListener("click", () => {
+      this.desktopVrOnlyPreferred = !this.desktopVrOnlyPreferred
+      localStorage.setItem(this.desktopVrOnlyKey,
+        this.desktopVrOnlyPreferred ? "1" : "0")
+      this.syncDesktopVrOnly()
+    })
+    this.syncDesktopVrOnly()
+  }
+
+  syncDesktopVrOnly() {
+    const status = this.helmet?.status
+    const available = this.root.dataset.nativeClient === "true" &&
+      headsetRendering(status)
+    const active = pauseDesktop3D({
+      nativeClient: this.root.dataset.nativeClient === "true",
+      preferVrOnly: this.desktopVrOnlyPreferred,
+      helmetStatus: status,
+      atlasOpen: Boolean(this.navComputer?.isOpen),
+    })
+    if (this.desktopVrOnlyActive === active &&
+        this.desktopVrAvailable === available &&
+        this.desktopVrLastPreference === this.desktopVrOnlyPreferred) return
+
+    this.desktopVrOnlyActive = active
+    this.desktopVrAvailable = available
+    this.desktopVrLastPreference = this.desktopVrOnlyPreferred
+    this.root.dataset.vrOnlyActive = String(active)
+    const overlay = this.root.querySelector("#desktop-vr-only-overlay")
+    if (overlay) overlay.hidden = !active
+    const button = this.root.querySelector("#desktop-vr-render-toggle")
+    if (button) {
+      button.hidden = !available
+      button.setAttribute("aria-pressed", String(this.desktopVrOnlyPreferred))
+      button.textContent = this.desktopVrOnlyPreferred ? "DESKTOP 3D OFF" : "BOTH VIEWS"
+      button.title = this.desktopVrOnlyPreferred
+        ? "Show both views while the headset renders (VR performance experiment)"
+        : "Pause desktop 3D while the headset renders (VR performance experiment)"
+    }
+  }
+
+  updateDesktopVrRenderStats(time) {
+    const stats = this.desktopVrRenderStats
+    if (time - stats.lastReport < 1000) return
+    stats.lastReport = time
+    const label = this.root.querySelector("#desktop-vr-render-stats")
+    if (!label || !this.desktopVrOnlyActive) return
+    const mean = stats.rendered > 0
+      ? (stats.cpuMs / stats.rendered).toFixed(2) : "—"
+    label.textContent = "3D draws skipped: " + stats.skipped +
+      " · previous desktop draw JS avg: " + mean + " ms"
+  }
+
   draw(time) {
     // A missing WebGL renderer must never silently bring back Classic 2D.
     if (!this.stereoView) return
 
-    this.stereoView.render(this, time)
+    if (this.desktopVrOnlyActive) {
+      this.desktopVrRenderStats.skipped++
+    } else {
+      const drawStarted = performance.now()
+      this.stereoView.render(this, time)
+      this.desktopVrRenderStats.rendered++
+      this.desktopVrRenderStats.cpuMs += performance.now() - drawStarted
+    }
+    // The experiment still advances presentation timers and HUD feedback.
+    this.updateDesktopVrRenderStats(time)
     this.beams = this.beams.filter(beam => beam.expiresAt > time)
     const feedback = this.lastLaserFeedback
     const element = this.root.querySelector("#laser-hit-confirmation")

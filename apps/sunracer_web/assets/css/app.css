@@ -747,6 +747,11 @@ body {
 /* Only the WebGL canvas is a flight display. A transparent div collects input. */
 #space-viewport { background: transparent; }
 #space-viewport-3d { opacity: 1; }
+/* The canvas must stay mounted for pointer capture and instant restoration.
+   Only its WebGL draw call is skipped; the overlay catches no mouse events. */
+#game-client[data-vr-only-active="true"] #space-viewport-3d { opacity: 0; }
+#desktop-vr-only-overlay[hidden] { display: none !important; }
+#desktop-vr-render-toggle[hidden] { display: none !important; }
 /* The standard HUD is monoscopic; stereo mode uses the cockpit texture instead. */
 #game-client[data-display-mode="sbs"] > header,
 #game-client[data-display-mode="sbs"] .cockpit-interface,
