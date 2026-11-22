@@ -6,9 +6,9 @@ export const STANDARD_CAMERA_SETTLE_SECONDS = 0.085
 // 100ms network tick or 25ms command update as visible camera vibration.
 export const POINTER_LOCK_CAMERA_SETTLE_SECONDS = 0.05
 // The own ship is predicted between ticks (own_ship_prediction.mjs), so the
-// camera follows a continuous goal; this settle only absorbs the small
-// correction when each authoritative update lands.
-export const PREDICTED_OWN_SHIP_SETTLE_SECONDS = 0.045
+// camera follows a continuous goal. A shorter correction settle reduces
+// visible trailing after the pilot stops the physical mouse.
+export const PREDICTED_OWN_SHIP_SETTLE_SECONDS = 0.022
 
 export const cameraSettleSeconds = ({ownShip = false, pointerLocked = false} = {}) =>
   ownShip && pointerLocked

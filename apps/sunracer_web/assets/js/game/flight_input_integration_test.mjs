@@ -7,12 +7,11 @@ const markup = readFileSync(new URL(
   "../../../lib/sunracer_web/controllers/game_html/show.html.heex", import.meta.url),
 "utf8")
 
-test("compact ship icons select authoritative cruise and Newtonian modes", () => {
-  assert.match(markup, /id="flight-mode-toggle"[^>]*role="group"/)
-  assert.match(markup, /id="flight-mode-cruise" data-flight-mode="cruise"/)
-  assert.match(markup, /id="flight-mode-newtonian" data-flight-mode="newtonian"/)
-  assert.match(markup, /aria-pressed="true"/)
-  assert.match(client, /this\.flightControls\.setMode\(button\.dataset\.flightMode\)/)
+test("single ship icon toggles authoritative cruise and Newtonian", () => {
+  assert.match(markup, /id="flight-mode-toggle" class="flight-mode-toggle"/)
+  assert.match(markup, /id="flight-mode-toggle-button" data-flight-mode-toggle/)
+  assert.doesNotMatch(markup, /id="flight-mode-cruise"|id="flight-mode-newtonian"/)
+  assert.match(client, /this\.flightControls\.setMode\(mode === "cruise" \? "newtonian" : "cruise"\)/)
   assert.match(client, /syncFlightModeButtons\(mode = this\.entities\.get\(this\.selfId\)\?\.flightMode\)/)
   assert.match(client, /button\.setAttribute\("aria-pressed"/)
 })

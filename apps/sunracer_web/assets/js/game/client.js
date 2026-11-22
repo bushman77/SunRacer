@@ -32,7 +32,7 @@ import {attachBandwidthPanel} from "./bandwidth_panel.mjs"
 import {gameSocketEndpoint} from "./socket_endpoint.mjs"
 import {
   MouseSteering, validMouseSensitivity, enabledMouseSteering,
-  MOUSE_STEERING_DEFAULT_SENSITIVITY, MOUSE_STEERING_IDLE_MS,
+  MOUSE_STEERING_DEFAULT_SENSITIVITY,
 } from "./mouse_steering.mjs"
 import {smoothAttitude} from "./attitude_interpolation.mjs"
 import {smoothOrientation, orientationTelemetry} from "./orientation_interpolation.mjs"
@@ -2101,7 +2101,10 @@ class SpaceClient {
     if (this.mouseSteeringEnabled &&
         (document.pointerLockElement === this.canvas || this.mouseFallback)) {
       const expired = this.mouseSteering.expire(time)
-      if (expired) this.flightControls?.setMouseSteering(expired)
+      if (expired) {
+        this.flightControls?.setMouseSteering(expired)
+        this.flightInputHistory?.record(time, this.flightControls.axes())
+      }
     }
     this.interpolate(deltaSeconds)
     this.stationWalking?.frame(time)
@@ -2417,7 +2420,10 @@ class SpaceClient {
           (document.pointerLockElement !== this.canvas && !this.mouseFallback) ||
           !this.flightControls?.active()) return
       const expired = this.mouseSteering.expire(performance.now())
-      if (expired) this.flightControls.setMouseSteering(expired)
+      if (expired) {
+        this.flightControls.setMouseSteering(expired)
+        this.flightInputHistory?.record(performance.now(), this.flightControls.axes())
+      }
     }, this.mouseSteering.stopDelayMs())
   }
 
@@ -2529,6 +2535,9 @@ class SpaceClient {
           (dx === 0 && dy === 0)) return
       const axes = this.mouseSteering.move(dx, dy)
       this.flightControls.setMouseSteering(axes)
+      // Record actual input-event time, not just the next animation frame,
+      // so own-ship prediction knows exactly when steering started or stopped.
+      this.flightInputHistory?.record(performance.now(), this.flightControls.axes())
       this.scheduleMouseStop()
     })
     this.canvas.addEventListener("mouseleave", () => {
@@ -2613,6 +2622,9 @@ class SpaceClient {
     this.mouseSteering.release()
     this.flightControls?.clearMouseSteering({silent: true})
     this.flightControls?.setMouseMode(false, {silent})
+    if (this.flightControls) {
+      this.flightInputHistory?.record(performance.now(), this.flightControls.axes())
+    }
     if (document.pointerLockElement === this.canvas) document.exitPointerLock?.()
     this.updateMouseSteeringStatus()
   }

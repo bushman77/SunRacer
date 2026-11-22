@@ -1,5 +1,6 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import {readFileSync} from "node:fs"
 import {
   advanceAngularRate, predictAxisAngle, predictOrientation, predictPosition,
   fromAngles, MOUSE_TURN_LIMITS, TURN_LIMITS, MAX_PREDICTION_SECONDS, InputHistory,
@@ -93,4 +94,31 @@ test("input history returns the input in effect at a time and stays bounded", ()
   for (let t = 50; t < 1000; t += 10) history.record(t, {yaw: t % 20 ? 1 : 0})
   assert.ok(history.entries.length <= 12)
   assert.equal(history.at(995).yaw, history.entries.at(-1).input.yaw)
+})
+
+test("client mouse prediction exactly matches server mouse turning and braking limits", () => {
+  assert.deepEqual(MOUSE_TURN_LIMITS, {
+    yaw: {speed: 150, acceleration: 420, braking: 540},
+    pitch: {speed: 135, acceleration: 380, braking: 500},
+  })
+  const source = readFileSync(new URL(
+    "../../../../core/lib/core/world/flight_dynamics.ex", import.meta.url), "utf8")
+  assert.match(source, /yaw: %\{speed: 150\.0, acceleration: 420\.0, braking: 540\.0\}/)
+  assert.match(source, /pitch: %\{speed: 135\.0, acceleration: 380\.0, braking: 500\.0\}/)
+})
+
+test("input history timestamps physical movement and neutral without late replay", () => {
+  const history = new InputHistory()
+  history.record(1000, {yaw: 0, pitch: 0, roll: 0})
+  history.record(1009, {yaw: 0.4, pitch: 0, roll: 0})
+  history.record(1039, {yaw: 0, pitch: 0, roll: 0})
+  assert.equal(history.at(1008).yaw, 0)
+  assert.equal(history.at(1009).yaw, 0.4)
+  assert.equal(history.at(1039).yaw, 0)
+  const stopped = predictOrientation(identity, {yaw: 0, pitch: 0, roll: 0},
+    history.since(1000), {mouseMode: true, seconds: 0.12})
+  const held = predictOrientation(identity, {yaw: 0, pitch: 0, roll: 0},
+    history.since(1000), {mouseMode: true, seconds: 0.05})
+  close(rotateVector(stopped, {x: 0, y: 0, z: -1}).x,
+    rotateVector(held, {x: 0, y: 0, z: -1}).x)
 })

@@ -16,8 +16,8 @@ export const TURN_LIMITS = Object.freeze({
   roll: {speed: 56, acceleration: 110, braking: 165},
 })
 export const MOUSE_TURN_LIMITS = Object.freeze({
-  yaw: {speed: 100, acceleration: 280, braking: 360},
-  pitch: {speed: 88, acceleration: 240, braking: 320},
+  yaw: {speed: 150, acceleration: 420, braking: 540},
+  pitch: {speed: 135, acceleration: 380, braking: 500},
 })
 // Never extrapolate further than this past the last snapshot. If ticks stall
 // the camera holds rather than spinning on.
