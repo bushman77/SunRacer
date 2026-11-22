@@ -47,6 +47,7 @@ import {applyOwnShipMovementPreview} from "./own_ship_movement_preview.mjs"
 import {acceptOwnShipPose} from "./own_ship_pose_policy.mjs"
 import {OwnShipCameraReconciler} from "./own_ship_camera_reconciler.mjs"
 import {DesktopMouseFrameSampler, DesktopMouseTimingProbe} from "./desktop_mouse_sampling.mjs"
+import {ClientLedMouseCamera} from "./client_led_mouse_camera.mjs"
 import {headsetRendering, pauseDesktop3D, preferredVrOnly} from "./vr_only_rendering.mjs"
 import {planetaryImpactMessage} from "./planetary_impact.mjs"
 import {
@@ -94,6 +95,10 @@ class SpaceClient {
     this.mouseFrameSamplingKey = "sunracer:mouse-frame-sampling:" + root.dataset.layoutPlayerId
     this.mouseFrameSamplingEnabled = localStorage.getItem(this.mouseFrameSamplingKey) === "1"
     this.mouseFrameSampler = new DesktopMouseFrameSampler()
+    this.clientLedCameraKey = "sunracer:client-led-mouse-camera:" + root.dataset.layoutPlayerId
+    this.clientLedCameraEnabled = localStorage.getItem(this.clientLedCameraKey) === "1"
+    this.clientLedCamera = new ClientLedMouseCamera()
+    this.clientLedCameraDelta = null
     this.mouseTimingProbe = new DesktopMouseTimingProbe()
     this.lastMouseTimingReport = -Infinity
     this.mouseIdleTimer = null
@@ -851,6 +856,7 @@ class SpaceClient {
     this.selectedTargetId = null
     this.commandDestination = null
     this.mouseFrameSampler.clear()
+    this.clientLedCamera.reset()
     this.ownShipCameraReconciler.reset()
     this.entities.clear()
     this.worldStream = null
@@ -871,6 +877,7 @@ class SpaceClient {
     // Join replies are not delivered to channel.on listeners.
     this.bandwidth.record("in", "world", "join_ack", response)
     this.mapId = response.map.map_id
+    this.clientLedCamera.reset()
     this.ownShipCameraReconciler.reset()
     this.worldStream = response.stream === "delta_v1"
       ? new WorldStreamDelta(response.map) : null
@@ -1009,6 +1016,7 @@ class SpaceClient {
     // jump back and accelerate forward again on each 100ms tick.
     const beforeTickVisual = existing && id === this.selfId &&
       fromWorldTick && acceptPose && !snap
+      && !this.clientLedCameraActiveForTick()
       ? this.predictOwnShip(existing, authoritativeAt)?.orientation : null
 
     if (existing) {
@@ -1112,6 +1120,17 @@ class SpaceClient {
     }
 
     if (id === this.selfId) {
+      // Server state remains canonical, but should not rewind the local
+      // cockpit while the pilot is actively controlling the visual camera.
+      // A major discrepancy still forces a real correction.
+      if (fromWorldTick && this.clientLedCameraActiveForTick() && orientation) {
+        this.clientLedCameraDelta = this.clientLedCamera.divergenceDegrees(orientation)
+        if (this.clientLedCamera.shouldSnap(orientation)) {
+          this.clientLedCamera.reset()
+          existing.renderOrientation = {...orientation}
+        }
+      }
+      if (snap || entity.status === "destroyed") this.clientLedCamera.reset()
       if (beforeTickVisual) {
         const freshPredicted = this.predictOwnShip(existing, authoritativeAt,
           {uncorrected: true})?.orientation
@@ -1774,6 +1793,7 @@ class SpaceClient {
     const wasDocked = this.docked
     if (wasDocked && !docked) this.stationWalking?.release()
     this.docked = Boolean(docked)
+    if (this.docked) this.clientLedCamera.reset()
     if (!this.docked) this.stationPosition = null
     if (this.docked) this.clearDockingCountdown()
     const panel = this.root.querySelector("#starbase-docked-panel")
@@ -2206,6 +2226,19 @@ class SpaceClient {
     const positionBlend = 1 - Math.exp(-deltaSeconds / 0.085)
     const pointerLocked = this.mouseSteeringEnabled &&
       (document.pointerLockElement === this.canvas || this.mouseFallback)
+    const own = this.entities.get(this.selfId)
+    const localCameraActive = this.clientLedMouseCameraActive() &&
+      Boolean(own?.orientation) && !own?.destination
+    if (localCameraActive) {
+      if (!this.clientLedCamera.active) {
+        this.clientLedCamera.begin(
+          own.renderOrientation || own.orientation, own.angularVelocity)
+      }
+      this.clientLedCamera.advance(this.flightControls.axes(), deltaSeconds,
+        {mouseMode: this.flightControls.mouseMode})
+    } else if (this.clientLedCamera.active) {
+      this.clientLedCamera.reset()
+    }
     const now = performance.now()
     // Record what the pilot is commanding so prediction can replay it.
     if (!this.flightInputHistory) this.flightInputHistory = new InputHistory()
@@ -2220,6 +2253,12 @@ class SpaceClient {
       if (predicted) {
         smoothEntityPresentation(entity, deltaSeconds,
           PREDICTED_OWN_SHIP_SETTLE_SECONDS, predicted)
+        if (localCameraActive && entity.id === this.selfId &&
+            this.clientLedCamera.active) {
+          // The pilot's view must follow LOCAL input immediately. Applying
+          // another 45ms camera settle would recreate perceived latency.
+          entity.renderOrientation = {...this.clientLedCamera.orientation}
+        }
         continue
       }
       // The local pointer-lock camera should not trail far behind the last
@@ -2268,18 +2307,33 @@ class SpaceClient {
     if (entity.id !== this.selfId || entity.destination || !entity.orientation ||
         !Number.isFinite(entity.authoritativeAt) || !this.flightControls?.active()) return null
     const seconds = Math.max(0, (now - entity.authoritativeAt) / 1000)
-    const predictedOrientation = predictOrientation(entity.orientation,
+    const predictedOrientation = this.clientLedCameraActiveForTick()
+      ? this.clientLedCamera.orientation
+      : predictOrientation(entity.orientation,
       entity.angularVelocity,
       this.flightInputHistory?.entries.length
         ? this.flightInputHistory.since(entity.authoritativeAt)
         : this.flightControls.axes(),
       {mouseMode: this.flightControls.mouseMode, seconds})
     return {
-      orientation: uncorrected ? predictedOrientation :
+      orientation: uncorrected || this.clientLedCameraActiveForTick()
+        ? predictedOrientation :
         this.ownShipCameraReconciler.apply(predictedOrientation, now),
       target: predictPosition(entity.target, entity.velocity, seconds),
       positionSettleSeconds: PREDICTED_OWN_SHIP_SETTLE_SECONDS,
     }
+  }
+
+  clientLedMouseCameraActive() {
+    return this.clientLedCameraEnabled && this.mouseSteeringEnabled &&
+      (document.pointerLockElement === this.canvas || this.mouseFallback) &&
+      Boolean(this.flightControls?.active()) &&
+      this.flightControls?.mouseMode === true && !this.docked &&
+      !this.navComputer?.isOpen
+  }
+
+  clientLedCameraActiveForTick() {
+    return this.clientLedMouseCameraActive() && this.clientLedCamera.active
   }
 
   setupDesktopVrOnlyControl() {
@@ -2618,6 +2672,16 @@ class SpaceClient {
     }
     for (const toggle of toggles) toggle.checked = this.mouseSteeringEnabled
     syncSensitivity()
+    const localCamera = this.root.querySelector("#cockpit-client-led-mouse-camera")
+    if (localCamera) {
+      localCamera.checked = this.clientLedCameraEnabled
+      localCamera.addEventListener("change", () => {
+        this.clientLedCameraEnabled = localCamera.checked
+        localStorage.setItem(this.clientLedCameraKey, localCamera.checked ? "1" : "0")
+        this.clientLedCamera.reset()
+        this.ownShipCameraReconciler.reset()
+      })
+    }
     const frameSampling = this.root.querySelector("#cockpit-mouse-frame-sampling")
     if (frameSampling) {
       frameSampling.checked = this.mouseFrameSamplingEnabled
@@ -2740,6 +2804,7 @@ class SpaceClient {
       // Use the faster mouse-only angular rate profile on the server ONLY
       // during pointer capture, reverting when the cursor is released.
       if (!captured) {
+        this.clientLedCamera.reset()
         this.mouseFrameSampler.clear()
         this.mouseSteering.release()
         this.flightControls.clearMouseSteering({silent: true})
@@ -2786,7 +2851,11 @@ class SpaceClient {
     panel.textContent = (this.mouseFrameSamplingEnabled ? "FRAME-SAMPLED" : "EVENT-DRIVEN") +
       " · " + captured + " · mouse gap p95 " + fmt(stats.mouseP95Ms) +
       " · frame gap p95 " + fmt(stats.frameP95Ms) +
-      " · server camera corrections " + stats.serverCorrections + "/s"
+      " · server camera corrections " + stats.serverCorrections + "/s" +
+      (this.clientLedCameraEnabled ? " · CLIENT CAMERA" +
+        (Number.isFinite(this.clientLedCameraDelta)
+          ? " · server diff " + this.clientLedCameraDelta.toFixed(1) + "°"
+          : "") : "")
   }
 
   mouseSteeringMessage(message) {
@@ -2812,6 +2881,7 @@ class SpaceClient {
   }
 
   exitMouseSteering({silent = false} = {}) {
+    this.clientLedCamera.reset()
     this.mouseFrameSampler.clear()
     this.mouseFallback = false
     this.mouseFallbackPoint = null
