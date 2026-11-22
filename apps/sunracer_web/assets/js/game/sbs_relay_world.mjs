@@ -6,7 +6,7 @@ const MAX_BYTES = 256 * 1024
 // This delay applies only to the laptop -> S21 LAN publisher. It does not
 // change the authoritative Phoenix/EC2 tick or create new remote traffic.
 // Keep one latest map instead of a queue; prioritize timely HMD frames.
-export const WORLD_INTERVAL_MS = 60
+export const WORLD_INTERVAL_MS = 32
 const entityScalar = [
   "id", "kind", "npc_type_id", "ship_class", "display_name", "status",
   "angle", "throttle", "flight_mode", "target_id", "hull", "max_hull",
@@ -33,7 +33,30 @@ const object = (value, keys) => {
   return out
 }
 
-export function projectSbsRelayWorld(map) {
+// Presentation-only own-ship pose; it never updates simulation state or
+// changes server-owned entity orientation. It is scoped to the current map.
+export function projectLocalVisualPose(map, pose) {
+  if (!pose || !map?.entities?.some(entity =>
+    entity?.id != null && String(entity.id) === String(pose.id))) return null
+  const coordinate = v => Number.isFinite(v) && Math.abs(v) <= 1e12
+  const pos = pose.position_3d
+  const rotation = pose.orientation
+  if (!pos || !rotation ||
+      !["x", "y", "z"].every(axis => coordinate(pos[axis])) ||
+      !["x", "y", "z", "w"].every(axis => coordinate(rotation[axis]))) return null
+  const norm = Math.hypot(rotation.x, rotation.y, rotation.z, rotation.w)
+  if (norm < 0.9 || norm > 1.1) return null
+  return {
+    id: pose.id,
+    position_3d: {x: pos.x, y: pos.y, z: pos.z},
+    orientation: {
+      x: rotation.x / norm, y: rotation.y / norm,
+      z: rotation.z / norm, w: rotation.w / norm,
+    },
+  }
+}
+
+export function projectSbsRelayWorld(map, visualPose = null) {
   if (!map || typeof map !== "object" || !Number.isSafeInteger(map.tick) ||
       map.tick < 0 || typeof map.map_id !== "string" ||
       map.map_id.length > 96 || !Array.isArray(map.entities) ||
@@ -86,6 +109,8 @@ export function projectSbsRelayWorld(map) {
       .map(npc => object(npc, ["id","name","display_name","room_id",
         "x","y","z","role","station_id"]) || {})
   }
+  const visual = projectLocalVisualPose(map, visualPose)
+  if (visual) result.visual_pose = visual
   return JSON.stringify(result).length <= MAX_BYTES ? result : null
 }
 
@@ -100,8 +125,8 @@ export class SbsRelayWorldPublisher {
     this.timer = null
     this.inFlight = false
   }
-  publish(map, immediate = false) {
-    const projected = projectSbsRelayWorld(map)
+  publish(map, immediate = false, visualPose = null) {
+    const projected = projectSbsRelayWorld(map, visualPose)
     if (!projected) return
     this.pending = projected
     if (this.timer) return

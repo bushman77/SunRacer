@@ -303,6 +303,31 @@ fn pick_scalars(input: &Value, keys: &[&str]) -> Value {
 fn picked_vector(input: &Value) -> Value {
     pick_scalars(input, &["x","y","z","w","pitch","roll","yaw","room_id"])
 }
+// Native second boundary for the opt-in visual-only pose. Never accept a
+// pilot ID not present in the same sanitized world, or arbitrary nested data.
+fn sanitized_visual_pose(input: &Value, entities: &[Value]) -> Option<Value> {
+    let id = input.get("id")?;
+    if !(id.is_number() || id.is_string()) ||
+        !entities.iter().any(|entity| entity.get("id") == Some(id)) {
+        return None;
+    }
+    let pos = input.get("position_3d")?;
+    let rot = input.get("orientation")?;
+    let f = |obj: &Value, key: &str| {
+        obj.get(key).and_then(Value::as_f64)
+            .filter(|n| n.is_finite() && n.abs() <= 1e12)
+    };
+    let (x, y, z) = (f(pos, "x")?, f(pos, "y")?, f(pos, "z")?);
+    let (qx, qy, qz, qw) =
+        (f(rot, "x")?, f(rot, "y")?, f(rot, "z")?, f(rot, "w")?);
+    let norm = (qx*qx + qy*qy + qz*qz + qw*qw).sqrt();
+    if !(0.9..=1.1).contains(&norm) { return None; }
+    Some(serde_json::json!({
+        "id": id, "position_3d": {"x":x,"y":y,"z":z},
+        "orientation": {"x":qx/norm,"y":qy/norm,"z":qz/norm,"w":qw/norm},
+    }))
+}
+
 fn picked_array(input: &Value, max: usize, allowed: &[&str]) -> Value {
     Value::Array(input.as_array().map(|items| items.iter().take(max)
         .map(|item| pick_scalars(item, allowed)).collect()).unwrap_or_default())
@@ -343,6 +368,10 @@ fn sanitize_world(raw: &Value) -> Result<Value, String> {
     clean.insert("map_id".into(), Value::String(map_id.into()));
     clean.insert("tick".into(), Value::Number(tick.into()));
     clean.insert("entities".into(), Value::Array(clean_entities));
+    if let Some(pose) = raw.get("visual_pose")
+        .and_then(|pose| sanitized_visual_pose(pose, &clean_entities)) {
+        clean.insert("visual_pose".into(), pose);
+    }
     if let Some(value) = raw.get("tick_ms") {
         if value.is_number() {clean.insert("tick_ms".into(), value.clone());}
     }
@@ -602,6 +631,24 @@ mod tests {
         })).is_err());
     }
 
+    #[test]
+    fn local_pose_is_numeric_scoped_and_never_mixes_private_fields() {
+        let entities = vec![serde_json::json!({"id":3,"kind":"pilot"})];
+        let valid = serde_json::json!({
+            "id":3,"position_3d":{"x":1.0,"y":2.0,"z":3.0},
+            "orientation":{"x":0.0,"y":0.0,"z":0.0,"w":1.0},
+            "secret":"DO_NOT_RELAY"
+        });
+        let pose = sanitized_visual_pose(&valid, &entities).unwrap();
+        assert!(pose.get("secret").is_none());
+        assert_eq!(pose["position_3d"]["x"], 1.0);
+        assert!(sanitized_visual_pose(&serde_json::json!({"id":4,
+            "position_3d":valid["position_3d"],
+            "orientation":valid["orientation"]}), &entities).is_none());
+        assert!(sanitized_visual_pose(&serde_json::json!({"id":3,
+            "position_3d":valid["position_3d"],
+            "orientation":{"x":0,"y":0,"z":0,"w":0}}), &entities).is_none());
+    }
     #[test]
     fn listener_accepts_only_explicit_private_addresses() {
         for ip in ["8.8.8.8", "127.0.0.1", "0.0.0.0", "169.254.1.10"] {

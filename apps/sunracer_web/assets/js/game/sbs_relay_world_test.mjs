@@ -1,6 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
-import {projectSbsRelayWorld, SbsRelayWorldPublisher, WORLD_INTERVAL_MS} from "./sbs_relay_world.mjs"
+import {projectSbsRelayWorld, projectLocalVisualPose,
+  SbsRelayWorldPublisher, WORLD_INTERVAL_MS} from "./sbs_relay_world.mjs"
 
 const map = () => ({
   map_id: "sol:free_earth", tick: 102, tick_ms: 100,
@@ -21,7 +22,7 @@ const map = () => ({
 })
 
 test("LAN snapshot updates favor responsiveness without altering EC2 subscription", () => {
-  assert.equal(WORLD_INTERVAL_MS, 60)
+  assert.equal(WORLD_INTERVAL_MS, 32)
   const publisher = new SbsRelayWorldPublisher({invoke: () => null})
   assert.equal(publisher.delay, WORLD_INTERVAL_MS)
   publisher.clear()
@@ -65,4 +66,39 @@ test("publisher coalesces changes and uses ONLY the local native command", async
   assert.equal(calls.length, 2)
   assert.equal(calls[1].payload.world.tick, 104)
   publisher.clear()
+})
+
+test("local predicted pose is scoped to same authoritative map and strips nonvisual data", () => {
+  const input = map()
+  const pose = {
+    id: 12,
+    orientation: {x: 0, y: 0.5, z: 0, w: Math.sqrt(0.75)},
+    position_3d: {x: 11, y: 2, z: 3},
+    credential: "UNSAFE", inventory: [{part: "private"}],
+  }
+  const projected = projectSbsRelayWorld(input, pose)
+  assert.deepEqual(projected.visual_pose, {
+    id: 12, orientation: pose.orientation, position_3d: pose.position_3d,
+  })
+  assert.equal(JSON.stringify(projected).includes("UNSAFE"), false)
+  assert.equal(projectLocalVisualPose(input, {...pose, id: 999}), null)
+  assert.equal(projectLocalVisualPose(input, {...pose, orientation: {x: 0, y: 0, z: 0, w: 0}}), null)
+  assert.equal(projectLocalVisualPose(input, {...pose, position_3d: {x: Infinity, y: 0, z: 0}}), null)
+})
+
+test("coalesced publisher retains latest visual pose without allocating a frame queue", async () => {
+  const calls = []
+  const p = new SbsRelayWorldPublisher({
+    invoke: () => async (_command, {world}) => calls.push(world),
+    delay: 10,
+  })
+  const pose = x => ({id: 12, position_3d: {x, y: 1, z: 1},
+    orientation: {x: 0, y: 0, z: 0, w: 1}})
+  p.publish(map(), false, pose(1))
+  p.publish(map(), false, pose(2))
+  p.publish(map(), false, pose(3))
+  await new Promise(resolve => setTimeout(resolve, 35))
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].visual_pose.position_3d.x, 3)
+  p.clear()
 })
