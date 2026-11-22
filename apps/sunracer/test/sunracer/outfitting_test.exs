@@ -99,6 +99,7 @@ defmodule Sunracer.OutfittingTest do
     assert fitted.combat.max_hull == initial.max_hull
     assert fitted.outfitting.configurations |> hd() |> Map.get(:stats) |> Map.get(:damage) == 15
     assert Inventory.laser_count(pilot.id, "beryl") == 0
+    assert Map.fetch!(:sys.get_state(map_pid).docked_ships, pilot.id).damage == 15
 
     # Fitting the inactive second configuration does not alter live shield capacity.
     assert {:ok, inactive} = GameWorld.outfitting_fit(session.id, 2, "generator", 0, "sg1")
@@ -106,9 +107,16 @@ defmodule Sunracer.OutfittingTest do
     assert Enum.at(inactive.outfitting.configurations, 1).stats.shields == 1_000
     assert Inventory.equipment_count(pilot.id, "sg1") == 0
 
-    assert {:ok, shielded} = GameWorld.outfitting_fit(session.id, 1, "generator", 0, nil)
+    assert {:ok, _} = Inventory.add_equipment(pilot.id, "sg2", 1)
+    assert {:ok, shielded} = GameWorld.outfitting_fit(session.id, 1, "generator", 0, "sg2")
     assert shielded.combat.hull == damaged.hull
+    assert shielded.combat.max_shields == 2_000
     assert shielded.combat.shields == 0
+    assert Map.fetch!(:sys.get_state(map_pid).docked_ships, pilot.id).max_shields == 2_000
+    assert {:ok, cleared} = GameWorld.outfitting_fit(session.id, 1, "generator", 0, nil)
+    assert cleared.combat.max_shields == 0
+    assert cleared.combat.hull == damaged.hull
+    assert Inventory.equipment_count(pilot.id, "sg2") == 1
     assert {:ok, removed} = GameWorld.outfitting_fit(session.id, 1, "laser", 0, nil)
     assert removed.combat.hull == damaged.hull
     assert Inventory.laser_count(pilot.id, "beryl") == 1
