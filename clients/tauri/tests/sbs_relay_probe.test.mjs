@@ -117,3 +117,16 @@ test("Rust dependency versions are pinned to existing lockfile-compatible versio
   assert.match(cargo, /ring = "0\.17"/)
   assert.match(cargo, /tokio = \{ version = "1\.54"/)
 })
+
+test("authenticated LAN stream wakes on publish without 100ms polling delay", () => {
+  // A subscriber is registered before checking the current frame, so no
+  // publication can be lost between the read and the awaited notification.
+  assert.match(native, /updated: Notify/)
+  assert.match(native, /updated: Notify::new\(\)/)
+  assert.match(native, /shared\.updated\.notify_waiters\(\)/)
+  assert.match(native, /let notified = shared\.updated\.notified\(\)/)
+  assert.match(native, /notified\.as_mut\(\)\.enable\(\)/)
+  assert.match(native, /tokio::time::timeout\(remaining, &mut notified\)/)
+  assert.doesNotMatch(native, /sleep\(Duration::from_millis\(100\)\)/)
+  assert.match(native, /Duration::from_secs\(4\)\.saturating_sub\(started\.elapsed\(\)\)/)
+})
