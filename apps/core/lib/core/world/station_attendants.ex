@@ -67,13 +67,13 @@ defmodule Core.World.StationAttendants do
     %{
       id: "missions", room_id: "mission_office", name: "Juno Rook",
       role: "Mission Liaison", x: -16.0, z: -211.0, color: 0x8ca8dd,
-      greeting: "Mission Office. You'll find contracts and assignments here once they are authorized by the station.",
+      greeting: "Mission Office. Juno Rook here. Finish your current story assignment before we discuss any further contracts.",
       topics: [
         %{id: "contracts", label: "Do you have any assignments?"},
         %{id: "rewards", label: "How are rewards handled?"}
       ],
       responses: %{
-        "contracts" => "Mission listings are not live yet. When they are, you'll be able to review objectives and accept an authorized contract here.",
+        "contracts" => "We'll finish the First Run and subsequent storyline one assignment at a time. Extra contracts are not live yet. All future missions must be issued through NPC dialogue here; a station approach doesn't authorize them.",
         "rewards" => "Bounties and mission rewards must be credited by the server after the objectives are verified. No reward can be claimed through dialogue alone."
       }
     },

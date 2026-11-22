@@ -12,6 +12,7 @@ SunRacer gets an original story set entirely in the Solar System, and its prolog
 
 - **Every step is server-verified.** A step advances only when the server confirms the pilot did it (docked, arrived, won the fight). Nothing advances on a client claim, matching how cargo, combat and docking already work.
 - **One prompt at a time.** A single short instruction in the cockpit HUD, also drawn in the headset's stereo HUD.
+- **NPC-issued missions only.** The HUD tracks objectives; it does not assign work. Docking proximity never offers a mission. The First Run begins with explicit contact with Dispatcher Halden Ross on ship comms. Juno Rook handles in-person story dialogue at Green Starbase.
 - **Skippable.** Veteran pilots can skip the tutorial prompts; the story stays available later.
 - **Scripted opening, real world.** Only the prologue's key moments are staged. Traffic, routes and the economy around it are the live simulation.
 - **Original IP.** Inspired by how Space Rogue (1989) wove jobs into a story, but no names, plot or factions taken from it. (The starter ship's name, Sunracer, matches Space Rogue's scout class; it is kept deliberately as a nod.)
@@ -48,7 +49,7 @@ Your first solo Helios delivery, Earth to Mars, goes wrong in a way that teaches
 | # | Story beat | Pilot does | Teaches | Trigger (server) | Exists today? |
 | --- | --- | --- | --- | --- | --- |
 | 1 | You undock your Sunracer from the Earth dock; Dispatcher Ross runs your systems check | Throttle up, steer, try mouse look | Flight, cockpit HUD | Flight controls received with throttle and rotation input | Flight yes; step tracking no |
-| 2 | Your consignment is loaded: 3 crates of medical supplies for the Mars refinery | Check the cargo hold | Cargo | Mission accepted; server adds the crates | Cargo yes; missions no |
+| 2 | Dispatcher Ross offers 3 crates of medical supplies over ship comms | Contact his NPC and explicitly accept the Mars delivery | NPC dialogue, cargo | Authenticated contact and server-verified acceptance load the crates | Implemented |
 | 3 | Ross clears you for Mars | Open the Atlas, plot Earth to Mars, start cruise | Navigation, cruise | Voyage status becomes traveling to Mars | Yes |
 | 4 | Vesper-02 passes close and Captain Varga hails you | Hail, then Resume | Encounter hold | Hail or resume on that encounter | Hold yes; staging it for this pilot no |
 | 5 | Eno Kade relays a distress call: raiders have Vesper-02 pinned near the Green Starbase | Attack the raider, aim with the sight | Combat, aiming | Tactical encounter starts against the staged raider | Combat yes; staged raider no |
@@ -63,7 +64,7 @@ Your first solo Helios delivery, Earth to Mars, goes wrong in a way that teaches
 
 **1. The Earth dock.** You've just earned your Helios wings, and the Sunracer is the cheapest ship the Cooperative would lease you. Dispatcher Ross is dry and patient: undock, bring the throttle up, swing the nose around, try the mouse look. He's done this with a hundred new pilots and sounds like it.
 
-**2. The consignment.** Three crates of medical supplies for the Mars refinery: routine, low pay, the run every new courier starts on. Ross tells you to check the hold, because the crates have to arrive with you.
+**2. The consignment.** Three crates of medical supplies for the Mars refinery: routine, low pay, the run every new courier starts on. After the flight check, the cockpit provides an objective to contact Dispatcher Halden Ross. The pilot explicitly opens the NPC dialogue and accepts Ross's assignment; only then does the server load crates. The old HUD acceptance is removed. No station-approach mission offer exists.
 
 **3. Clearance.** You open the Atlas, plot Earth to Mars, and engage cruise. Ross signs off: "Quiet lane today. Enjoy it."
 
@@ -103,7 +104,7 @@ Juno Rook spots it during the debrief at step 8 and asks you to keep it quiet. C
 2. **Asteroid belt and Jupiter:** the raiders' supply side. Bounties and combat.
 3. **Outer system:** why someone wants Helios out of the outer routes. A thread for the Survey Consortium and the Outer Rim Trading Guild.
 
-Between story beats, repeatable side jobs (courier runs, bounties, paid tips on real ships) keep credits flowing, the way trading did in Space Rogue.
+Repeatable side jobs (courier runs, bounties and tips) are **deferred** until the current storyline is completed, reviewed and explicitly opened for expansion. The first implementation pass is the First Run; mission office contracts remain offline.
 
 ## Systems to build
 
@@ -113,7 +114,7 @@ Five new server pieces make the prologue playable; everything else it uses alrea
 2. **Tutorial prompts and comms.** One short in-character line per step from the dispatcher or station staff, shown in the cockpit HUD and in the headset's stereo HUD. Text only. A skip option on first launch.
 3. **Credits payout.** The first thing in the game that earns credits: a delivery reward with a once-only receipt, following the existing cargo-claim pattern. Also covers the license flag and the Helios standing gain.
 4. **Staged encounters for one pilot.** Force the Vesper-02 close pass at step 4, and spawn one raider (Corsair-17) at step 5 with surrender set up to happen. Only for a pilot on that step; the live game's raider settings stay untouched.
-5. **Mission Office actions.** Juno Rook's dialogue gains real topics driven by story state (debrief, the data chip, Chapter 1).
+5. **Mission Office actions.** Juno Rook's dialogue gains real topics driven by story state (debrief, the data chip, Chapter 1). All future offers will be initiated and accepted via authenticated NPC dialogue, not station proximity.
 
 Not needed for the prologue: real repair transactions (step 8 can patch the hull as a scripted story reward), hostile raiders in the live game, and interceptions.
 
@@ -122,6 +123,8 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 **Decided (Brad, 2026-11-21):**
 
 - The pilot starts in the Sunracer at the Earth dock.
+- All missions are issued through explicit NPC dialogue. The First Run is accepted from Earth-orbit dispatcher Ross over comms, while Juno Rook remains the Green Starbase liaison.
+- Story missions are developed and verified one at a time until completion. Other or repeatable missions remain out of scope for this story-first milestone.
 - Placeholder names approved: Halden Ross, Ines Varga, Corsair-17.
 - If the pilot dies, the normal respawn at Earth happens and the quest carries on.
 - If Vesper-02 is destroyed, that part of the quest is redone.
@@ -145,7 +148,7 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 - `Sunracer.Story`: applies the engine under a `story_progress` row lock. Crates, credits, the `story_rewards` receipt and the faction event commit with the step change; staging, the hull patch and the cached standing run after commit.
 - `Core.Universe.StoryTraffic` plus `Navigation.stage_story_contact/3` and `clear_story_contacts/2` (apps/core): the private Vesper-02 and Corsair-17. Core stays database-free.
 - Hooks: `Sunracer.World` (hail, resolve, tactical start and finish, station talk, story actions) and `SunracerWeb.WorldChannel` (accepted flight commands, the pilot's own navigation snapshots, docking). The channel pre-filters with the engine so high-rate events skip the database.
-- Client: `story_hud.mjs` (cockpit card `#story-comms`), the stereo HUD objective line, and `helmet_story` for the phone headset.
+- Client: `story_hud.mjs` (cockpit objective card `#story-comms`), the stereo HUD objective line, and `helmet_story` for the phone headset. Ross issues the assignment via `story_dispatch_offer` and `story_dispatch_accept`, with a separate NPC dialogue; the generic `story_action: accept_consignment` is rejected.
 
 **Design changes made while building.**
 
@@ -157,7 +160,7 @@ Not needed for the prologue: real repair transactions (step 8 can patch the hull
 - **Timing.** Vesper-02 closes in once the Earth–Mars cruise passes 12%. The distress call fires when the pilot cruises within 2.5 million game-km of the Green Starbase, in either direction. After a failed rescue it waits for a later voyage.
 - **Skip** pauses the whole prologue (no staging, no prompts); *Resume story* continues from the same step.
 
-**Not built yet.** The gear shop (Ilya Quill), Chapter 1, and a manual play-through.
+**Not built yet.** Chapter 1, non-story missions, and a documented end-to-end manual First Run play-through. Ilya Quill now has a credit-priced shop.
 
 **Known gap in the step 6 fight (2026-11-21).** Corsair-17 bee-lines at the
 pilot and has no tactical states, so once the pilot establishes the 420-540 gap
