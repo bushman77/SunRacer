@@ -97,6 +97,7 @@ on:
       - "apps/sunracer_web/assets/js/game/stereo_view.js"
       - "apps/sunracer_web/assets/js/game/cockpit_mode_icons*.mjs"
       - "apps/sunracer_web/assets/js/game/cockpit_mode_layout*.mjs"
+      - "apps/sunracer_web/assets/js/game/helmet_mode_gaze*.mjs"
       - "apps/sunracer_web/assets/js/game/stereo_layout.mjs"
       - "apps/sunracer_web/assets/js/game/stereo_layout_test.mjs"
       - "apps/sunracer_web/assets/css/app.css"
@@ -173,6 +174,7 @@ jobs:
           node --check apps/sunracer_web/assets/js/game/stereo_view.js
           node --test apps/sunracer_web/assets/js/game/cockpit_mode_icons_test.mjs
           node --test apps/sunracer_web/assets/js/game/cockpit_mode_layout_test.mjs
+          node --test apps/sunracer_web/assets/js/game/helmet_mode_gaze_test.mjs
           node --test apps/sunracer_web/assets/js/game/helmet_mode_icon_test.mjs
           node --test apps/sunracer_web/assets/js/game/helmet_gaze_integration_test.mjs
       - name: Test SOL cruise and headless free-flight

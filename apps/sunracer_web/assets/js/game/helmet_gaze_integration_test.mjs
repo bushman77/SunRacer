@@ -256,19 +256,23 @@ test("the flight mode icon is an intent relayed to the laptop, not a command", (
   const flight = js("./flight_controls.mjs")
 
   // The headset asks over its own channel and never sends flight controls.
-  assert.match(helmet, /old\.push\("helmet_action", \{action: "toggle_flight_mode"\}/)
+  assert.match(helmet, /old\.push\("helmet_action", \{action\}, 5_000\)/)
   assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"/)
-  assert.match(view, /if \(target === this\.helmetModeIcons\?\.\[inactiveMode\]\) return "flight_mode"/)
+  assert.match(view, /this\.helmetModeHitboxes = \{\}/)
+  assert.match(view, /return modeGazeTarget\(requestedMode\)/)
+  assert.match(helmet, /requestFlightModeSelection\(modeForGazeTarget\(update\.activated\)\)/)
 
   // The server relays a name from an allowlist, only while in the cockpit.
   assert.match(channel, /def handle_in\("helmet_action", %\{"action" => action\}/)
-  assert.match(manager, /@gaze_actions ~w\(toggle_flight_mode\)/)
+  assert.match(manager, /@gaze_actions ~w\(toggle_flight_mode select_cruise_mode select_newtonian_mode\)/)
   assert.match(manager, /def gaze_action\(_player_id, _action\), do: \{:error, :unknown_action\}/)
   assert.match(manager, /Map\.get\(state\.modes, player_id\) == :combat/)
 
   // The laptop applies it through the same control the keyboard drives.
   assert.match(control, /this\.channel\.on\("helmet_gaze_action"/)
   assert.match(laptop, /if \(action === "toggle_flight_mode"\) this\.flightControls\?\.toggleMode\(\)/)
+  assert.match(laptop, /if \(action === "select_cruise_mode"\) this\.flightControls\?\.setMode\("cruise"\)/)
+  assert.match(laptop, /if \(action === "select_newtonian_mode"\) this\.flightControls\?\.setMode\("newtonian"\)/)
   assert.match(flight, /toggleMode\(\) \{/)
   assert.match(flight, /if \(!event\.repeat\) this\.toggleMode\(\)/)
 })

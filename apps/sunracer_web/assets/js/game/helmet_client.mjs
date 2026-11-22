@@ -869,17 +869,18 @@ export class HelmetClient {
     if (!action || this.modePending || this.channel?.state !== "joined") return
     const current = this.entities.get(this.selfId)?.flightMode
     if (current !== "cruise" && current !== "newtonian") return
-    if (mode === current) {
-      this.gaze.reset()
-      return
-    }
+    // Selecting the already-active mode is harmless. Leave the dwell latch
+    // engaged until the pilot looks away: resetting it here would make a
+    // stationary gaze repeatedly "click" a selected control.
+    if (mode === current) return
     this.modePending = true
     this.updateModeIcon()
     const old = this.channel
     const settle = (reason = null) => {
       if (this.channel !== old) return
       this.modePending = false
-      this.gaze.reset()
+      // Don't reset gaze on acknowledgement. The same held gaze must not
+      // dispatch another command before the world confirms the new mode.
       this.updateModeIcon()
       if (reason) this.message("Flight mode switch unavailable: " + reason)
     }

@@ -31,7 +31,9 @@ test("resize repositions physical 3D icons to match scaled cockpit HUD", () => {
   assert.match(view, /button\.position\.set\(pos\.x, pos\.y, pos\.z\)/)
   assert.doesNotMatch(view, /button\.position\.set\(x, -0\.52, -2\.36\)/)
   assert.match(view, /const inactiveMode = this\.helmetModeCurrent === "cruise"/)
-  assert.match(view, /this\.helmetModeIcons\?\.\[inactiveMode\]/)
+  assert.match(view, /this\.helmetModeHitboxes\?\.\[mode\]/)
+  assert.match(view, /hitbox\.position\.set\(pos\.x, pos\.y, pos\.z \+ 0\.035\)/)
+  assert.doesNotMatch(view, /const inactiveMode = this\.helmetModeCurrent/)
 })
 
 test("invalid fit values don't scatter cockpit controls out of sight", () => {
