@@ -236,6 +236,17 @@ defmodule SunracerWeb.WorldChannel do
     end
   end
 
+  def handle_in("station_outfitting_purchase", %{"item_id" => item_id}, socket)
+      when is_binary(item_id) do
+    case World.outfitting_purchase(socket.assigns.world_session_id, item_id) do
+      {:ok, receipt} -> {:reply, {:ok, receipt}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in("station_outfitting_purchase", _payload, socket),
+    do: {:reply, {:error, %{reason: "invalid_purchase"}}, socket}
+
   def handle_in("station_outfitting", _payload, socket) do
     case World.outfitting_snapshot(socket.assigns.world_session_id) do
       {:ok, view} -> {:reply, {:ok, %{outfitting: view}}, socket}

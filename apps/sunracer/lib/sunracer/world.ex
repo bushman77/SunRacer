@@ -223,6 +223,19 @@ defmodule Sunracer.World do
     end
   end
 
+  @doc "Purchase one listed equipment item, charging the authenticated account."
+  def outfitting_purchase(session_id, item_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
+      active = active_configuration(session.player_id)
+      Simulation.station_purchase(session_id, fn %{ship_instance_id: ship_id} ->
+        Sunracer.Outfitting.purchase(session.player_id, ship_id, active, item_id)
+      end)
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+
   @doc "Apply a fitted item while MapServer serializes dock, walk and launch."
   def outfitting_fit(session_id, config, kind, slot, item_id) do
     with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do

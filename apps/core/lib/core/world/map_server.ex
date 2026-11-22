@@ -96,6 +96,11 @@ defmodule Core.World.MapServer do
       when is_function(callback, 1),
       do: call_map(registry, map_id, {:station_refit, session_id, entity_id, callback})
 
+  @doc "Execute a docked outfitter purchase while server-owned proximity remains valid."
+  def station_purchase(registry, map_id, session_id, entity_id, callback)
+      when is_function(callback, 1),
+      do: call_map(registry, map_id, {:station_purchase, session_id, entity_id, callback})
+
   @doc """
   Restore a parked ship's hull and shields (the prologue's scripted patch at
   Mara Venn's bench). Server-only; never exposed as a socket command.
@@ -448,6 +453,20 @@ defmodule Core.World.MapServer do
       with {:ok, ship} <- parked_station_ship(state, session_id, entity_id) do
         pose = Map.get(state.station_avatars, entity_id, StationInterior.initial())
         StationAttendants.talk(pose, ship, attendant_id, topic)
+      end
+    {:reply, result, state}
+  end
+
+  def handle_call({:station_purchase, session_id, entity_id, callback}, _from, state) do
+    result =
+      with {:ok, ship} <- parked_station_ship(state, session_id, entity_id),
+           pose <- Map.get(state.station_avatars, entity_id, StationInterior.initial()),
+           {:ok, _} <- StationAttendants.talk(pose, ship, "outfitting", "greeting"),
+           %{status: :alive} <- ship do
+        callback.(player_ship_report(ship, state))
+      else
+        %{status: :destroyed} -> {:error, :ship_not_alive}
+        error -> error
       end
     {:reply, result, state}
   end

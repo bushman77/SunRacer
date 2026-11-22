@@ -46,7 +46,7 @@ defmodule Core.World.StationAttendants do
         %{id: "fitting", label: "How do fittings work?"}
       ],
       responses: %{
-        "console" => "Opening the authenticated outfitting console. Bring owned lasers, speed generators, or shield generators; purchases are not yet active.",
+        "console" => "Opening the authenticated outfitting console. Bring owned lasers, speed generators, or shield generators; purchases are made at the outfitting counter using verified credits.",
         "equipment" => "I can fit gear you already own: lasers, shield generators, and speed generators. Your ship's hardpoints determine how many are available.",
         "fitting" => "Both configurations are saved separately. I check berth, station position, inventory ownership, and each hull's hardpoint capacity before installing or removing gear."
       }

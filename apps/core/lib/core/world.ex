@@ -96,6 +96,15 @@ defmodule Core.World do
     end
   end
 
+  @doc "Trusted purchase callback, serialized against dock and station movement."
+  def station_purchase(session_id, callback, opts \\ []) when is_function(callback, 1) do
+    with {:ok, session} <- fetch_session(
+           Keyword.get(opts, :sessions, SessionManager), session_id) do
+      MapServer.station_purchase(Keyword.get(opts, :registry, Core.World.Registry),
+        session.map_id, session.id, session.entity_id, callback)
+    end
+  end
+
   @doc "Trusted station fitting callback, serialized by the authoritative map process."
   def station_refit(session_id, callback, opts \\ []) when is_function(callback, 1) do
     with {:ok, session} <- fetch_session(

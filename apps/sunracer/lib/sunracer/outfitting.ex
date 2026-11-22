@@ -5,10 +5,14 @@ defmodule Sunracer.Outfitting do
   The map process locks the parked hull for each mutation.
   """
 
+  import Ecto.Query, warn: false
+
   alias Core.Equipment.Catalog, as: Equipment
   alias Core.Ships.Catalog, as: Ships
   alias Core.Ships.Stats
   alias Sunracer.{Fleet, Inventory, Loadouts, Repo, ShipCondition, ShipStats}
+  alias Sunracer.Accounts.PlayerAccount
+  alias Sunracer.Outfitting.Shop
 
   @spec snapshot(pos_integer(), pos_integer(), 1 | 2) :: {:ok, map()} | {:error, term()}
   def snapshot(player_id, ship_id, active) do
@@ -26,7 +30,10 @@ defmodule Sunracer.Outfitting do
         end)
         |> Enum.filter(&(&1.quantity > 0))
 
+      account = Repo.get(PlayerAccount, player_id)
       {:ok, %{
+        credits: account.credits,
+        shop: Shop.stock(),
         ship: %{id: ship.ship_id, name: definition.name,
           laser_slots: definition.laser_slots,
           generator_slots: definition.generator_slots},
@@ -52,6 +59,36 @@ defmodule Sunracer.Outfitting do
         kind: kind, slot: slot, item_id: item_id, configuration: config}}
     end
   end
+
+  @doc """
+  Purchase exactly one catalogued item at the authoritative credit price.
+  Locking the account row serializes concurrent purchases, while both the
+  credit debit and inventory addition commit (or roll back) together.
+  """
+  def purchase(player_id, ship_id, active, item_id) when is_binary(item_id) do
+    Repo.transaction(fn ->
+      with {:ok, _ship} <- owned_ship(player_id, ship_id),
+           {:ok, %{price: price, name: name}} <- Shop.quote(item_id),
+           %PlayerAccount{} = account <- Repo.one(
+             from a in PlayerAccount, where: a.id == ^player_id, lock: "FOR UPDATE"),
+           true <- account.credits >= price,
+           {:ok, _inventory} <- Inventory.add_equipment(player_id, item_id, 1),
+           {:ok, updated_account} <- account
+             |> Ecto.Changeset.change(credits: account.credits - price)
+             |> Repo.update(),
+           {:ok, view} <- snapshot(player_id, ship_id, active) do
+        %{outfitting: view,
+          receipt: %{item_id: item_id, name: name,
+            price: price, credits_remaining: updated_account.credits}}
+      else
+        false -> Repo.rollback(:insufficient_credits)
+        nil -> Repo.rollback(:account_not_found)
+        {:error, reason} -> Repo.rollback(reason)
+        _ -> Repo.rollback(:invalid_purchase)
+      end
+    end)
+  end
+  def purchase(_, _, _, _), do: {:error, :invalid_purchase}
 
   @doc "Called only inside the authenticated MapServer station-refit callback."
   def fit(player_id, %{ship_instance_id: ship_id, combat: combat}, active,
