@@ -3,6 +3,7 @@ import assert from "node:assert/strict"
 import {
   MouseSteering, mouseSteeringAxes, MOUSE_STEERING_IDLE_MS,
   MOUSE_STEERING_FAST_STOP_MS, MOUSE_STEERING_MIN_STOP_MS,
+  MOUSE_STEERING_SAMPLE_MS,
   MOUSE_STEERING_DEFAULT_SENSITIVITY, MOUSE_STEERING_PIXELS_PER_AXIS,
   validMouseSensitivity, enabledMouseSteering,
 } from "./mouse_steering.mjs"
@@ -40,11 +41,11 @@ test("mouse filter smooths acceleration but never amplifies or delays slowdown",
   now += 8
   const steady = mouse.move(2, 0).yaw
   assert.ok(first > 0 && first < faster)
-  assert.ok(faster <= 0.3 && steady <= 0.3 && steady >= faster)
+  assert.ok(faster <= 0.6 && steady <= 0.6 && steady >= faster)
   now += 8
-  assert.deepEqual(mouse.move(1, -1), {yaw: 0.15, pitch: 0.15})
+  assert.deepEqual(mouse.move(1, -1), {yaw: 0.3, pitch: 0.3})
   now += 8
-  assert.deepEqual(mouse.move(-5, 0), {yaw: -0.75, pitch: 0})
+  assert.deepEqual(mouse.move(-5, 0), {yaw: -1, pitch: 0})
 })
 
 test("continuous 60Hz movement stops promptly instead of coasting 85ms", () => {
@@ -56,7 +57,7 @@ test("continuous 60Hz movement stops promptly instead of coasting 85ms", () => {
     assert.equal(mouse.expire(now), null)
   }
   assert.ok(mouse.stopDelayMs() >= MOUSE_STEERING_MIN_STOP_MS)
-  assert.ok(mouse.stopDelayMs() < 40)
+  assert.ok(mouse.stopDelayMs() < 55)
   now = mouse.lastMovementAt + mouse.stopDelayMs() - 1
   assert.equal(mouse.expire(now), null)
   now += 1
@@ -109,4 +110,47 @@ test("native pointer loss and long gaps reset both steering and cadence", () => 
   assert.deepEqual(mouse.move(2, 0), {yaw: 0.3, pitch: 0})
   assert.equal(mouse.packetGapMs, null)
   assert.equal(mouse.sensitivity, 1.5)
+})
+
+test("equal physical hand speed stays steady across 60, 120, and 30Hz mouse packets", () => {
+  let now = 1000
+  const mouse = new MouseSteering({now: () => now, sensitivity: 1.5})
+  // Same physical velocity: 4px / 16ms == 2px / 8ms == 8px / 32ms.
+  const axes = [mouse.move(4, 0).yaw]
+  for (const [gap, dx] of [[8, 2], [16, 4], [32, 8], [8, 2], [16, 4]]) {
+    now += gap
+    axes.push(mouse.move(dx, 0).yaw)
+  }
+  assert.equal(MOUSE_STEERING_SAMPLE_MS, 16)
+  assert.ok(axes.every(axis => Math.abs(axis - 0.6) < 1e-9),
+    "steady physical mouse velocity must not cause sawtooth steering")
+})
+
+test("a skipped 60Hz pointer event does not trigger an unintended neutral pulse", () => {
+  let now = 1000
+  const mouse = new MouseSteering({now: () => now})
+  mouse.move(4, 0)
+  now += 16
+  mouse.move(4, 0)
+  now += 48  // two mouse packets missed; no intentional stop
+  assert.equal(mouse.expire(now), null)
+  assert.ok(mouse.axes().yaw > 0)
+  now += 1
+  mouse.move(12, 0)
+  assert.ok(mouse.axes().yaw > 0)
+  now += mouse.stopDelayMs()
+  assert.deepEqual(mouse.expire(now), {yaw: 0, pitch: 0})
+})
+
+test("slowing, reversing and releasing still react immediately", () => {
+  let now = 1000
+  const mouse = new MouseSteering({now: () => now, sensitivity: 1.5})
+  mouse.move(5, -5)
+  now += 16
+  const slow = mouse.move(1, -1)
+  assert.deepEqual(slow, {yaw: 0.15, pitch: 0.15})
+  now += 16
+  assert.deepEqual(mouse.move(-2, 0), {yaw: -0.3, pitch: 0})
+  assert.deepEqual(mouse.release(), {yaw: 0, pitch: 0})
+  assert.equal(mouse.expire(now + 100), null)
 })

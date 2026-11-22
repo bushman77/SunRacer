@@ -4,6 +4,7 @@ import {
   cameraSettleSeconds,
   STANDARD_CAMERA_SETTLE_SECONDS,
   POINTER_LOCK_CAMERA_SETTLE_SECONDS,
+  PREDICTED_OWN_SHIP_SETTLE_SECONDS,
 } from "./camera_response.mjs"
 import {smoothOrientation} from "./orientation_interpolation.mjs"
 
@@ -24,4 +25,10 @@ test("fast local interpolation reduces trailing without changing the server quat
   assert.ok(Math.abs(fast.y) > Math.abs(usual.y))
   assert.ok(Math.abs(fast.y) < Math.abs(target.y))
   assert.deepEqual(target, {x: 0, y: -Math.sin(Math.PI / 12), z: 0, w: Math.cos(Math.PI / 12)})
+})
+
+test("predicted own-ship orientation keeps enough settle to hide server tick correction", () => {
+  assert.equal(PREDICTED_OWN_SHIP_SETTLE_SECONDS, 0.045)
+  assert.ok(PREDICTED_OWN_SHIP_SETTLE_SECONDS < STANDARD_CAMERA_SETTLE_SECONDS)
+  assert.ok(PREDICTED_OWN_SHIP_SETTLE_SECONDS > 0.03)
 })

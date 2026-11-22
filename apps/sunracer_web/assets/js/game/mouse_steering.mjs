@@ -6,8 +6,11 @@
 // ordinary movement. Allow a short event gap, then send ONE immediate neutral.
 // Keep cross-axis movement independent, and never coast after capture loss.
 export const MOUSE_STEERING_IDLE_MS = 85 // hard ceiling for slow native webviews
-export const MOUSE_STEERING_FAST_STOP_MS = 36
-export const MOUSE_STEERING_MIN_STOP_MS = 30
+export const MOUSE_STEERING_FAST_STOP_MS = 60
+export const MOUSE_STEERING_MIN_STOP_MS = 50
+// Normalize event packet displacement to a consistent 60Hz reference. Without
+// this, varying mouse packet rates become visible fluctuations in turn speed.
+export const MOUSE_STEERING_SAMPLE_MS = 16
 export const MOUSE_STEERING_ACCUMULATE_MS = 45
 export const MOUSE_STEERING_FILTER = 0.65
 // New pilots get a responsive baseline; existing saved preferences remain valid.
@@ -46,11 +49,12 @@ export class MouseSteering {
     this.packetGapMs = null
   }
 
-  // Adapt stop timing to real packet cadence instead of always holding full
-  // angular velocity for 85ms after the pilot stops moving.
+  // Allow occasional skipped pointer packets before neutralizing. A too-short
+  // timeout generated turn/stop/turn pulses (visible as cockpit jitter), while
+  // the hard 85ms ceiling still limits mouse overshoot.
   stopDelayMs() {
     return this.packetGapMs === null ? MOUSE_STEERING_FAST_STOP_MS :
-      clamp(this.packetGapMs * 1.35 + 12,
+      clamp(this.packetGapMs * 1.8 + 12,
         MOUSE_STEERING_MIN_STOP_MS, MOUSE_STEERING_IDLE_MS)
   }
 
@@ -61,8 +65,16 @@ export class MouseSteering {
         (deltaX === 0 && deltaY === 0)) return this.axes()
 
     const time = this.now()
-    const {yaw, pitch} = mouseSteeringAxes(deltaX, deltaY, this.sensitivity)
     const elapsed = time - this.lastMovementAt
+    // With a rate-based server control, "pixels per packet" is NOT a stable
+    // velocity: a 120Hz device gives half the delta of a 60Hz device for the
+    // same physical motion. Convert to an equivalent 16ms displacement, and
+    // bound tiny/long event gaps to avoid burst spikes and stalled motion.
+    const packetMs = elapsed > 0 && elapsed < MOUSE_STEERING_IDLE_MS
+      ? clamp(elapsed, 8, 50) : MOUSE_STEERING_SAMPLE_MS
+    const scale = MOUSE_STEERING_SAMPLE_MS / packetMs
+    const {yaw, pitch} = mouseSteeringAxes(
+      deltaX * scale, deltaY * scale, this.sensitivity)
     if (elapsed < 0 || elapsed >= MOUSE_STEERING_IDLE_MS) {
       this.yaw = 0
       this.pitch = 0
