@@ -20,6 +20,8 @@ test("desktop NPC conversation is keyboard accessible and server authorized", ()
   assert.match(markup, /id="station-npc-dialogue"/)
   assert.match(markup, /aria-modal="true"/)
   assert.match(markup, /id="station-npc-prompt"/)
+  assert.match(game, /this\.openStationOutfitting\(\)/)
+  assert.match(markup, /id="station-outfitting-panel"/)
 })
 
 test("the paired SBS viewer renders the same server-owned kiosk staff without commands", () => {

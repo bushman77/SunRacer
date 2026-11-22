@@ -78,7 +78,38 @@
       </div>
       <p id="station-npc-message" class="mt-5 min-h-20 text-sm leading-relaxed text-slate-200" aria-live="polite"></p>
       <div id="station-npc-options" class="mt-4 grid gap-2"></div>
-      <p class="mt-4 text-xs text-slate-500">Dialogue is server-authorized. No credits, cargo, or ship systems are modified here.</p>
+      <p class="mt-4 text-xs text-slate-500">Dialogue is read-only. Repairs and outfitting use separately authorized station services.</p>
+    </div>
+  </section>
+
+  <%!-- Ilya's equipment console is fed from server-owned inventory and hull limits. --%>
+  <section id="station-outfitting-panel" style="display: none" role="dialog"
+           aria-modal="true" aria-labelledby="station-outfitting-title"
+           class="pointer-events-none absolute inset-0 z-[145] items-center justify-center p-3">
+    <div class="pointer-events-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-cyan-500/60 bg-slate-950/95 p-5 font-mono text-slate-100 shadow-2xl backdrop-blur-xl">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-bold tracking-widest text-emerald-400">GREEN STARBASE · SHIP OUTFITTER</p>
+          <h2 id="station-outfitting-title" class="mt-2 text-xl font-bold">Ilya Quill / Equipment Bay</h2>
+          <p id="station-outfitting-ship" class="mt-1 text-sm text-slate-300"></p>
+        </div>
+        <button id="station-outfitting-close" type="button"
+                class="nav-button shrink-0 px-3 py-2 text-xs">Close [Esc]</button>
+      </div>
+      <p id="station-outfitting-message" class="mt-4 text-sm text-emerald-300" role="status" aria-live="polite"></p>
+      <p class="mt-5 text-xs font-bold uppercase tracking-wide text-cyan-300">Saved configurations</p>
+      <div id="station-outfitting-configs" class="mt-2 flex flex-wrap gap-2"></div>
+      <p class="mt-5 text-xs font-bold uppercase tracking-wide text-cyan-300">Configuration statistics</p>
+      <div id="station-outfitting-stats" class="mt-2 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3"></div>
+      <p class="mt-5 text-xs font-bold uppercase tracking-wide text-cyan-300">Available ship hardpoints</p>
+      <div id="station-outfitting-slots" class="mt-2 grid gap-2 sm:grid-cols-2"></div>
+      <p class="mt-5 text-xs font-bold uppercase tracking-wide text-cyan-300">Your compatible inventory</p>
+      <div id="station-outfitting-items" class="mt-2 grid max-h-36 gap-2 overflow-y-auto"></div>
+      <div id="station-outfitting-preview"
+           class="mt-5 rounded-lg border border-cyan-700/50 bg-slate-900/65 p-3 text-xs text-slate-200"></div>
+      <button id="station-outfitting-apply" type="button" disabled
+              class="nav-button nav-primary mt-3 w-full">Confirm fitting</button>
+      <p class="mt-3 text-xs text-slate-400">Only owned equipment can be installed. You can edit both saved configurations, but only the active configuration affects current flight performance. Purchasing remains unavailable.</p>
     </div>
   </section>
 

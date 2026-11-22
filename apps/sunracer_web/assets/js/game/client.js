@@ -48,6 +48,7 @@ import {ownStationWarning, stationWarningView} from "./station_warning.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
 import {StationWalkingControls} from "./station_walking_controls.mjs"
 import {nearestStationAttendant} from "./station_attendants.mjs"
+import {StationOutfittingPanel} from "./station_outfitting_panel.mjs"
 import {validOrbitalMapId, shouldEnterOrbitalRegion} from "./orbital_regions.mjs"
 import {tacticalEncounterAction} from "./solar_encounter_actions.mjs"
 
@@ -120,6 +121,7 @@ class SpaceClient {
     this.stationPosition = null
     this.stationAttendants = []
     this.stationNpcDialogOpen = false
+    this.outfittingPanel = null
     this.stationNpcId = null
     this.stationNpcBusy = false
     this.stationNpcRequestSeq = 0
@@ -427,6 +429,21 @@ class SpaceClient {
       () => this.requestStarbaseDock())
     this.root.querySelector("#starbase-launch")?.addEventListener("click",
       () => this.launchFromStarbase())
+    this.outfittingPanel = new StationOutfittingPanel({
+      root: this.root.querySelector("#station-outfitting-panel"),
+      preview: (payload, done) =>
+        this.sendStationOutfitting("station_outfitting_preview", payload, done),
+      fit: (payload, done) =>
+        this.sendStationOutfitting("station_outfitting_fit", payload, done),
+      onApplied: response => this.applyStationOutfitting(response),
+      onClose: () => {
+        if (this.stationNpcDialogOpen && this.stationNpcId === "outfitting" &&
+            this.nearbyStationNpc()?.id === "outfitting") {
+          const modal = this.root.querySelector("#station-npc-dialogue")
+          if (modal) modal.style.display = "flex"
+        }
+      },
+    })
     this.root.querySelector("#station-npc-close")?.addEventListener("click",
       () => this.closeStationNpc())
     this.root.querySelector("#station-npc-dialogue")?.addEventListener("click", event => {
@@ -1580,6 +1597,15 @@ class SpaceClient {
   }
 
   handleStationNpcKey(event) {
+    if (this.outfittingPanel?.opened) {
+      if (event.code === "Escape") this.outfittingPanel.close()
+      if (["Escape", "KeyW", "KeyA", "KeyS", "KeyD",
+           "ArrowLeft", "ArrowRight", "KeyM", "KeyE"].includes(event.code)) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
+      return
+    }
     if (this.stationNpcDialogOpen) {
       if (event.code === "Escape") {
         event.preventDefault()
@@ -1605,6 +1631,10 @@ class SpaceClient {
   askStationNpc(id, topic) {
     if (!this.docked || this.stationNpcBusy || this.channel?.state !== "joined" ||
         this.nearbyStationNpc()?.id !== id) return
+    if (id === "outfitting" && topic === "console") {
+      this.openStationOutfitting()
+      return
+    }
     const fresh = !this.stationNpcDialogOpen
     if (fresh) {
       this.stationNpcDialogOpen = true
@@ -1649,6 +1679,50 @@ class SpaceClient {
       })
   }
 
+  sendStationOutfitting(event, payload, done) {
+    if (this.channel?.state !== "joined" || !this.docked) {
+      done(false, {reason: "not_docked"})
+      return
+    }
+    this.channel.push(event, payload, 8000)
+      .receive("ok", response => done(true, response))
+      .receive("error", response => done(false, response))
+      .receive("timeout", () => done(false, {reason: "timeout"}))
+  }
+
+  openStationOutfitting() {
+    if (this.stationNpcBusy || this.stationNpcId !== "outfitting" ||
+        this.nearbyStationNpc()?.id !== "outfitting") return
+    this.stationNpcBusy = true
+    this.sendStationOutfitting("station_outfitting", {}, (ok, response) => {
+      this.stationNpcBusy = false
+      if (!this.stationNpcDialogOpen || this.stationNpcId !== "outfitting") return
+      if (!ok) {
+        const message = this.root.querySelector("#station-npc-message")
+        if (message) message.textContent = "Outfitting unavailable: " +
+          String(response?.reason || "unknown error").replaceAll("_", " ")
+        return
+      }
+      this.root.querySelector("#station-npc-dialogue").style.display = "none"
+      this.outfittingPanel?.open(response.outfitting)
+    })
+  }
+
+  applyStationOutfitting(response) {
+    if (!response?.player) return
+    this.player = response.player
+    this.populateHud()
+    if (response.combat) {
+      const c = response.combat
+      this.text("#hud-hp", String(c.hull) + " / " + String(c.max_hull))
+      this.text("#hud-shields", String(c.shields) + " / " + String(c.max_shields))
+      this.text("#hud-compact-hp", c.hull)
+      this.text("#hud-compact-shields", c.shields)
+      this.setWidth("#hud-hp-bar", healthPercent(c.hull, c.max_hull))
+      this.setWidth("#hud-shield-bar", healthPercent(c.shields, c.max_shields))
+    }
+  }
+
   showStationNpcResponse(response) {
     const name = this.root.querySelector("#station-npc-name")
     const role = this.root.querySelector("#station-npc-role")
@@ -1671,6 +1745,7 @@ class SpaceClient {
   }
 
   closeStationNpc({focus = true} = {}) {
+    this.outfittingPanel?.close({restoreDialogue: false})
     if (!this.stationNpcDialogOpen) return
     this.stationNpcDialogOpen = false
     this.stationNpcBusy = false
