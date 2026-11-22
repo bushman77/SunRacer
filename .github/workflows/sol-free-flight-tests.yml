@@ -161,6 +161,13 @@ jobs:
           mix test apps/core/test/core/world/green_starbase_safety_test.exs
           mix test apps/core/test/core/world/green_starbase_impact_integration_test.exs
           mix test apps/core/test/core/world/station_impact_integration_test.exs
+      # The station UI has its own fast gate, even if unrelated Phoenix
+      # integration tests fail later in this workflow.
+      - name: Test station outfitting console
+        run: |
+          node --check apps/sunracer_web/assets/js/game/station_outfitting_panel.mjs
+          node --test apps/sunracer_web/assets/js/game/station_outfitting_panel_test.mjs
+          node --test apps/sunracer_web/assets/js/game/station_npc_integration_test.mjs
       - name: Test authenticated Phoenix handoffs
         run: |
           mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
