@@ -1621,7 +1621,10 @@ class SpaceClient {
     }
     this.stationNpcBusy = true
     const seq = ++this.stationNpcRequestSeq
-    this.channel.push("station_talk", {attendant_id: id, topic}, 5000)
+    // Service operations are distinct from read-only NPC dialogue.
+    const repair = id === "repair" && topic === "repair"
+    this.channel.push(repair ? "station_repair" : "station_talk",
+      repair ? {} : {attendant_id: id, topic}, 5000)
       .receive("ok", response => {
         if (!this.stationNpcDialogOpen || seq !== this.stationNpcRequestSeq) return
         this.stationNpcBusy = false

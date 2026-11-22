@@ -228,6 +228,14 @@ defmodule SunracerWeb.WorldChannel do
   def handle_in("station_look", _input, socket),
     do: {:reply, {:error, %{reason: "invalid_station_look"}}, socket}
 
+  # Repairs are authenticated server operations, not editable dialogue text.
+  def handle_in("station_repair", _payload, socket) do
+    case World.station_repair(socket.assigns.world_session_id) do
+      {:ok, repair} -> {:reply, {:ok, repair}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
   def handle_in("station_talk",
                 %{"attendant_id" => id, "topic" => topic}, socket)
       when is_binary(id) and is_binary(topic) do

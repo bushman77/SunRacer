@@ -23,7 +23,7 @@ defmodule Core.World.StationAttendantsTest do
       assert {:ok, %{name: name, topics: topics}} =
         StationAttendants.talk(position, @ship, npc.id, "greeting")
       assert name == npc.name
-      assert length(topics) == 2
+      assert length(topics) == (if npc.id == "repair", do: 3, else: 2)
       for topic <- topics do
         assert {:ok, %{message: message}} =
           StationAttendants.talk(position, @ship, npc.id, topic.id)
@@ -49,4 +49,15 @@ defmodule Core.World.StationAttendantsTest do
     assert text =~ "12/50"
     assert text =~ "no repairs have been performed"
   end
+  test "Mara offers a complimentary repair topic while dialogue stays read-only" do
+    mara = Enum.find(StationAttendants.public(), &(&1.id == "repair"))
+    pose = %{room_id: "repair_bay", x: mara.x, z: mara.z}
+    assert {:ok, %{topics: topics}} =
+      StationAttendants.talk(pose, @ship, "repair", "greeting")
+    assert Enum.any?(topics, &(&1.id == "repair"))
+    assert {:ok, %{message: text}} =
+      StationAttendants.talk(pose, @ship, "repair", "repair")
+    assert text =~ "No credits"
+  end
+
 end

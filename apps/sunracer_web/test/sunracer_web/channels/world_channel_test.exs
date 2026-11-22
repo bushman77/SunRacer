@@ -171,6 +171,12 @@ defmodule SunracerWeb.WorldChannelTest do
     story = push(joined, "station_talk", %{"attendant_id" => "repair", "topic" => "story"})
     assert_reply story, :error, %{reason: "not_docked"}
 
+    forged = push(joined, "station_repair", %{
+      "room_id" => "repair_bay", "x" => -49, "z" => -143,
+      "ship_id" => account.id
+    })
+    assert_reply forged, :error, %{reason: "not_docked"}
+
     invalid = push(joined, "station_talk", %{
       "attendant_id" => ["trade"], "topic" => "greeting"
     })

@@ -171,6 +171,30 @@ defmodule Sunracer.World do
   def station_look(session_id, input) when is_map(input),
     do: Simulation.station_look(session_id, input)
 
+  @doc "Repair the authenticated docked ship at Mara's workbench (complimentary)."
+  def station_repair(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, dialogue} <- Simulation.station_talk(session_id, "repair", "greeting"),
+         {:ok, %{docked: true, ship_instance_id: ship_id,
+                 combat: %{status: :alive}}} <- Simulation.ship_condition(session_id),
+         {:ok, _durable} <- ShipCondition.story_patch(session.player_id, ship_id),
+         {:ok, %{combat: repaired}} <- Simulation.station_patch_hull(session_id) do
+      reply =
+        dialogue
+        |> Map.put(:message,
+          "Repairs complete: hull #{repaired.hull}/#{repaired.max_hull}, " <>
+          "shields #{repaired.shields}/#{repaired.max_shields}. No credits charged.")
+        |> Map.put(:repair, Map.take(repaired,
+          [:hull, :max_hull, :shields, :max_shields]))
+        |> with_story_topics(session.player_id)
+      {:ok, reply}
+    else
+      :error -> {:error, :session_not_found}
+      {:ok, %{combat: %{status: :destroyed}}} -> {:error, :ship_not_alive}
+      error -> error
+    end
+  end
+
   @doc """
   Talk to a nearby station attendant; no client-supplied location.
 

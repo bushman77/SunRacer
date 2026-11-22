@@ -4,8 +4,7 @@ defmodule Core.World.StationAttendants do
   contacts, NOT tactical NPC ships. All interaction eligibility is checked
   against a MapServer-owned pilot position and authenticated docked ship.
 
-  No conversation topic can mutate credits, cargo, inventory or ship state.
-  Real service transactions will be added as separate validated operations.
+  Dialogue is read-only. Repair is a separate authenticated service action.
   """
 
   @interaction_radius 12.0
@@ -16,10 +15,12 @@ defmodule Core.World.StationAttendants do
       greeting: "Welcome to Repairs. I inspect hull integrity and shield condition before authorizing any work.",
       topics: [
         %{id: "condition", label: "Inspect my ship's condition"},
+        %{id: "repair", label: "Restore hull and shields (complimentary)"},
         %{id: "work", label: "How will repairs work?"}
       ],
       responses: %{
-        "work" => "The repair bench is installed, but the paid repair transaction is not active yet. I will not charge credits or alter your ship until that service is verified."
+        "work" => "During station commissioning, hull and shield repairs are complimentary. I can restore your docked ship here; no credits are deducted.",
+        "repair" => "Mara can restore your docked hull and shields. No credits are charged."
       }
     },
     %{

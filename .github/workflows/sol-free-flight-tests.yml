@@ -145,6 +145,7 @@ jobs:
           mix test apps/core/test/core/universe/free_flight_region_test.exs
           mix test apps/core/test/core/world/world_test.exs
           mix test apps/sunracer/test/sunracer/world_test.exs
+          mix test apps/core/test/core/world/station_attendants_test.exs
           mix test apps/sunracer/test/sunracer/pilot_location_test.exs
           mix test apps/core/test/core/universe/orbital_entry_test.exs
           mix test apps/core/test/core/universe/space_bases_test.exs
