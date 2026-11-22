@@ -20,6 +20,7 @@ import {EncounterShipVisual} from "./encounter_ship.js"
 import {SpaceEnvironmentVisual} from "./space_environment_visual.js"
 import {helmetHudLines, HMD_HUD_PAGES} from "./helmet_hud_pages.mjs"
 import {paintCockpitModeIcon} from "./cockpit_mode_icons.mjs"
+import {cockpitModePlacement} from "./cockpit_mode_layout.mjs"
 
 // Rendering only: no Phoenix socket, no movement authority, no combat calculations.
 const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
@@ -370,16 +371,17 @@ export class StereoSpaceView {
     // Only the inactive icon is gaze-armed, so looking at the selected
     // mode cannot accidentally flip the ship back.
     this.helmetModeIcons = {}
-    for (const [mode, x] of [["cruise", -1.10], ["newtonian", -0.77]]) {
+    const initialModePlacement = cockpitModePlacement(1)
+    for (const mode of ["cruise", "newtonian"]) {
       const button = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.275, 0.275),
+        new THREE.PlaneGeometry(initialModePlacement.side, initialModePlacement.side),
         new THREE.MeshBasicMaterial({
           map: modeIconTexture(mode),
           transparent: true, depthTest: false, depthWrite: false,
         }),
       )
-      button.position.set(x, -0.52, -2.36)
-      button.rotation.y = 0.22
+      const position = initialModePlacement[mode]
+      button.position.set(position.x, position.y, position.z)
       button.renderOrder = 72
       button.visible = false
       button.userData.flightMode = mode
@@ -726,6 +728,15 @@ export class StereoSpaceView {
     if (fit && this.hudPanel && this.dash) {
       this.hudPanel.scale.setScalar(fit.scale)
       this.dash.scale.setScalar(fit.scale)
+      // SBS shrinks the instrument to fit each eye. Its two mode buttons
+      // must follow that scale, otherwise the Newtonian icon covers ALT/HDG
+      // (the original screenshot regression). The pair is mounted below.
+      const placement = cockpitModePlacement(fit.scale)
+      for (const mode of ["cruise", "newtonian"]) {
+        const button = this.helmetModeIcons?.[mode]
+        const pos = placement[mode]
+        if (button && pos) button.position.set(pos.x, pos.y, pos.z)
+      }
     }
   }
 
