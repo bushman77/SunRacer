@@ -2340,6 +2340,13 @@ class SpaceClient {
       }
     }
 
+    // Keep the local camera's quaternion as the final presentation pose even
+    // if a transient legacy navigation condition skipped prediction this
+    // frame. Never overwrite the server's authoritative orientation.
+    if (localCameraActive && own && this.clientLedCamera.active) {
+      own.renderOrientation = {...this.clientLedCamera.orientation}
+    }
+
     const rotationBlend = 1 - Math.exp(-deltaSeconds / 0.075)
     for (const entity of this.entities.values()) {
       entity.angle = smoothAngle(

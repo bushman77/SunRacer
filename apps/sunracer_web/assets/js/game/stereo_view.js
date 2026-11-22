@@ -6,6 +6,7 @@ import {LensDistortionPass, lensCenterU} from "./lens_distortion.mjs"
 import {cockpitHudFit, HUD_GEOMETRY} from "./stereo_layout.mjs"
 import {flightBasis, degrees} from "./flight_basis.mjs"
 import {orientationTelemetry} from "./orientation_interpolation.mjs"
+import {cockpitDestinationCamera} from "./cockpit_camera_source.mjs"
 import {targetRange, LASER_FEEDBACK_MS} from "./laser_feedback.mjs"
 import {createDartModel, dartHeadingRotation} from "./dart_model.mjs"
 import {createScowModel} from "./scow_model.mjs"
@@ -748,13 +749,17 @@ export class StereoSpaceView {
     }
   }
 
-  setCamera(ownShip) {
+  setCamera(ownShip, {clientLedActive = false} = {}) {
     if (!ownShip) return
+    // A stale server navigation destination must never re-point the camera
+    // while the pilot is steering locally. The same choice applies to eye
+    // offset AND orientation, avoiding an intermittent view-source jump.
+    const useDestinationView = cockpitDestinationCamera(ownShip, clientLedActive)
     const pos = toScene(ownShip.render)
     const angle = Number.isFinite(ownShip.angle) ? ownShip.angle : -Math.PI / 2
     // The pilot eye is ship-local too. Rotating this offset with the ship
     // keeps the wing emitters physically anchored after rolls and loops.
-    const pose = !ownShip.destination &&
+    const pose = !useDestinationView &&
       (ownShip.renderOrientation || ownShip.orientation)
     if (pose) {
       const localEye = new THREE.Vector3(0, 2.75, 0).applyQuaternion(
@@ -769,7 +774,7 @@ export class StereoSpaceView {
     // independent destination-heading view.
     const attitude = ownShip.renderAttitude || ownShip.attitude ||
       {yaw: 0, pitch: 0, roll: 0}
-    if (!ownShip.destination) {
+    if (!useDestinationView) {
       if (ownShip.renderOrientation || ownShip.orientation) {
         const q = ownShip.renderOrientation || ownShip.orientation
         this.camera.up.set(0, 1, 0)
@@ -1062,7 +1067,9 @@ export class StereoSpaceView {
       this.stationViewPose = null
       this.stationLastFrameAt = null
       if (this.camera.parent !== this.scene) this.scene.add(this.camera)
-      this.setCamera(ownShip)
+      this.setCamera(ownShip, {
+        clientLedActive: Boolean(client.clientLedCameraActiveForTick?.()),
+      })
       // Ship-fixed cockpit surfaces stay separate from headset head motion.
       this.cockpitFraming.position.copy(this.camera.position)
       this.cockpitFraming.quaternion.copy(this.camera.quaternion)
