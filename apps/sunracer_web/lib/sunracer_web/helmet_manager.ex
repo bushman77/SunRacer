@@ -42,7 +42,9 @@ defmodule SunracerWeb.HelmetManager do
   that already owns the keyboard acts. Only the names below are relayed, so a
   compromised handset cannot invent an event for the laptop to act on.
   """
-  @gaze_actions ~w(toggle_flight_mode)
+  # Intent only. The server never trusts the headset to set flight velocity;
+  # the authenticated desktop pilot decides and sends the actual controls.
+  @gaze_actions ~w(toggle_flight_mode select_cruise_mode select_newtonian_mode)
   @spec gaze_action(pos_integer(), String.t()) :: :ok | {:error, atom()}
   def gaze_action(player_id, action) when action in @gaze_actions,
     do: GenServer.call(__MODULE__, {:gaze_action, player_id, action})

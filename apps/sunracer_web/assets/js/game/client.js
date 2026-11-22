@@ -518,6 +518,8 @@ class SpaceClient {
       // applies it through the same FlightControls the keyboard drives.
       onGazeAction: action => {
         if (action === "toggle_flight_mode") this.flightControls?.toggleMode()
+        if (action === "select_cruise_mode") this.flightControls?.setMode("cruise")
+        if (action === "select_newtonian_mode") this.flightControls?.setMode("newtonian")
       },
     }).start()
 

@@ -13,6 +13,7 @@ import {helmetSurrenderFromEntities} from "./helmet_surrender_view.mjs"
 import {helmetRespawnView} from "./helmet_respawn_view.mjs"
 import {helmetSurrenderChoice} from "./helmet_surrender_choice.mjs"
 import {helmetModeIcon} from "./helmet_mode_icon.mjs"
+import {modeForGazeTarget, modeSelectionAction} from "./helmet_mode_gaze.mjs"
 import {helmetPlanetaryNavigation} from "./helmet_planetary_navigation.mjs"
 import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
@@ -860,25 +861,32 @@ export class HelmetClient {
       helmetModeIcon(this.entities, this.selfId, {pending: this.modePending}))
   }
 
-  // An intent, not a command. The headset never sends flight_controls: the
-  // server relays this to the pilot's own laptop, which applies it through
-  // the same FlightControls the keyboard drives. The icon stays disarmed
-  // until the world snapshot reports the mode actually changed.
-  requestFlightModeToggle() {
-    if (this.modePending || this.channel?.state !== "joined") return
-    const before = this.entities.get(this.selfId)?.flightMode
-    if (before !== "cruise" && before !== "newtonian") return
+  // The headset selects a specific mode rather than requesting a blind
+  // toggle. A relay acknowledgement means only that the request was forwarded:
+  // the desktop controller and the authoritative world own the actual mode.
+  requestFlightModeSelection(mode) {
+    const action = modeSelectionAction(mode)
+    if (!action || this.modePending || this.channel?.state !== "joined") return
+    const current = this.entities.get(this.selfId)?.flightMode
+    if (current !== "cruise" && current !== "newtonian") return
+    if (mode === current) {
+      this.gaze.reset()
+      return
+    }
     this.modePending = true
     this.updateModeIcon()
     const old = this.channel
-    const settle = () => {
+    const settle = (reason = null) => {
       if (this.channel !== old) return
       this.modePending = false
       this.gaze.reset()
       this.updateModeIcon()
+      if (reason) this.message("Flight mode switch unavailable: " + reason)
     }
-    old.push("helmet_action", {action: "toggle_flight_mode"}, 5_000)
-      .receive("ok", settle).receive("error", settle).receive("timeout", settle)
+    old.push("helmet_action", {action}, 5_000)
+      .receive("ok", () => settle())
+      .receive("error", reply => settle(reply?.reason || "request rejected"))
+      .receive("timeout", () => settle("request timed out"))
   }
 
   updateRespawnPanel() {
@@ -1016,8 +1024,8 @@ export class HelmetClient {
     } else if (update.activated === "nav_close") {
       this.view?.setHelmetNavOpen(false)
       this.gaze.reset()
-    } else if (update.activated === "flight_mode") {
-      this.requestFlightModeToggle()
+    } else if (modeForGazeTarget(update.activated)) {
+      this.requestFlightModeSelection(modeForGazeTarget(update.activated))
     } else if (update.activated === "surrender_accept") {
       this.requestSurrenderOutcome("solar_accept_surrender")
     } else if (update.activated === "surrender_seize") {
