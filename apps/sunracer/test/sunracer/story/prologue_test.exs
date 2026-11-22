@@ -113,13 +113,19 @@ defmodule Sunracer.Story.PrologueTest do
   end
 
   test "docking, then both station conversations; Mara patches the hull once" do
-    assert {:ok, %{step: 8} = docked, []} = Prologue.apply(at(7), :docked_starbase)
+    assert {:ok, %{step: 8} = docked, []} =
+      Prologue.apply(at(7, %{"data_chip" => true}), :docked_starbase)
+    assert :ignore = Prologue.apply(docked, {:talked, "missions"})
+    assert [] = Prologue.topics(docked, "missions")
 
     assert {:ok, %{step: 8} = patched, [:patch_hull]} =
              Prologue.apply(docked, {:talked, "repair"})
+    assert [%{id: "story"}] = Prologue.topics(patched, "missions")
 
     assert :ignore = Prologue.apply(patched, {:talked, "repair"})
     assert {:ok, %{step: 9}, []} = Prologue.apply(patched, {:talked, "missions"})
+    assert :ignore = Prologue.apply(at(8, %{"talked_mara" => true}),
+      {:talked, "missions"})
   end
 
   test "delivery at Mars needs every crate and completes the prologue" do
@@ -188,8 +194,10 @@ defmodule Sunracer.Story.PrologueTest do
     assert [%{id: "story"}] = Prologue.topics(at(8), "repair")
     assert [] = Prologue.topics(at(8, %{"talked_mara" => true}), "repair")
     assert [] = Prologue.topics(at(5), "missions")
-    assert {:ok, line} = Prologue.dialogue(at(8), "missions")
-    assert line =~ "route plan"
+    assert :error = Prologue.dialogue(at(8), "missions")
+    assert {:ok, line} = Prologue.dialogue(
+      at(8, %{"talked_mara" => true, "data_chip" => true}), "missions")
+    assert line =~ "flight plan"
     assert :error = Prologue.dialogue(at(3), "repair")
   end
 end

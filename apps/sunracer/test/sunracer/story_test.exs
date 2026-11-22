@@ -57,9 +57,12 @@ defmodule Sunracer.StoryTest do
     assert {:ok, %{story: %{step: 2}}} =
              record!(id, {:flight_controls, %{throttle: false, rotation: true}})
 
-    assert_receive {:story_updated, %{player_id: ^id, story: %{step: 2}}}
+    assert_receive {:story_updated, %{player_id: ^id,
+      story: %{step: 2, scene: %{id: "first_run:systems_green"}}}}
 
     assert {:ok, %{story: %{step: 3}}} = record!(id, :accept_consignment)
+    assert_receive {:story_updated, %{player_id: ^id,
+      story: %{step: 3, scene: %{id: "first_run:consignment_loaded"}}}}
     assert crates(id) == Prologue.crates()
     assert :ignored = record!(id, :accept_consignment)
     assert crates(id) == Prologue.crates()
@@ -83,12 +86,12 @@ defmodule Sunracer.StoryTest do
 
     capture_log(fn ->
       assert {:ok, patch_line} = Story.talk(id, "repair")
-      assert patch_line =~ "field patch"
+      assert patch_line =~ "patched"
     end)
 
     assert [] = Story.topics(id, "repair")
     assert {:ok, chip_line} = Story.talk(id, "missions")
-    assert chip_line =~ "route plan"
+    assert chip_line =~ "flight plan"
     assert {:error, :invalid_station_topic} = Story.talk(id, "missions")
     assert %{step: 9} = Story.snapshot(id)
 
