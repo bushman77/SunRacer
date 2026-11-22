@@ -4,7 +4,9 @@ import {relayQRUrl} from "./helmet_relay_test.mjs"
 
 // The Atlas owns enrollment; the cockpit owns the headset's operating mode.
 export class HelmetControl {
-  constructor({root, socket, playerId, combatActive, publishRelayWorld = () => {}}) {
+  constructor({root, socket, playerId, combatActive, publishRelayWorld = () => {},
+    onGazeAction = () => {}}) {
+    this.onGazeAction = onGazeAction
     this.root = root
     this.socket = socket
     this.playerId = playerId
@@ -144,6 +146,10 @@ export class HelmetControl {
 
     this.channel = this.socket.channel("helmet:control:" + this.playerId, {})
     this.channel.on("helmet_status", data => this.updateStatus(data))
+    // The headset asks; the laptop decides and issues the actual control.
+    // Nothing here trusts the phone beyond the name of a known action.
+    this.channel.on("helmet_gaze_action", ({action} = {}) =>
+      this.onGazeAction?.(action))
     this.channel.onError(() => this.message("Helmet link interrupted. Reconnecting…"))
     this.channel.join()
       .receive("ok", reply => {

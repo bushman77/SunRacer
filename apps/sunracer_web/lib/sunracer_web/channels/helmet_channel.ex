@@ -6,6 +6,11 @@ defmodule SunracerWeb.HelmetChannel do
   Three exceptions exist. None is a flight or combat command, none accepts a
   single value from the phone, and each is re-verified against the map before
   it takes effect: `respawn`, `solar_accept_surrender` and `solar_seize_cargo`.
+
+  `helmet_action` is not a fourth: it issues nothing. It relays a named intent
+  from a gaze icon to the pilot's own laptop, which applies it through the
+  same controls the keyboard drives. The name is checked against an allowlist
+  in `HelmetManager`, and the cockpit remains the only flight commander.
   They exist because an HMD pilot has no keyboard, so without them a death or
   a surrendered captain is unresolvable from inside the headset.
 
@@ -194,6 +199,18 @@ defmodule SunracerWeb.HelmetChannel do
         _ ->
           {:reply, {:error, %{reason: "region_changed"}}, socket}
       end
+    end
+  end
+
+  # A gaze icon asking the pilot's own laptop to do something. Nothing is
+  # issued here and nothing reaches the world: the action name is checked
+  # against an allowlist and relayed to the cockpit, which decides.
+  def handle_in("helmet_action", %{"action" => action},
+                %{assigns: %{helmet_role: :viewer, helmet_player_id: player_id}} = socket)
+      when is_binary(action) do
+    case HelmetManager.gaze_action(player_id, action) do
+      :ok -> {:reply, {:ok, %{relayed: true}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: Atom.to_string(reason)}}, socket}
     end
   end
 

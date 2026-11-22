@@ -182,15 +182,22 @@ export class FlightControls {
     return true
   }
 
+  // The Ctrl+E chord and the headset's gaze icon both land here, so the two
+  // routes can never drift apart. A headset pilot cannot find a modifier
+  // chord blind, but the laptop stays the only thing that commands the ship.
+  toggleMode() {
+    if (!this.active()) return false
+    this.mode = this.mode === "cruise" ? "newtonian" : "cruise"
+    this.emit()
+    return true
+  }
+
   keyDown(event) {
     if (event.defaultPrevented || typing(event.target) || !this.active()) return false
 
     if (event.code === "KeyE" && event.ctrlKey && !event.altKey && !event.metaKey && !event.shiftKey) {
       event.preventDefault()
-      if (!event.repeat) {
-        this.mode = this.mode === "cruise" ? "newtonian" : "cruise"
-        this.emit()
-      }
+      if (!event.repeat) this.toggleMode()
       return true
     }
 

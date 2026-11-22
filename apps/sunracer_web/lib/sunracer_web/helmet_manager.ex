@@ -34,6 +34,21 @@ defmodule SunracerWeb.HelmetManager do
   # Sensor orientation stays entirely on the handset.
   def recenter(player_id), do: GenServer.call(__MODULE__, {:recenter, player_id})
 
+  @doc """
+  Relay a gaze-selected intent from a paired headset to the pilot's own
+  laptop, which decides what to do with it.
+
+  The headset never issues flight controls itself; it asks, and the cockpit
+  that already owns the keyboard acts. Only the names below are relayed, so a
+  compromised handset cannot invent an event for the laptop to act on.
+  """
+  @gaze_actions ~w(toggle_flight_mode)
+  @spec gaze_action(pos_integer(), String.t()) :: :ok | {:error, atom()}
+  def gaze_action(player_id, action) when action in @gaze_actions,
+    do: GenServer.call(__MODULE__, {:gaze_action, player_id, action})
+
+  def gaze_action(_player_id, _action), do: {:error, :unknown_action}
+
   def report_alignment(pid, gap_px, separation_mm)
       when is_integer(gap_px) and gap_px in -160..80 and
            is_integer(separation_mm) and separation_mm in 40..85 do
@@ -167,6 +182,18 @@ defmodule SunracerWeb.HelmetManager do
       true ->
         Enum.each(viewers, &send(&1, :helmet_recenter))
         {:reply, :ok, state}
+    end
+  end
+
+  def handle_call({:gaze_action, player_id, action}, _from, state) do
+    # Only while the pilot is actually in the cockpit: a relayed intent must
+    # not arrive at a laptop sitting in the navigation computer or a station.
+    if Map.get(state.modes, player_id) == :combat do
+      Endpoint.broadcast("helmet:control:#{player_id}", "helmet_gaze_action",
+        %{action: action})
+      {:reply, :ok, state}
+    else
+      {:reply, {:error, :not_in_cockpit}, state}
     end
   end
 

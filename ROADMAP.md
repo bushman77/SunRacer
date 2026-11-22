@@ -13,11 +13,10 @@
       everything touch-findable), or gamepad support through the existing
       `flight_controls` payload (best ergonomics, new input path, no channel
       change). Decide before more headset content lands.
-- [ ] Reachable flight-mode switching in the headset. Prologue step 6 now tells
-      the pilot to press Ctrl+E to cut the flight assist, which is close to
-      impossible to find blind while wearing a headset. Either the mode needs a
-      gaze target of its own or the step needs a different instruction for HMD
-      pilots. This is a live contradiction in shipped content.
+- [x] Reachable flight-mode switching in the headset: a gaze icon relaying a
+      named intent to the laptop, which applies it through the same
+      FlightControls the keyboard drives. Resolves the contradiction introduced
+      by prologue step 6, which tells HMD pilots to press Ctrl+E.
 - [ ] Audit the rest of the prologue for keyboard-only instructions.
 
 ## Flight model and combat balance (2026-11-21)

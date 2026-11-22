@@ -8,6 +8,49 @@
 
 ## Unreleased
 
+### Gaze icon for the flight mode switch (2026-11-21, branch `story_line`)
+
+#### Added
+
+- A cruise/Newtonian icon in the headset cockpit, selected by the usual gaze
+  dwell. Prologue step 6 now requires Newtonian flight and tells the pilot to
+  press Ctrl+E, which is close to impossible to find blind in an HMD; this
+  makes the switch reachable without changing mouse or keyboard control at all.
+- The icon's label comes from `flight_mode` in the authoritative world
+  snapshot, not from a local guess, so it cannot drift from the real ship. It
+  names the current mode first and the consequence second ("CRUISE / CUT
+  ASSIST"), and disarms itself until the world confirms the change.
+- `FlightControls.toggleMode/0`, now the single place the mode flips, shared by
+  the Ctrl+E chord and the icon so the two routes cannot drift apart.
+
+#### Architecture
+
+- The headset still never sends a flight control. The icon relays a **named
+  intent** over `helmet_action`; `HelmetManager.gaze_action/2` checks it
+  against an allowlist of exactly one action and only while the pilot is in
+  the cockpit, then broadcasts to `helmet:control:<player_id>`; the pilot's own
+  laptop receives it and applies it through the same `FlightControls` the
+  keyboard drives. The cockpit remains the only flight commander, so this is
+  not a fourth exception to the channel's read-only rule — it issues nothing.
+
+#### Tests
+
+- Browser JS 424 passing: 6 new in `helmet_mode_icon_test.mjs` and an
+  integration case tracing the whole relay from gaze target to allowlist to
+  the laptop applying it. Tauri 42, `apps/core` 302, Prologue 14.
+- Two guards added earlier in this branch asserted the gaze candidate array
+  as an exact literal and broke on each new conditional target. They now
+  assert the resting pair plus any conditional spreads, along with each
+  target's armed guard, so the read-only intent is enforced without breaking
+  on the next addition.
+
+#### Known limitations
+
+- `apps/sunracer_web` still cannot be compiled here (no hex.pm access), so the
+  channel handler and `HelmetManager.gaze_action/2` were parse-checked and
+  text-asserted, never run.
+- No testing in a headset.
+
 ### Gaze-reachable death recovery and surrender choice in the headset (2026-11-21, branch `story_line`)
 
 #### Added

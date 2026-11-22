@@ -446,6 +446,11 @@ class SpaceClient {
       playerId: this.root.dataset.layoutPlayerId,
       combatActive: !this.navComputer.isOpen,
       publishRelayWorld: () => this.sbsRelayWorld.publish(this.worldStream?.map, true),
+      // A gaze icon in the headset is an intent, not a command: the laptop
+      // applies it through the same FlightControls the keyboard drives.
+      onGazeAction: action => {
+        if (action === "toggle_flight_mode") this.flightControls?.toggleMode()
+      },
     }).start()
 
     // Prologue comms card. Steps are server-owned; this only offers the

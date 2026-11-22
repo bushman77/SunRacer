@@ -113,8 +113,13 @@ test("HUD gaze inspects read-only flight, contacts and space pages", () => {
   // The resting gaze set is still the nav switch and the HUD panel. The
   // surrender buttons are spread in only while a captain is actually
   // yielding, and helmetSurrenderArmed is false at every other moment.
-  assert.match(view, /\[this\.navSwitch, this\.hudPanel, \.\.\.surrender\]/)
+  // The resting gaze set is the nav switch and the HUD panel. Anything else
+  // is spread in conditionally and is absent whenever its own armed flag is
+  // false, so assert the base pair and the guards rather than the exact
+  // literal -- every new conditional target would otherwise break this.
+  assert.match(view, /\[this\.navSwitch, this\.hudPanel(, \.\.\.\w+)*\]/)
   assert.match(view, /const surrender = this\.helmetSurrenderArmed \?/)
+  assert.match(view, /const mode = this\.helmetModeArmed \?/)
   assert.match(view, /return target === this\.hudPanel \? "hud_inspect"/)
   for (const key of ["hud_inspect", "hud_flight", "hud_contacts", "hud_space"]) {
     assert.ok(helmet.includes('"' + key + '"'))
@@ -218,7 +223,8 @@ test("a surrendered captain can be released, robbed or ignored by gaze", () => {
   // Mid-fight prompt: additive, never exclusive, and below the sight line so
   // a pilot tracking a target cannot dwell on it by accident.
   assert.match(view, /this\.helmetSurrenderPanel\.position\.set\(0, -0\.44, -2\.44\)/)
-  assert.match(view, /\[this\.navSwitch, this\.hudPanel, \.\.\.surrender\]/)
+  assert.match(view, /\[this\.navSwitch, this\.hudPanel(, \.\.\.\w+)*\]/)
+  assert.match(view, /\.\.\.surrender\b/)
   assert.match(view, /if \(target === this\.helmetSurrenderButtons\?\.accept\) return "surrender_accept"/)
 
   // A wreck outranks a surrender prompt: dying closes it.
@@ -238,4 +244,31 @@ test("a surrendered captain can be released, robbed or ignored by gaze", () => {
   assert.match(world, /def settle_surrender_for_player\(player_id, opts/)
   assert.match(world, /SessionManager\.fetch_player\(SessionManager, player_id\)/)
   assert.match(world, /solar_finish_tactical\(session\.id, encounter_id, :surrender, opts\)/)
+})
+
+test("the flight mode icon is an intent relayed to the laptop, not a command", () => {
+  const channel = readFileSync(new URL(
+    "../../../lib/sunracer_web/channels/helmet_channel.ex", import.meta.url), "utf8")
+  const manager = readFileSync(new URL(
+    "../../../lib/sunracer_web/helmet_manager.ex", import.meta.url), "utf8")
+  const control = js("./helmet_control.mjs")
+  const laptop = js("./client.js")
+  const flight = js("./flight_controls.mjs")
+
+  // The headset asks over its own channel and never sends flight controls.
+  assert.match(helmet, /old\.push\("helmet_action", \{action: "toggle_flight_mode"\}/)
+  assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"/)
+  assert.match(view, /if \(target === this\.helmetModeIcon\) return "flight_mode"/)
+
+  // The server relays a name from an allowlist, only while in the cockpit.
+  assert.match(channel, /def handle_in\("helmet_action", %\{"action" => action\}/)
+  assert.match(manager, /@gaze_actions ~w\(toggle_flight_mode\)/)
+  assert.match(manager, /def gaze_action\(_player_id, _action\), do: \{:error, :unknown_action\}/)
+  assert.match(manager, /Map\.get\(state\.modes, player_id\) == :combat/)
+
+  // The laptop applies it through the same control the keyboard drives.
+  assert.match(control, /this\.channel\.on\("helmet_gaze_action"/)
+  assert.match(laptop, /if \(action === "toggle_flight_mode"\) this\.flightControls\?\.toggleMode\(\)/)
+  assert.match(flight, /toggleMode\(\) \{/)
+  assert.match(flight, /if \(!event\.repeat\) this\.toggleMode\(\)/)
 })

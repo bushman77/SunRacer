@@ -12,6 +12,7 @@ import {restoredHelmetCalibration} from "./helmet_calibration_restore.mjs"
 import {helmetSurrenderFromEntities} from "./helmet_surrender_view.mjs"
 import {helmetRespawnView} from "./helmet_respawn_view.mjs"
 import {helmetSurrenderChoice} from "./helmet_surrender_choice.mjs"
+import {helmetModeIcon} from "./helmet_mode_icon.mjs"
 import {helmetPlanetaryNavigation} from "./helmet_planetary_navigation.mjs"
 import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
@@ -84,6 +85,7 @@ export class HelmetClient {
     this.surrenderPending = false
     this.surrenderError = null
     this.surrenderDismissed = false
+    this.modePending = false
     this.beams = []
     this.lastLaserFeedback = null
     this.view = null
@@ -726,7 +728,9 @@ export class HelmetClient {
     this.surrenderPending = false
     this.surrenderError = null
     this.surrenderDismissed = false
+    this.modePending = false
     this.view?.setHelmetDestroyed({destroyed: false})
+    this.view?.setHelmetModeIcon({visible: false})
     this.view?.setHelmetSurrenderChoice({open: false})
     this.canvas.hidden = true
     const bandwidthOverlay = this.root.querySelector("#helmet-bandwidth-sbs")
@@ -848,6 +852,33 @@ export class HelmetClient {
     this.planetaryWarningDisplay = planetaryWarningView(ownPlanetaryWarning(map, this.selfId))
     this.updateSurrender(helmetSurrenderFromEntities(this.entities, this.selfId))
     this.updateRespawnPanel()
+    this.updateModeIcon()
+  }
+
+  updateModeIcon() {
+    this.view?.setHelmetModeIcon(
+      helmetModeIcon(this.entities, this.selfId, {pending: this.modePending}))
+  }
+
+  // An intent, not a command. The headset never sends flight_controls: the
+  // server relays this to the pilot's own laptop, which applies it through
+  // the same FlightControls the keyboard drives. The icon stays disarmed
+  // until the world snapshot reports the mode actually changed.
+  requestFlightModeToggle() {
+    if (this.modePending || this.channel?.state !== "joined") return
+    const before = this.entities.get(this.selfId)?.flightMode
+    if (before !== "cruise" && before !== "newtonian") return
+    this.modePending = true
+    this.updateModeIcon()
+    const old = this.channel
+    const settle = () => {
+      if (this.channel !== old) return
+      this.modePending = false
+      this.gaze.reset()
+      this.updateModeIcon()
+    }
+    old.push("helmet_action", {action: "toggle_flight_mode"}, 5_000)
+      .receive("ok", settle).receive("error", settle).receive("timeout", settle)
   }
 
   updateRespawnPanel() {
@@ -985,6 +1016,8 @@ export class HelmetClient {
     } else if (update.activated === "nav_close") {
       this.view?.setHelmetNavOpen(false)
       this.gaze.reset()
+    } else if (update.activated === "flight_mode") {
+      this.requestFlightModeToggle()
     } else if (update.activated === "surrender_accept") {
       this.requestSurrenderOutcome("solar_accept_surrender")
     } else if (update.activated === "surrender_seize") {

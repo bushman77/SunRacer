@@ -352,6 +352,22 @@ export class StereoSpaceView {
     this.helmetSurrenderPanel.visible = false
     framing.add(this.helmetSurrenderPanel)
 
+    // Flight mode. Off to the left of the forward view so it is a glance
+    // rather than something in the way of flying, and small enough that a
+    // pilot tracking a target will not sit on it for the full dwell.
+    this.helmetModeIcon = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.62, 0.26),
+      new THREE.MeshBasicMaterial({
+        map: cockpitLabel(["CRUISE"], {width: 512, height: 224}),
+        transparent: true, depthTest: false,
+      }),
+    )
+    this.helmetModeIcon.position.set(-0.92, -0.52, -2.36)
+    this.helmetModeIcon.rotation.y = 0.22
+    this.helmetModeIcon.renderOrder = 72
+    this.helmetModeIcon.visible = false
+    framing.add(this.helmetModeIcon)
+
     this.helmetSurrenderButtons = {}
     for (const [name, x] of [["accept", -0.58], ["seize", 0.0], ["dismiss", 0.58]]) {
       const button = new THREE.Mesh(
@@ -479,6 +495,7 @@ export class StereoSpaceView {
     // While the wreck panel is up, no other cockpit surface is selectable.
     this.setHelmetNavOpen(false)
     this.setHelmetSurrenderChoice({open: false})
+    this.setHelmetModeIcon({visible: false})
     const text = (view.lines || []).join("\n") + "|" + (view.button || "")
     if (text === this.lastRespawnText) return
     this.lastRespawnText = text
@@ -526,6 +543,25 @@ export class StereoSpaceView {
       button.material.needsUpdate = true
       old?.dispose()
     }
+  }
+
+  // Painted from helmetModeIcon(), whose label comes from the world snapshot.
+  setHelmetModeIcon(icon) {
+    const visible = icon?.visible === true && !this.helmetDestroyed
+    this.helmetModeArmed = visible && icon?.armed === true
+    if (this.helmetModeIcon) this.helmetModeIcon.visible = visible
+    if (!visible) {
+      this.lastModeText = null
+      return
+    }
+    const text = (icon.lines || []).join("\n")
+    if (text === this.lastModeText) return
+    this.lastModeText = text
+    const old = this.helmetModeIcon.material.map
+    this.helmetModeIcon.material.map =
+      cockpitLabel(icon.lines || [], {width: 512, height: 224})
+    this.helmetModeIcon.material.needsUpdate = true
+    old?.dispose()
   }
 
   setHelmetNavOpen(open) {
@@ -578,12 +614,13 @@ export class StereoSpaceView {
     if (!this.helmetGazeEnabled || !this.helmetHeadRotation) return null
     const surrender = this.helmetSurrenderArmed ?
       Object.values(this.helmetSurrenderButtons || {}) : []
+    const mode = this.helmetModeArmed ? [this.helmetModeIcon] : []
     const candidates = this.helmetDestroyed ?
       (this.helmetRespawnArmed ? [this.helmetRespawnButton] : []) :
       this.helmetNavOpen ?
         [this.helmetNavClose, this.helmetNavRecenter, this.helmetNavFlight,
-          this.helmetNavContacts, this.helmetNavSpace, ...surrender] :
-        [this.navSwitch, this.hudPanel, ...surrender]
+          this.helmetNavContacts, this.helmetNavSpace, ...surrender, ...mode] :
+        [this.navSwitch, this.hudPanel, ...surrender, ...mode]
     this.camera.updateMatrixWorld(true)
     this.cockpitFraming.updateMatrixWorld(true)
     this.raycaster.set(this.camera.position,
@@ -593,6 +630,7 @@ export class StereoSpaceView {
     if (!hits.length || hits[0].distance >= 6) return null
     this.gazeHitDistance = hits[0].distance
     const target = hits[0].object
+    if (target === this.helmetModeIcon) return "flight_mode"
     if (target === this.helmetRespawnButton) return "respawn"
     if (target === this.helmetSurrenderButtons?.accept) return "surrender_accept"
     if (target === this.helmetSurrenderButtons?.seize) return "surrender_seize"
