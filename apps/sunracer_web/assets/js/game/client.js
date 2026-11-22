@@ -435,6 +435,8 @@ class SpaceClient {
         this.sendStationOutfitting("station_outfitting_preview", payload, done),
       fit: (payload, done) =>
         this.sendStationOutfitting("station_outfitting_fit", payload, done),
+      purchase: (payload, done) =>
+        this.sendStationOutfitting("station_outfitting_purchase", payload, done),
       onApplied: response => this.applyStationOutfitting(response),
       onClose: () => {
         if (this.stationNpcDialogOpen && this.stationNpcId === "outfitting" &&

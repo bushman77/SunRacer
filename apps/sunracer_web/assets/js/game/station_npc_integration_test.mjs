@@ -33,5 +33,6 @@ test("the paired SBS viewer renders the same server-owned kiosk staff without co
 test("station console shows complimentary repairs and clearly identifies inactive purchases", () => {
   assert.match(markup, /Station attendants are present at each kiosk/)
   assert.match(markup, /Mara Venn offers complimentary hull and shield repairs/)
-  assert.match(markup, /purchases remain offline/)
+  assert.match(markup, /Ilya Quill sells equipment for credits/)
+  assert.match(markup, /cargo trading remains offline/)
 })

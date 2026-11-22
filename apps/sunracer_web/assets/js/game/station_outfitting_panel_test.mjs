@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
-import {fittingCandidates, installedItem, fittingStatRows} from "./station_outfitting_panel.mjs"
+import {fittingCandidates, installedItem, fittingStatRows, affordable, creditText} from "./station_outfitting_panel.mjs"
 
 test("fitting picker excludes incompatible and unowned equipment", () => {
   const items = [
@@ -32,4 +32,20 @@ test("in-game outfitting only sends selections, not statistics", () => {
   assert.match(client, /id === "outfitting" && topic === "console"/)
   assert.match(html, /id="station-outfitting-panel"/)
   assert.match(html, /id="station-outfitting-preview"/)
+})
+
+test("shop shows credit affordability and uses server-owned price on purchase", () => {
+  assert.equal(affordable(500, 2000), false)
+  assert.equal(affordable(2000, 2000), true)
+  assert.equal(affordable(-1, 100), false)
+  assert.equal(affordable(500, 0), false)
+  assert.equal(creditText(2000), "2,000 cr")
+  const client = readFileSync(new URL("./client.js", import.meta.url), "utf8")
+  const markup = readFileSync(new URL(
+    "../../../lib/sunracer_web/controllers/game_html/show.html.heex", import.meta.url),
+  "utf8")
+  assert.match(client, /this\.sendStationOutfitting\("station_outfitting_purchase", payload, done\)/)
+  assert.match(markup, /id="station-outfitting-stock"/)
+  assert.match(markup, /id="station-outfitting-credits"/)
+  assert.match(markup, /id="station-outfitting-buy"/)
 })

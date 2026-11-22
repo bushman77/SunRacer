@@ -8,6 +8,11 @@ export const fittingCandidates = (items, kind) => (items || []).filter(item =>
   item.quantity > 0 && (kind === "laser" ? item.category === "laser" :
     ["shield", "generator"].includes(item.category)))
 
+export const affordable = (balance, price) =>
+  Number.isInteger(balance) && Number.isInteger(price) && price > 0 && balance >= price
+
+export const creditText = credits => Number(credits || 0).toLocaleString("en-CA") + " cr"
+
 export const installedItem = (config, kind, index) =>
   config?.slots?.[kind]?.[index] ?? null
 
@@ -39,10 +44,11 @@ const button = (root, label, dataset, active = false) => {
 }
 
 export class StationOutfittingPanel {
-  constructor({root, preview, fit, onApplied, onClose}) {
+  constructor({root, preview, fit, purchase, onApplied, onClose}) {
     this.root = root
     this.preview = preview
     this.fit = fit
+    this.purchase = purchase
     this.onApplied = onApplied
     this.onClose = onClose
     this.opened = false
@@ -59,6 +65,7 @@ export class StationOutfittingPanel {
     this.slot = 0
     this.chosen = undefined
     this.proposed = null
+    this.shopChoice = null
     this.busy = false
     this.opened = true
     this.message = "Select a hardpoint and owned equipment."
@@ -89,6 +96,7 @@ export class StationOutfittingPanel {
     this.chosen = item
     this.proposed = null
     this.busy = true
+    this.shopChoice = null
     this.message = "Checking inventory, hardpoint and ship statistics…"
     const seq = ++this.seq
     this.render()
@@ -98,6 +106,43 @@ export class StationOutfittingPanel {
       this.proposed = ok ? result?.preview : null
       this.message = ok ? "Review this preview before installing." :
         "Preview rejected: " + String(result?.reason || "unavailable").replaceAll("_", " ")
+      this.render()
+    })
+  }
+
+  chooseShop(item_id) {
+    if (!this.opened || this.busy) return
+    this.shopChoice = this.data.shop?.find(item => item.id === item_id) || null
+    this.chosen = undefined
+    this.proposed = null
+    this.message = this.shopChoice
+      ? this.shopChoice.name + " · " + creditText(this.shopChoice.price) +
+        " · Purchasing adds one to inventory. Installation is a separate action."
+      : "Item no longer offered."
+    this.render()
+  }
+
+  buy() {
+    if (!this.opened || this.busy || !this.shopChoice ||
+        !affordable(this.data.credits, this.shopChoice.price)) return
+    const seq = ++this.seq
+    const item_id = this.shopChoice.id
+    this.busy = true
+    this.message = "Confirming purchase with Green Starbase accounts…"
+    this.render()
+    this.purchase({item_id}, (ok, result) => {
+      if (!this.opened || seq !== this.seq) return
+      this.busy = false
+      this.shopChoice = null
+      if (ok && result?.outfitting && result?.receipt) {
+        this.data = result.outfitting
+        this.message = "Purchased " + result.receipt.name + " for " +
+          creditText(result.receipt.price) + ". Remaining balance: " +
+          creditText(result.receipt.credits_remaining) + ". Choose the item above to install."
+      } else {
+        this.message = "Purchase rejected: " +
+          String(result?.reason || "unavailable").replaceAll("_", " ")
+      }
       this.render()
     })
   }
@@ -131,6 +176,7 @@ export class StationOutfittingPanel {
     if (!this.opened) return
     if (event.target?.closest?.("#station-outfitting-close")) return this.close()
     if (event.target?.closest?.("#station-outfitting-apply")) return this.apply()
+    if (event.target?.closest?.("#station-outfitting-buy")) return this.buy()
     if (this.busy) return
     const config = event.target?.closest?.("[data-outfit-config]")?.dataset.outfitConfig
     if (config != null) {
@@ -139,6 +185,7 @@ export class StationOutfittingPanel {
       this.slot = 0
       this.chosen = undefined
       this.proposed = null
+      this.shopChoice = null
       return this.render()
     }
     const chosenSlot = event.target?.closest?.("[data-outfit-slot]")
@@ -147,8 +194,11 @@ export class StationOutfittingPanel {
       this.slot = Number(chosenSlot.dataset.outfitSlot)
       this.chosen = undefined
       this.proposed = null
+      this.shopChoice = null
       return this.render()
     }
+    const sale = event.target?.closest?.("[data-outfit-shop]")?.dataset.outfitShop
+    if (sale != null) return this.chooseShop(sale)
     const item = event.target?.closest?.("[data-outfit-item]")?.dataset.outfitItem
     if (item != null) this.selectItem(item === "__remove__" ? null : item)
   }
@@ -162,6 +212,8 @@ export class StationOutfittingPanel {
       this.data.ship.laser_slots + " laser / " +
       this.data.ship.generator_slots + " generator hardpoints"
     at("#station-outfitting-message").textContent = this.message
+    at("#station-outfitting-credits").textContent =
+      "Credits: " + creditText(this.data.credits)
 
     const configs = at("#station-outfitting-configs")
     configs.replaceChildren()
@@ -201,8 +253,31 @@ export class StationOutfittingPanel {
         {outfitItem: item.id}, this.chosen === item.id)
     }
     if (!installed && candidates.length === 0)
-      add(items, "No compatible items owned. Purchasing is not enabled.",
+      add(items, "No compatible items owned. Browse the shop below.",
         "rounded border border-slate-700/60 p-3 text-slate-400")
+
+    const stock = at("#station-outfitting-stock")
+    stock.replaceChildren()
+    for (const item of fittingCandidates(
+      (this.data.shop || []).map(x => ({...x, quantity: 1})), this.kind)) {
+      const details = this.kind === "laser"
+        ? item.damage + " damage"
+        : item.shields > 0
+          ? item.shields + " shields · " +
+            Math.round(item.shield_absorption * 100) + "% absorption"
+          : "+" + item.speed + " speed"
+      button(stock, item.name + " · " + details + " · " +
+        creditText(item.price) + (affordable(this.data.credits, item.price)
+          ? "" : " · SAVE UP"),
+        {outfitShop: item.id}, this.shopChoice?.id === item.id)
+    }
+
+    const buy = at("#station-outfitting-buy")
+    buy.disabled = this.busy || !this.shopChoice ||
+      !affordable(this.data.credits, this.shopChoice.price)
+    buy.textContent = this.shopChoice
+      ? "Confirm purchase · " + creditText(this.shopChoice.price)
+      : "Select equipment to purchase"
 
     const preview = at("#station-outfitting-preview")
     preview.replaceChildren()
