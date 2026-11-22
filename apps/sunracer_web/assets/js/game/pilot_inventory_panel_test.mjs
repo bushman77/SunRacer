@@ -19,6 +19,10 @@ test("inventory displays real cargo stacks, loose gear and installed loadouts", 
   assert.deepEqual(installedRows(
     {slots: {laser: ["beryl"], generator: [null]}}, view.catalog),
   ["Laser 1: Beryl", "Generator 1: Empty"])
+  assert.deepEqual(installedRows(
+    {slots: {laser: [null], generator: [null]}}, view.catalog,
+    {id: 1, base_damage: 10}),
+  ["Laser 1: Garnet · 10 damage (built-in)", "Generator 1: Empty"])
 })
 
 test("inventory panel never permits mutable operations or reads client IDs", () => {

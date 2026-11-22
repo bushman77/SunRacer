@@ -37,7 +37,8 @@ defmodule Sunracer.Inventory.View do
         |> Enum.sort_by(& &1.name)
 
       {:ok, %{
-        ship: %{id: ship.ship_id, name: definition.name},
+        ship: %{id: ship.ship_id, name: definition.name,
+          base_damage: definition.damage},
         credits: fitting.credits,
         cargo: %{
           items: cargo,

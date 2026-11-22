@@ -12,6 +12,7 @@ defmodule Sunracer.Inventory.ViewTest do
     other = player_account_fixture()
     assert {:ok, empty} = View.snapshot(pilot.id, 1)
     assert empty.ship.name == "Sunracer"
+    assert empty.ship.base_damage == 10
     assert empty.credits == pilot.credits
     assert empty.cargo.items == []
     assert empty.cargo.used_tonnes == 0

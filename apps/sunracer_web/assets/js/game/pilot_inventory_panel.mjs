@@ -14,10 +14,15 @@ export const equipmentRows = inventory =>
 
 const prettyId = id => text(id).replaceAll("_", " ").toUpperCase()
 
-export function installedRows(config, catalog = []) {
+export function installedRows(config, catalog = [], ship = null) {
   const byId = new Map(catalog.map(item => [item.id, item.name]))
+  const defaultLaser = Number(ship?.base_damage) > 0
+    ? (ship.id === 1 ? "Garnet" : "Built-in beam") +
+      " · " + ship.base_damage + " damage (built-in)"
+    : "Empty"
   const laser = (config?.slots?.laser || []).map((id, i) =>
-    "Laser " + (i + 1) + ": " + (id ? byId.get(id) || prettyId(id) : "Empty"))
+    "Laser " + (i + 1) + ": " +
+      (id ? byId.get(id) || prettyId(id) : defaultLaser))
   const generator = (config?.slots?.generator || []).map((id, i) =>
     "Generator " + (i + 1) + ": " + (id ? byId.get(id) || prettyId(id) : "Empty"))
   return [...laser, ...generator]
@@ -132,7 +137,7 @@ export class PilotInventoryPanel {
         section.appendChild(title)
         const ul = document.createElement("ul")
         ul.className = "mt-2 grid gap-1 text-xs"
-        ul.replaceChildren(...installedRows(config, view.catalog).map(row))
+        ul.replaceChildren(...installedRows(config, view.catalog, view.ship).map(row))
         section.appendChild(ul)
         return section
       })
