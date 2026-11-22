@@ -139,6 +139,27 @@ test("unmodified E rolls, Ctrl+E toggles mode without rolling; text inputs prote
   assert.equal(sent.at(-1).mode, "newtonian")
 })
 
+test("explicit icon mode selection keeps keyboard and HMD on the same controller", () => {
+  const sent = []
+  let enabled = true
+  const flight = new FlightControls({
+    send: data => sent.push(data),
+    active: () => enabled,
+    now: () => 2000,
+  })
+  assert.equal(flight.setMode("newtonian"), true)
+  assert.equal(sent.at(-1).mode, "newtonian")
+  assert.equal(flight.setMode("newtonian"), false)
+  assert.equal(sent.length, 1, "selecting active mode must not repeat a command")
+  assert.equal(flight.setMode("invalid"), false)
+  assert.equal(flight.toggleMode(), true)
+  assert.equal(sent.at(-1).mode, "cruise")
+  enabled = false
+  assert.equal(flight.setMode("newtonian"), false)
+  assert.equal(flight.toggleMode(), false)
+  assert.equal(sent.at(-1).mode, "cruise")
+})
+
 test("held rotation heartbeats, focus loss releases, atlas release remains silent", () => {
   let time = 2000
   const sent = []

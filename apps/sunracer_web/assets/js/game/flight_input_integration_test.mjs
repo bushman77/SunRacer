@@ -7,7 +7,17 @@ const markup = readFileSync(new URL(
   "../../../lib/sunracer_web/controllers/game_html/show.html.heex", import.meta.url),
 "utf8")
 
-test("keyboard and mouse share a single authoritative flight gate", () => {
+test("compact ship icons select authoritative cruise and Newtonian modes", () => {
+  assert.match(markup, /id="flight-mode-toggle"[^>]*role="group"/)
+  assert.match(markup, /id="flight-mode-cruise" data-flight-mode="cruise"/)
+  assert.match(markup, /id="flight-mode-newtonian" data-flight-mode="newtonian"/)
+  assert.match(markup, /aria-pressed="true"/)
+  assert.match(client, /this\.flightControls\.setMode\(button\.dataset\.flightMode\)/)
+  assert.match(client, /syncFlightModeButtons\(mode = this\.entities\.get\(this\.selfId\)\?\.flightMode\)/)
+  assert.match(client, /button\.setAttribute\("aria-pressed"/)
+})
+
+test("keyboard and mouse share a single authoritative flight gate",
   assert.match(client, /active: \(\) => this\.flightInputState\(\) === "ready"/)
   assert.match(client, /flightInputState\(\) \{[\s\S]*?sectorJoined:/)
 })

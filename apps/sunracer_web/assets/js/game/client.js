@@ -191,6 +191,7 @@ class SpaceClient {
       send: input => this.sendFlightControls(input),
     })
     this.setupMouseSteering()
+    this.setupFlightModeButtons()
     const takeHelm = this.root.querySelector("#cockpit-take-helm")
     takeHelm?.addEventListener("click", () => {
       if (this.flightInputState() !== "cruise" || takeHelm.disabled) return
@@ -876,7 +877,11 @@ class SpaceClient {
     // Region clocks restart independently; never carry old shot ticks forward.
     this.spaceLaser?.resetForWorld()
     this.flightControls.resetThrottle()
-    this.flightControls.mode = "cruise"
+    // The server may restore a previously saved Newtonian mode on reconnect.
+    // Avoid emitting a stale default Cruise command on the next control tick.
+    const authoritativeMode = this.entities.get(this.selfId)?.flightMode
+    this.flightControls.mode = authoritativeMode === "newtonian" ? "newtonian" : "cruise"
+    this.lastFlightModeDisplay = null
     this.populateHud()
     this.setConnection("Authoritative sync", "online")
   }
@@ -2254,8 +2259,35 @@ class SpaceClient {
     )
   }
 
+  setupFlightModeButtons() {
+    for (const button of this.root.querySelectorAll("[data-flight-mode]")) {
+      button.addEventListener("click", () => {
+        // All routes, including the Ctrl+E keyboard chord and HMD gaze,
+        // use the same authoritative flight_controls channel.
+        if (!this.flightControls?.active()) return
+        this.flightControls.setMode(button.dataset.flightMode)
+      })
+    }
+    this.syncFlightModeButtons()
+  }
+
+  syncFlightModeButtons(mode = this.entities.get(this.selfId)?.flightMode) {
+    const enabled = this.flightControls?.active() === true
+    const signature = String(mode) + ":" + enabled
+    if (signature === this.lastFlightModeDisplay) return
+    this.lastFlightModeDisplay = signature
+    for (const button of this.root.querySelectorAll("[data-flight-mode]")) {
+      button.disabled = !enabled
+      // Highlight only what the server actually reports. Never fake success
+      // before a mode command is accepted and replicated.
+      button.setAttribute("aria-pressed",
+        String(mode === button.dataset.flightMode))
+    }
+  }
+
   updateCoordinates() {
     const ownShip = this.entities.get(this.selfId)
+    this.syncFlightModeButtons(ownShip?.flightMode)
     if (!ownShip) return
     this.text("#hud-coordinates", `${number(ownShip.render.x)} / ${number(ownShip.render.y)} / ${number(ownShip.render.z)}`)
     this.text("#hud-flight-mode", (ownShip.flightMode || "cruise").toUpperCase())
