@@ -27,7 +27,7 @@ defmodule Sunracer.Story do
   alias Sunracer.Piracy
   alias Sunracer.Repo
   alias Sunracer.ShipCondition
-  alias Sunracer.Story.{Progress, Prologue, Reward}
+  alias Sunracer.Story.{Progress, Prologue, Reward, Scenes}
   alias Sunracer.World.PubSub
 
   @first_run_reward "prologue:first_run"
@@ -94,7 +94,7 @@ defmodule Sunracer.Story do
             outcomes = Enum.map(effects, &db_effect!(player_id, &1))
             changed? = next != current
             if changed?, do: save!(row, current, next)
-            {next, effects, outcomes, changed?}
+            {current, next, effects, outcomes, changed?}
         end
       end)
 
@@ -102,14 +102,15 @@ defmodule Sunracer.Story do
       {:ok, :ignored} ->
         :ignored
 
-      {:ok, {next, effects, outcomes, changed?}} ->
+      {:ok, {current, next, effects, outcomes, changed?}} ->
         Enum.zip(effects, outcomes)
         |> Enum.each(fn {effect, outcome} ->
           safely(fn -> runtime_effect(player_id, effect, outcome, opts) end)
         end)
 
         story = public(next)
-        if changed?, do: broadcast(player_id, story, next)
+        scene = Scenes.on_transition(current, next)
+        if changed?, do: broadcast(player_id, story, next, scene)
         {:ok, %{story: story, progress: next}}
 
       {:error, reason} ->
@@ -313,7 +314,10 @@ defmodule Sunracer.Story do
     :exit, reason -> Logger.warning("story runtime effect unavailable: #{inspect(reason)}")
   end
 
-  defp broadcast(player_id, story, progress) do
+  defp broadcast(player_id, story, progress, scene) do
+    # Scene metadata accompanies this *transition event* only, never the
+    # persisted snapshot. Reconnecting cannot replay an old transmission.
+    story = if scene, do: Map.put(story, :scene, scene), else: story
     Phoenix.PubSub.broadcast(
       Sunracer.PubSub,
       PubSub.topic("sol"),

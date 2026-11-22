@@ -161,21 +161,18 @@ defmodule Sunracer.Story.Prologue do
   def apply(%{step: 7} = progress, :docked_starbase, _facts),
     do: {:ok, advance(progress, 8, progress.flags), []}
 
-  def apply(%{step: 8} = progress, {:talked, attendant_id}, _facts)
-      when attendant_id in ["repair", "missions"] do
-    key = if attendant_id == "repair", do: "talked_mara", else: "talked_juno"
+  # Mara must inspect the damaged ship before Juno reviews the route evidence.
+  def apply(%{step: 8, flags: %{"talked_mara" => true, "data_chip" => true}} = progress,
+            {:talked, "missions"}, _facts) do
+    {:ok, advance(progress, 9, Map.put(progress.flags, "talked_juno", true)), []}
+  end
 
-    effects =
-      if attendant_id == "repair" and progress.flags["talked_mara"] != true,
-        do: [:patch_hull],
-        else: []
-
-    flags = Map.put(progress.flags, key, true)
-
-    cond do
-      flags["talked_mara"] && flags["talked_juno"] -> {:ok, advance(progress, 9, flags), effects}
-      flags != progress.flags -> {:ok, %{progress | flags: flags}, effects}
-      true -> :ignore
+  def apply(%{step: 8} = progress, {:talked, "repair"}, _facts) do
+    if progress.flags["talked_mara"] == true do
+      :ignore
+    else
+      {:ok, %{progress | flags: Map.put(progress.flags, "talked_mara", true)},
+       [:patch_hull]}
     end
   end
 
@@ -363,9 +360,9 @@ defmodule Sunracer.Story.Prologue do
     line(
       @kade,
       "Green Starbase communications",
-      "Welcome aboard. Mara Venn is in the repair bay, and Juno Rook wants your " <>
-        "report in the Mission Office.",
-      "Talk to Mara Venn and Juno Rook",
+      "Welcome aboard. Mara Venn must inspect the raider's weapons damage first. " <>
+        "Then report what you saw and the route evidence to Juno Rook.",
+      "Speak to Mara first, then report to Juno",
       checks: [
         check("Mara Venn, repair bay", flags["talked_mara"]),
         check("Juno Rook, Mission Office", flags["talked_juno"])
@@ -428,7 +425,12 @@ defmodule Sunracer.Story.Prologue do
   end
 
   def topics(%{step: 8, flags: flags}, "missions") do
-    if flags["talked_juno"], do: [], else: [%{id: "story", label: "Report the Corsair-17 attack"}]
+    if flags["talked_mara"] == true and flags["data_chip"] == true and
+         flags["talked_juno"] != true do
+      [%{id: "story", label: "Report Corsair-17 and show the route evidence"}]
+    else
+      []
+    end
   end
 
   def topics(%{step: step}, "comms") when step in 8..@complete,
@@ -449,15 +451,16 @@ defmodule Sunracer.Story.Prologue do
 
   defp dialogue_text(%{step: 8}, "repair"),
     do:
-      "Hold still; this is a field patch, not a refit. There: hull and shields back " <>
-        "to full. Funny thing about those burn marks. They came from military-grade " <>
-        "emitters. Too good for a small-time outfit like Corsair-17."
+      "Let's see your hull. Those burn marks came from military-grade emitters, " <>
+        "not the scrap an outfit like Corsair-17 can usually afford. I've patched " <>
+        "your hull and shields. Now report this to Juno in the Mission Office."
 
   defp dialogue_text(%{step: 8}, "missions"),
     do:
-      "Corsair-17, Vesper-02, and a data chip from the raider's hold? Let me see it. " <>
-        "...That's your route plan, filed with Helios dispatch before you launched. " <>
-        "Somebody is selling courier routes. Say nothing about this for now. To anyone."
+      "Mara's report says military emitters, not scrapyard guns. And this " <>
+        "route evidence from Corsair? That's your own flight plan, filed " <>
+        "with Helios dispatch before you launched. Somebody is selling " <>
+        "courier routes to raiders. Tell no one yet. I'll follow the leak."
 
   defp dialogue_text(_progress, "comms"),
     do:
