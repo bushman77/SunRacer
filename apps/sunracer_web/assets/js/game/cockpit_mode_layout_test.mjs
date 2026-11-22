@@ -30,7 +30,6 @@ test("resize repositions physical 3D icons to match scaled cockpit HUD", () => {
   assert.match(view, /const placement = cockpitModePlacement\(fit\.scale\)/)
   assert.match(view, /button\.position\.set\(pos\.x, pos\.y, pos\.z\)/)
   assert.doesNotMatch(view, /button\.position\.set\(x, -0\.52, -2\.36\)/)
-  assert.match(view, /const inactiveMode = this\.helmetModeCurrent === "cruise"/)
   assert.match(view, /this\.helmetModeHitboxes\?\.\[mode\]/)
   assert.match(view, /hitbox\.position\.set\(pos\.x, pos\.y, pos\.z \+ 0\.035\)/)
   assert.doesNotMatch(view, /const inactiveMode = this\.helmetModeCurrent/)
