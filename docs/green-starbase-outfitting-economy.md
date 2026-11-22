@@ -14,29 +14,32 @@ against docking, walking and launching. In PostgreSQL, the account is locked,
 the server validates the current balance, and the credit debit and inventory
 addition commit atomically. A failed purchase cannot debit credits or grant gear.
 
-## Fixed prices
+## Scarcity-based progression prices
 
-| Item | Effect | Price (credits) | First-run rewards needed to match price* |
-| --- | --- | ---: | ---: |
-| G3N-1010 (g1) | +2 speed | 1,500 | 3 |
-| Beryl beam | 15 damage (replaces built-in Garnet's 10) | 2,000 | 4 |
-| G3N-2010 (g2) | +4 speed | 5,500 | 11 |
-| Sapphire beam | 20 damage | 6,000 | 12 |
-| SG3N-A01 (sg1) | 1,000 shield capacity, 40% absorption | 6,000 | 12 |
-| LF-1 | 40 damage | 14,000 | 28 |
-| G3N-3210 (g3) | +7 speed | 16,000 | 32 |
-| SG3N-A02 (sg2) | 2,000 shields, 50% absorption | 22,000 | 44 |
-| LF-2 | 60 damage | 32,000 | 64 |
-| LF-3 | 150 damage | 130,000 | 260 |
-| LF-4 | 200 damage | 300,000 | 600 |
-| B02 shield | 10,000 shields, 80% absorption | 300,000 | 600 |
+This is a deliberately **steeper, provisional** price ladder. Entry upgrades
+start at 20,000 credits; high-performance lasers and shields reach 8–35 million.
+Larger power jumps cost disproportionately more instead of scaling linearly.
 
-\* The current prologue pays **500 credits once** at the first verified delivery.
-The equivalents above express **relative cost**, not an assertion that the
-delivery is repeatable. The game needs a separate, server-verified repeatable
-income path (missions, cargo trading, bounties) before equipment purchases
-become a fully reachable long-term progression loop. Do not silently increase
-story rewards or give starter equipment as a workaround.
+| Item | Effect | Old price | Revised price | × 500-credit first-run reward* |
+| --- | --- | ---: | ---: | ---: |
+| G3N-1010 (g1) | +2 speed | 1,500 | **20,000** | 40× |
+| Beryl beam | 15 damage (vs built-in Garnet 10) | 2,000 | **35,000** | 70× |
+| G3N-2010 (g2) | +4 speed | 5,500 | **100,000** | 200× |
+| Sapphire beam | 20 damage | 6,000 | **150,000** | 300× |
+| SG3N-A01 (sg1) | 1,000 shields, 40% absorption | 6,000 | **250,000** | 500× |
+| G3N-3210 (g3) | +7 speed | 16,000 | **400,000** | 800× |
+| LF-1 | 40 damage | 14,000 | **500,000** | 1,000× |
+| SG3N-A02 (sg2) | 2,000 shields, 50% absorption | 22,000 | **1,250,000** | 2,500× |
+| LF-2 | 60 damage | 32,000 | **2,000,000** | 4,000× |
+| LF-3 | 150 damage | 130,000 | **8,000,000** | 16,000× |
+| LF-4 | 200 damage | 300,000 | **25,000,000** | 50,000× |
+| B02 shield | 10,000 shields, 80% absorption | 300,000 | **35,000,000** | 70,000× |
+
+\* The first verified prologue delivery currently pays **500 credits only once**.
+The last column expresses a price-to-reward ratio, **not repeatable mission
+counts**. The game does not yet provide a measured repeatable credit income
+loop; earning hours, progression pace, and final affordability cannot be
+estimated reliably until that system exists.
 
 ## Balancing assumptions and next gates
 
@@ -48,6 +51,12 @@ story rewards or give starter equipment as a workaround.
   refund/resale path or free upgrade exchange.
 - Keep the shop server-owned. Future restocking, faction discounts, and dynamic
   markets require independently validated server-side policy and tests.
-- Next economic milestone: verify a repeatable earning loop and measure
-  credits earned per hour, upgrade time-to-purchase, survival difficulty,
-  and endgame inflation before modifying the price book.
+- Next economic milestone: implement and measure repeatable missions, trade,
+  and bounties. Tune earnings against this scarcity ladder using median hours
+  per upgrade, combat survival, player attrition, and endgame inflation.
+- Do not inflate rewards merely to make an expensive shop item affordable.
+  Difficulty, travel risk, repair costs, and access to higher-paying contracts
+  should explain increasing income over time.
+- This adjustment changes **only** server purchase prices, their tests, and
+  the economy specification; no credits, assets, or existing loadouts are
+  changed or retroactively repriced.

@@ -9,13 +9,14 @@ defmodule Sunracer.OutfittingTest do
   alias Sunracer.Outfitting.Shop
   alias Sunracer.World, as: GameWorld
 
-  test "fixed prices require saving beyond the first 500-credit payout" do
+  test "progression price tiers are scarce relative to the one-time prologue reward" do
     prices = Shop.stock()
     assert length(prices) == length(Core.Equipment.Catalog.all())
-    assert Enum.all?(prices, &(&1.price > Sunracer.Story.Prologue.first_pay()))
-    assert {:ok, 2_000} = Shop.price("beryl")
-    assert {:ok, 6_000} = Shop.price("sg1")
-    assert {:ok, 300_000} = Shop.price("lf4")
+    assert Enum.all?(prices, &(&1.price >= 40 * Sunracer.Story.Prologue.first_pay()))
+    assert {:ok, 35_000} = Shop.price("beryl")
+    assert {:ok, 250_000} = Shop.price("sg1")
+    assert {:ok, 25_000_000} = Shop.price("lf4")
+    assert {:ok, 35_000_000} = Shop.price("bo2")
     assert {:error, :not_for_sale} = Shop.price("not-real")
     assert {:error, :not_for_sale} = Shop.price(nil)
   end
@@ -152,23 +153,23 @@ defmodule Sunracer.OutfittingTest do
     account = Sunracer.Accounts.get_player_account!(pilot.id)
     {:ok, _funded} =
       account
-      |> Ecto.Changeset.change(credits: 4_500)
+      |> Ecto.Changeset.change(credits: 80_000)
       |> Repo.update()
 
     assert {:ok, %{receipt: first, outfitting: stocked}} =
       GameWorld.outfitting_purchase(session.id, "beryl")
-    assert first.price == 2_000
-    assert first.credits_remaining == 2_500
-    assert stocked.credits == 2_500
+    assert first.price == 35_000
+    assert first.credits_remaining == 45_000
+    assert stocked.credits == 45_000
     assert Enum.find(stocked.inventory, &(&1.id == "beryl")).quantity == 2
 
     assert {:ok, %{receipt: second}} =
       GameWorld.outfitting_purchase(session.id, "beryl")
-    assert second.credits_remaining == 500
+    assert second.credits_remaining == 10_000
     assert {:error, :insufficient_credits} =
       GameWorld.outfitting_purchase(session.id, "beryl")
     assert Inventory.laser_count(pilot.id, "beryl") == 3
-    assert Sunracer.Accounts.get_player_account!(pilot.id).credits == 500
+    assert Sunracer.Accounts.get_player_account!(pilot.id).credits == 10_000
 
     assert {:ok, %{docked: false, entity: launched}} = GameWorld.launch(session.id)
     assert launched.damage == 10

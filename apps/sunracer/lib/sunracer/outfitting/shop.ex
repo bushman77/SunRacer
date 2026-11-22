@@ -2,8 +2,9 @@ defmodule Sunracer.Outfitting.Shop do
   @moduledoc """
   Green Starbase outfitter's fixed credit price book.
 
-  Costs are deliberately well above the first-run delivery payout of 500
-  credits. Client messages never include a price or a purchase quantity.
+  The progression price curve ranges from 20,000-credit entry fittings to
+  35,000,000-credit late-game shields. The first-run delivery pays only 500
+  credits once; these prices require future repeatable economic gameplay. Client messages never include a price or a purchase quantity.
   Only the listed catalog IDs are available; stock is not an exploitable
   client-controlled value. Pricing is a balance baseline, not a reward source.
   """
@@ -11,18 +12,18 @@ defmodule Sunracer.Outfitting.Shop do
   alias Core.Equipment.Catalog
 
   @prices %{
-    "beryl" => 2_000,
-    "sapphire" => 6_000,
-    "lf1" => 14_000,
-    "lf2" => 32_000,
-    "lf3" => 130_000,
-    "lf4" => 300_000,
-    "g1" => 1_500,
-    "g2" => 5_500,
-    "g3" => 16_000,
-    "sg1" => 6_000,
-    "sg2" => 22_000,
-    "bo2" => 300_000
+    "beryl" => 35_000,
+    "sapphire" => 150_000,
+    "lf1" => 500_000,
+    "lf2" => 2_000_000,
+    "lf3" => 8_000_000,
+    "lf4" => 25_000_000,
+    "g1" => 20_000,
+    "g2" => 100_000,
+    "g3" => 400_000,
+    "sg1" => 250_000,
+    "sg2" => 1_250_000,
+    "bo2" => 35_000_000
   }
 
   @spec price(String.t()) :: {:ok, pos_integer()} | {:error, :not_for_sale}
