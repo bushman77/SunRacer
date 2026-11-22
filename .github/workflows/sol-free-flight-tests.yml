@@ -46,6 +46,13 @@ on:
       - "apps/core/test/core/world/world_test.exs"
       - "apps/sunracer/test/sunracer/world_test.exs"
       - "apps/sunracer/lib/sunracer/world.ex"
+      - "apps/sunracer/lib/sunracer/story.ex"
+      - "apps/sunracer/lib/sunracer/story/prologue.ex"
+      - "apps/sunracer/test/sunracer/story/prologue_test.exs"
+      - "apps/sunracer/test/sunracer/story_test.exs"
+      - "apps/sunracer_web/assets/js/game/story_hud*.mjs"
+      - "apps/core/lib/core/world/station_attendants.ex"
+      - "docs/story-first-run.md"
       - "apps/sunracer/lib/sunracer/pilot_location.ex"
       - "apps/sunracer/test/sunracer/pilot_location_test.exs"
       - "apps/sunracer_web/lib/sunracer_web/channels/world_channel.ex"
@@ -169,6 +176,11 @@ jobs:
           node --check apps/sunracer_web/assets/js/game/station_outfitting_panel.mjs
           node --test apps/sunracer_web/assets/js/game/station_outfitting_panel_test.mjs
           node --test apps/sunracer_web/assets/js/game/station_npc_integration_test.mjs
+      - name: Test First Run story and NPC assignment contract
+        run: |
+          mix test apps/sunracer/test/sunracer/story/prologue_test.exs
+          mix test apps/sunracer/test/sunracer/story_test.exs
+          node --test apps/sunracer_web/assets/js/game/story_hud_test.mjs
       - name: Test authenticated Phoenix handoffs
         run: |
           mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
