@@ -582,9 +582,9 @@
           </label>
           <label for="nav-mouse-sensitivity" class="flex items-center gap-2 text-xs text-slate-300">
             Sensitivity
-            <input id="nav-mouse-sensitivity" type="range" min="40" max="600"
-                   step="10" value="100" class="w-32 accent-cyan-400" />
-            <output id="nav-mouse-sensitivity-value" for="nav-mouse-sensitivity">1.0×</output>
+            <input id="nav-mouse-sensitivity" type="range" min="40" max="1000"
+                   step="10" value="150" class="w-32 accent-cyan-400" />
+            <output id="nav-mouse-sensitivity-value" for="nav-mouse-sensitivity">1.5×</output>
           </label>
         </div>
         <p class="mt-2 text-xs text-slate-400">
@@ -813,6 +813,27 @@
     </div>
 
     <aside id="cockpit-settings" class="cockpit-settings" aria-label="Cockpit layout settings">
+      <details class="relative pointer-events-auto">
+        <summary class="cockpit-settings-button cursor-pointer select-none" title="Tune cockpit mouse steering">
+          <.icon name="hero-cursor-arrow-rays" class="size-4" />
+          <span class="hidden sm:inline">Mouse</span>
+        </summary>
+        <div class="absolute right-0 top-full z-[75] mt-2 w-64 rounded-xl border border-cyan-400/40 bg-slate-950/95 p-4 text-slate-100 shadow-2xl">
+          <label class="flex items-center gap-2 text-xs font-semibold text-cyan-200">
+            <input id="cockpit-mouse-steering" type="checkbox" class="size-4 accent-cyan-400" />
+            Enable mouse steering
+          </label>
+          <label for="cockpit-mouse-sensitivity" class="mt-4 flex items-center justify-between gap-2 text-xs">
+            Sensitivity
+            <output id="cockpit-mouse-sensitivity-value" for="cockpit-mouse-sensitivity">1.5×</output>
+          </label>
+          <input id="cockpit-mouse-sensitivity" type="range" min="40" max="1000"
+                 step="10" value="150" class="mt-2 w-full accent-cyan-400" />
+          <p class="mt-2 text-[0.65rem] text-slate-400">
+            0.4×–10× · Changes apply immediately. Click cockpit to capture; Esc releases.
+          </p>
+        </div>
+      </details>
       <button id="cockpit-inventory-open" type="button"
         class="cockpit-settings-button" aria-controls="pilot-inventory-panel"
         title="View ship inventory [I]">

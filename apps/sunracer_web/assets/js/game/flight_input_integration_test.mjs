@@ -12,6 +12,14 @@ test("keyboard and mouse share a single authoritative flight gate", () => {
   assert.match(client, /flightInputState\(\) \{[\s\S]*?sectorJoined:/)
 })
 
+test("Atlas and cockpit share a persistent live-adjustable 0.4x to 10x mouse sensitivity", () => {
+  assert.match(client, /"#nav-mouse-sensitivity", "#cockpit-mouse-sensitivity"/)
+  assert.match(client, /"#nav-mouse-steering", "#cockpit-mouse-steering"/)
+  assert.match(client, /localStorage\.setItem\(this\.mouseSensitivityKey, String\(sensitivity\)\)/)
+  assert.match(markup, /id="cockpit-mouse-sensitivity" type="range" min="40" max="1000"/)
+  assert.match(markup, /id="nav-mouse-sensitivity" type="range" min="40" max="1000"/)
+})
+
 test("native fallback mouse impulses must stop even without pointer lock", () => {
   assert.match(client, /document\.pointerLockElement !== this\.canvas && !this\.mouseFallback/)
   assert.match(client, /document\.pointerLockElement === this\.canvas \|\| this\.mouseFallback/)

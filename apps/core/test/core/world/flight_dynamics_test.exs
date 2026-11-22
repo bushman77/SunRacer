@@ -454,8 +454,8 @@ defmodule Core.World.FlightDynamicsTest do
     deg = 180.0 / :math.pi()
     assert_in_delta keyboard_full.angular_velocity.yaw * deg, 44.0, 1.0e-6
     assert_in_delta keyboard_full.angular_velocity.pitch * deg, 38.0, 1.0e-6
-    assert_in_delta mouse_full.angular_velocity.yaw * deg, 100.0, 1.0e-6
-    assert_in_delta mouse_full.angular_velocity.pitch * deg, 88.0, 1.0e-6
+    assert_in_delta mouse_full.angular_velocity.yaw * deg, 150.0, 1.0e-6
+    assert_in_delta mouse_full.angular_velocity.pitch * deg, 135.0, 1.0e-6
 
     # Releasing mouse capture reverts to the keyboard profile, including
     # bounded angular braking rather than an abrupt physical attitude jump.

@@ -25,8 +25,8 @@ defmodule Core.World.FlightDynamics do
   # Captured mouse-look uses a faster *server-bounded* rotational response.
   # The legacy keyboard rate profile remains unchanged when mouse-look is off.
   @mouse_turn_limits %{
-    yaw: %{speed: 100.0, acceleration: 280.0, braking: 360.0},
-    pitch: %{speed: 88.0, acceleration: 240.0, braking: 320.0}
+    yaw: %{speed: 150.0, acceleration: 420.0, braking: 540.0},
+    pitch: %{speed: 135.0, acceleration: 380.0, braking: 500.0}
   }
   @input_expiry_ticks 10
   # Simulation units are not metres, so a hull's g rating is scaled into them.

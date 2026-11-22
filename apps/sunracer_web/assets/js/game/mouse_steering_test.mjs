@@ -2,6 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import {
   MouseSteering, mouseSteeringAxes, MOUSE_STEERING_IDLE_MS,
+  MOUSE_STEERING_DEFAULT_SENSITIVITY, MOUSE_STEERING_PIXELS_PER_AXIS,
   validMouseSensitivity, enabledMouseSteering,
 } from "./mouse_steering.mjs"
 
@@ -13,19 +14,24 @@ test("native defaults to mouse flight without overriding saved preference", () =
   assert.equal(enabledMouseSteering("1", false), true)
 })
 
-test("mouse yaw/pitch control remains bounded and sensitivity remains 0.4x-6x", () => {
-  assert.deepEqual(mouseSteeringAxes(5.5, -5.5), {yaw: 0.5, pitch: 0.5})
-  assert.deepEqual(mouseSteeringAxes(-5.5, 5.5), {yaw: -0.5, pitch: -0.5})
+test("mouse axes respond more strongly at saved 1x and remain server-bounded", () => {
+  assert.equal(MOUSE_STEERING_DEFAULT_SENSITIVITY, 1.5)
+  assert.equal(MOUSE_STEERING_PIXELS_PER_AXIS, 6)
+  assert.ok(mouseSteeringAxes(2, -2).yaw > 2 / 11,
+    "existing 1.0x profiles must immediately benefit from the new input scale")
+  assert.equal(mouseSteeringAxes(6, -6).yaw, 1)
+  assert.equal(mouseSteeringAxes(6, -6).pitch, 1)
+  assert.equal(mouseSteeringAxes(-6, 6).yaw, -1)
+  assert.equal(mouseSteeringAxes(-6, 6).pitch, -1)
   assert.deepEqual(mouseSteeringAxes(0, 0), {yaw: 0, pitch: 0})
   assert.deepEqual(mouseSteeringAxes(2000, -2000), {yaw: 1, pitch: 1})
-  assert.deepEqual(mouseSteeringAxes(-2000, 2000), {yaw: -1, pitch: -1})
   assert.equal(mouseSteeringAxes(5.5, 0, 2).yaw, 1)
-  assert.equal(mouseSteeringAxes(5.5, 0, 0.4).yaw, 0.2)
-  assert.equal(mouseSteeringAxes(2, 0, 6).yaw, 1)
-  assert.equal(mouseSteeringAxes(5.5, 0, Infinity).yaw, 0.5)
-  assert.equal(mouseSteeringAxes(5.5, 0, 100).yaw, 0.5)
-  assert.equal(validMouseSensitivity(6.0), true)
-  assert.equal(validMouseSensitivity(6.1), false)
+  assert.ok(Math.abs(mouseSteeringAxes(5.5, 0, 0.4).yaw - 0.4 * 5.5 / 6) < 1e-10)
+  assert.equal(mouseSteeringAxes(2, 0, 10).yaw, 1)
+  assert.equal(mouseSteeringAxes(5.5, 0, Infinity).yaw, 5.5 / 6)
+  assert.equal(mouseSteeringAxes(5.5, 0, 100).yaw, 5.5 / 6)
+  assert.equal(validMouseSensitivity(10.0), true)
+  assert.equal(validMouseSensitivity(10.1), false)
   assert.equal(validMouseSensitivity(0.39), false)
 })
 
@@ -38,9 +44,9 @@ test("irregular small movements accumulate smoothly without turn-rate spikes", (
     time += elapsed
     values.push(mouse.move(1, 0).yaw)
   }
-  assert.ok(values.every(v => v > 0 && v < 0.3))
+  assert.ok(values.every(v => v > 0 && v < 0.5))
   assert.ok(values[1] > values[0])
-  assert.ok(values.every((v, i) => i === 0 || Math.abs(v - values[i - 1]) < 0.075),
+  assert.ok(values.every((v, i) => i === 0 || Math.abs(v - values[i - 1]) < 0.12),
     "uneven browser events should not create abrupt yaw changes")
 })
 
@@ -95,8 +101,8 @@ test("direction reversal never waits for the low-pass filter", () => {
   time += 8
   const reversed = mouse.move(-5.5, 5.5)
   assert.ok(reversed.yaw < 0 && reversed.pitch < 0)
-  assert.equal(reversed.yaw, -0.5)
-  assert.equal(reversed.pitch, -0.5)
+  assert.equal(reversed.yaw, -1)
+  assert.equal(reversed.pitch, -1)
   time += MOUSE_STEERING_IDLE_MS
   assert.deepEqual(mouse.expire(time), {yaw: 0, pitch: 0})
 })

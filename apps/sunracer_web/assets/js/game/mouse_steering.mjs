@@ -8,7 +8,11 @@
 export const MOUSE_STEERING_IDLE_MS = 85
 export const MOUSE_STEERING_ACCUMULATE_MS = 45
 export const MOUSE_STEERING_FILTER = 0.65
-export const MOUSE_STEERING_DEFAULT_SENSITIVITY = 1
+// New pilots get a responsive baseline; existing saved preferences remain valid.
+export const MOUSE_STEERING_DEFAULT_SENSITIVITY = 1.5
+// One captured mouse pixel now commands more angular input at every setting.
+// The server still clamps actual rotation to a safe mouse-only turn rate.
+export const MOUSE_STEERING_PIXELS_PER_AXIS = 6
 
 const clamp = (value, low, high) => Math.min(high, Math.max(low, value))
 // Native clients have their own storage origin. Do not silently disable
@@ -17,13 +21,13 @@ export const enabledMouseSteering = (saved, isNative = false) =>
   saved === "1" || (saved === null && isNative === true)
 
 export const validMouseSensitivity = value => Number.isFinite(value) &&
-  value >= 0.4 && value <= 6.0
+  value >= 0.4 && value <= 10.0
 
 export function mouseSteeringAxes(movementX, movementY, sensitivity = 1) {
   const factor = validMouseSensitivity(sensitivity) ? sensitivity : 1
-  const yaw = clamp((Number(movementX) || 0) * factor / 11, -1, 1)
+  const yaw = clamp((Number(movementX) || 0) * factor / MOUSE_STEERING_PIXELS_PER_AXIS, -1, 1)
   // Browser Y increases downwards. Moving mouse UP pitches nose UP.
-  const pitch = clamp(-(Number(movementY) || 0) * factor / 11, -1, 1)
+  const pitch = clamp(-(Number(movementY) || 0) * factor / MOUSE_STEERING_PIXELS_PER_AXIS, -1, 1)
   return {
     yaw: Math.abs(yaw) < 0.015 ? 0 : yaw,
     pitch: Math.abs(pitch) < 0.015 ? 0 : pitch,
@@ -31,7 +35,7 @@ export function mouseSteeringAxes(movementX, movementY, sensitivity = 1) {
 }
 
 export class MouseSteering {
-  constructor({now = () => performance.now(), sensitivity = 1} = {}) {
+  constructor({now = () => performance.now(), sensitivity = MOUSE_STEERING_DEFAULT_SENSITIVITY} = {}) {
     this.now = now
     this.sensitivity = validMouseSensitivity(sensitivity) ? sensitivity : 1
     this.yaw = 0

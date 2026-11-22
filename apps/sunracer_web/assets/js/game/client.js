@@ -31,7 +31,8 @@ import {BandwidthProbe, instrumentPhoenixSocket} from "./bandwidth_probe.mjs"
 import {attachBandwidthPanel} from "./bandwidth_panel.mjs"
 import {gameSocketEndpoint} from "./socket_endpoint.mjs"
 import {
-  MouseSteering, validMouseSensitivity, enabledMouseSteering, MOUSE_STEERING_IDLE_MS,
+  MouseSteering, validMouseSensitivity, enabledMouseSteering,
+  MOUSE_STEERING_DEFAULT_SENSITIVITY, MOUSE_STEERING_IDLE_MS,
 } from "./mouse_steering.mjs"
 import {smoothAttitude} from "./attitude_interpolation.mjs"
 import {smoothOrientation, orientationTelemetry} from "./orientation_interpolation.mjs"
@@ -83,7 +84,7 @@ class SpaceClient {
     )
     const savedSensitivity = Number(localStorage.getItem(this.mouseSensitivityKey))
     this.mouseSteeringSensitivity = validMouseSensitivity(savedSensitivity)
-      ? savedSensitivity : 1
+      ? savedSensitivity : MOUSE_STEERING_DEFAULT_SENSITIVITY
     this.mouseSteering = new MouseSteering({sensitivity: this.mouseSteeringSensitivity})
     this.mouseIdleTimer = null
     this.mouseCaptureLost = false
@@ -2389,23 +2390,36 @@ class SpaceClient {
   }
 
   setupMouseSteering() {
-    const toggle = this.root.querySelector("#nav-mouse-steering")
-    const slider = this.root.querySelector("#nav-mouse-sensitivity")
-    const output = this.root.querySelector("#nav-mouse-sensitivity-value")
-    if (toggle) toggle.checked = this.mouseSteeringEnabled
-    if (slider) slider.value = String(Math.round(this.mouseSteeringSensitivity * 100))
-    if (output) output.textContent = this.mouseSteeringSensitivity.toFixed(1) + "×"
-    slider?.addEventListener("input", () => {
+    // Both cockpit and Atlas use one saved setting and update each other's
+    // controls immediately. The server enforces the final angular rate cap.
+    const toggles = ["#nav-mouse-steering", "#cockpit-mouse-steering"]
+      .map(id => this.root.querySelector(id)).filter(Boolean)
+    const sliders = ["#nav-mouse-sensitivity", "#cockpit-mouse-sensitivity"]
+      .map(id => this.root.querySelector(id)).filter(Boolean)
+    const outputs = ["#nav-mouse-sensitivity-value", "#cockpit-mouse-sensitivity-value"]
+      .map(id => this.root.querySelector(id)).filter(Boolean)
+    const syncSensitivity = () => {
+      for (const slider of sliders) {
+        slider.value = String(Math.round(this.mouseSteeringSensitivity * 100))
+      }
+      for (const output of outputs) {
+        output.textContent = this.mouseSteeringSensitivity.toFixed(1) + "×"
+      }
+    }
+    for (const toggle of toggles) toggle.checked = this.mouseSteeringEnabled
+    syncSensitivity()
+    for (const slider of sliders) slider.addEventListener("input", () => {
       const sensitivity = Number(slider.value) / 100
       if (!validMouseSensitivity(sensitivity)) return
       this.mouseSteeringSensitivity = sensitivity
       this.mouseSteering.sensitivity = sensitivity
       localStorage.setItem(this.mouseSensitivityKey, String(sensitivity))
-      if (output) output.textContent = sensitivity.toFixed(1) + "×"
+      syncSensitivity()
     })
-    toggle?.addEventListener("change", () => {
+    for (const toggle of toggles) toggle.addEventListener("change", () => {
       this.mouseSteeringEnabled = toggle.checked
       localStorage.setItem(this.mouseSteeringKey, toggle.checked ? "1" : "0")
+      for (const other of toggles) other.checked = this.mouseSteeringEnabled
       if (!toggle.checked) this.exitMouseSteering({silent: this.navComputer?.isOpen})
       this.updateMouseSteeringStatus()
     })
