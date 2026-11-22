@@ -42,6 +42,7 @@ defmodule Sunracer.StoryTest do
 
     assert %{step: 1, complete: false, skipped: false, prompt: %{speaker: speaker}} =
              Story.snapshot(pilot.id)
+    refute Map.has_key?(Story.snapshot(pilot.id), :scene)
 
     assert speaker == "Dispatcher Halden Ross"
   end
@@ -65,6 +66,8 @@ defmodule Sunracer.StoryTest do
       story: %{step: 3, scene: %{id: "first_run:consignment_loaded"}}}}
     assert crates(id) == Prologue.crates()
     assert :ignored = record!(id, :accept_consignment)
+    refute_receive {:story_updated, %{player_id: ^id,
+      story: %{scene: %{id: "first_run:consignment_loaded"}}}}, 20
     assert crates(id) == Prologue.crates()
 
     assert {:ok, %{story: %{step: 4}}} = record!(id, {:navigation, nav(%{})})

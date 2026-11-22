@@ -48,9 +48,14 @@ on:
       - "apps/sunracer/lib/sunracer/world.ex"
       - "apps/sunracer/lib/sunracer/story.ex"
       - "apps/sunracer/lib/sunracer/story/prologue.ex"
+      - "apps/sunracer/lib/sunracer/story/scenes.ex"
+      - "apps/sunracer/test/sunracer/story/scenes_test.exs"
+      - "apps/core/lib/core/universe/story_traffic.ex"
+      - "apps/core/test/core/universe/story_traffic_navigation_test.exs"
       - "apps/sunracer/test/sunracer/story/prologue_test.exs"
       - "apps/sunracer/test/sunracer/story_test.exs"
       - "apps/sunracer_web/assets/js/game/story_hud*.mjs"
+      - "apps/sunracer_web/assets/js/game/story_radio*.mjs"
       - "apps/core/lib/core/world/station_attendants.ex"
       - "docs/story-first-run.md"
       - "apps/sunracer/lib/sunracer/pilot_location.ex"
@@ -180,7 +185,10 @@ jobs:
         run: |
           mix test apps/sunracer/test/sunracer/story/prologue_test.exs
           mix test apps/sunracer/test/sunracer/story_test.exs
+          mix test apps/sunracer/test/sunracer/story/scenes_test.exs
+          mix test apps/core/test/core/universe/story_traffic_navigation_test.exs
           node --test apps/sunracer_web/assets/js/game/story_hud_test.mjs
+          node --test apps/sunracer_web/assets/js/game/story_radio_test.mjs
       - name: Test authenticated Phoenix handoffs
         run: |
           mix test apps/sunracer_web/test/sunracer_web/channels/world_channel_test.exs
