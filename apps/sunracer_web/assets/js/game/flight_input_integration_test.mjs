@@ -47,3 +47,9 @@ test("laser hold during cruise transfers manual helm before firing in the new re
   assert.match(client, /regionTransferring: Boolean\(navigation\?\.free_flight\)/)
   assert.match(client, /this\.spaceLaser\?\.resetForWorld\(\)/)
 })
+
+test("own-ship movement previews do not reset authoritative camera prediction", () => {
+  assert.match(client, /const ownShip = id === this\.selfId \? this\.entities\.get\(id\) : null/)
+  assert.match(client, /applyOwnShipMovementPreview\(ownShip, entity\)/)
+  assert.match(client, /if \(ownShip\) \{[\s\S]*?\} else \{\s*this\.upsertEntity\(entity\)/)
+})

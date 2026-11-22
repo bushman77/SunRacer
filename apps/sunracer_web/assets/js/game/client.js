@@ -43,6 +43,7 @@ import {nextFlightMode, validFlightMode} from "./display_modes.mjs"
 import {cameraSettleSeconds, PREDICTED_OWN_SHIP_SETTLE_SECONDS} from "./camera_response.mjs"
 import {predictOrientation, predictPosition, InputHistory} from "./own_ship_prediction.mjs"
 import {smoothEntityPresentation} from "./entity_smoothing.mjs"
+import {applyOwnShipMovementPreview} from "./own_ship_movement_preview.mjs"
 import {planetaryImpactMessage} from "./planetary_impact.mjs"
 import {
   ownPlanetaryWarning, proximityEventWarning, planetaryWarningView,
@@ -677,7 +678,18 @@ class SpaceClient {
     channel.on("movement_delta", patch => {
       if (this.channel !== channel || this.worldResyncInFlight) return
       const entity = this.worldStream?.previewEntity(patch)
-      if (entity) this.upsertEntity(entity)
+      if (!entity) return
+      const id = entityKey(entity.id)
+      const ownShip = id === this.selfId ? this.entities.get(id) : null
+      if (ownShip) {
+        // Flight-control previews arrive faster than authoritative world ticks.
+        // Updating orientation/authoritativeAt here repeatedly rewinds the
+        // camera prediction, especially during high-sensitivity mouse turns.
+        // Only pilot UI state should change before the next world snapshot.
+        applyOwnShipMovementPreview(ownShip, entity)
+      } else {
+        this.upsertEntity(entity)
+      }
     })
     channel.on("solar_navigation_updated", payload => {
       if (String(payload.player_id) === String(this.selfId) && payload.navigation) {
