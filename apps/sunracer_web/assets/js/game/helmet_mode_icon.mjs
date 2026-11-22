@@ -6,7 +6,7 @@
 // snapshot rather than a local guess, so it cannot drift from the real ship,
 // and the laptop is still the only thing that commands flight.
 
-export const MODE_GAZE_TARGET = "flight_mode"
+export {MODE_GAZE_TARGET} from "./helmet_mode_gaze.mjs"
 
 export function helmetModeIcon(entities, pilotId, {pending = false} = {}) {
   const mode = entities?.get?.(pilotId)?.flightMode

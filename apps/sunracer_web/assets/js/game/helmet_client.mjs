@@ -13,7 +13,7 @@ import {helmetSurrenderFromEntities} from "./helmet_surrender_view.mjs"
 import {helmetRespawnView} from "./helmet_respawn_view.mjs"
 import {helmetSurrenderChoice} from "./helmet_surrender_choice.mjs"
 import {helmetModeIcon} from "./helmet_mode_icon.mjs"
-import {modeForGazeTarget, modeSelectionAction} from "./helmet_mode_gaze.mjs"
+import {MODE_GAZE_TARGET, nextFlightMode, modeSelectionAction} from "./helmet_mode_gaze.mjs"
 import {helmetPlanetaryNavigation} from "./helmet_planetary_navigation.mjs"
 import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
@@ -861,17 +861,15 @@ export class HelmetClient {
       helmetModeIcon(this.entities, this.selfId, {pending: this.modePending}))
   }
 
-  // The headset selects a specific mode rather than requesting a blind
-  // toggle. A relay acknowledgement means only that the request was forwarded:
-  // the desktop controller and the authoritative world own the actual mode.
+  // One visible icon toggles the authoritative ship mode. The relay remains
+  // an explicit intent, not a headset-issued flight command.
   requestFlightModeSelection(mode) {
     const action = modeSelectionAction(mode)
     if (!action || this.modePending || this.channel?.state !== "joined") return
     const current = this.entities.get(this.selfId)?.flightMode
     if (current !== "cruise" && current !== "newtonian") return
-    // Selecting the already-active mode is harmless. Leave the dwell latch
-    // engaged until the pilot looks away: resetting it here would make a
-    // stationary gaze repeatedly "click" a selected control.
+    // Leave the fixed gaze target latched until the pilot looks away.
+    // A stationary gaze must never toggle a second time after confirmation.
     if (mode === current) return
     this.modePending = true
     this.updateModeIcon()
@@ -1025,8 +1023,9 @@ export class HelmetClient {
     } else if (update.activated === "nav_close") {
       this.view?.setHelmetNavOpen(false)
       this.gaze.reset()
-    } else if (modeForGazeTarget(update.activated)) {
-      this.requestFlightModeSelection(modeForGazeTarget(update.activated))
+    } else if (update.activated === MODE_GAZE_TARGET) {
+      this.requestFlightModeSelection(
+        nextFlightMode(this.entities.get(this.selfId)?.flightMode))
     } else if (update.activated === "surrender_accept") {
       this.requestSurrenderOutcome("solar_accept_surrender")
     } else if (update.activated === "surrender_seize") {

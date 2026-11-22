@@ -21,7 +21,7 @@ import {SpaceEnvironmentVisual} from "./space_environment_visual.js"
 import {helmetHudLines, HMD_HUD_PAGES} from "./helmet_hud_pages.mjs"
 import {paintCockpitModeIcon} from "./cockpit_mode_icons.mjs"
 import {cockpitModePlacement} from "./cockpit_mode_layout.mjs"
-import {modeForGazeTarget, modeGazeTarget} from "./helmet_mode_gaze.mjs"
+import {MODE_GAZE_TARGET} from "./helmet_mode_gaze.mjs"
 
 // Rendering only: no Phoenix socket, no movement authority, no combat calculations.
 const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
@@ -88,8 +88,7 @@ function cockpitLabel(lines, {width = 512, height = 256} = {}) {
   return texture
 }
 
-// The actual SBS cockpit used to render a big neon-green text rectangle here.
-// Flight modes now use two small illustrated ship symbols instead.
+// One compact SBS ship symbol, repainted in place when the mode changes.
 function modeIconTexture(mode, selected = false, pending = false) {
   const canvas = document.createElement("canvas")
   canvas.width = canvas.height = 256
@@ -366,46 +365,32 @@ export class StereoSpaceView {
     this.helmetSurrenderPanel.visible = false
     framing.add(this.helmetSurrenderPanel)
 
-    // Two compact, truly illustrated 3D cockpit controls (not green text
-    // panels): ship with exhaust = assisted Cruise, ship with opposing
-    // arrows = free-momentum Newtonian. Keep both outside the central sight.
-    // Only the inactive icon is gaze-armed, so looking at the selected
-    // mode cannot accidentally flip the ship back.
-    this.helmetModeIcons = {}
-    this.helmetModeHitboxes = {}
+    // One ship-mode icon at one fixed gaze target, showing current flight mode.
     const initialModePlacement = cockpitModePlacement(1)
-    for (const mode of ["cruise", "newtonian"]) {
-      const button = new THREE.Mesh(
-        new THREE.PlaneGeometry(initialModePlacement.side, initialModePlacement.side),
-        new THREE.MeshBasicMaterial({
-          map: modeIconTexture(mode),
-          transparent: true, depthTest: false, depthWrite: false,
-        }),
-      )
-      const position = initialModePlacement[mode]
-      button.position.set(position.x, position.y, position.z)
-      button.renderOrder = 72
-      button.visible = false
-      button.userData.flightMode = mode
-      framing.add(button)
-      this.helmetModeIcons[mode] = button
+    const position = initialModePlacement.icon
+    this.helmetModeIcon = new THREE.Mesh(
+      new THREE.PlaneGeometry(initialModePlacement.side, initialModePlacement.side),
+      new THREE.MeshBasicMaterial({
+        map: modeIconTexture("cruise"),
+        transparent: true, depthTest: false, depthWrite: false,
+      }),
+    )
+    this.helmetModeIcon.position.set(position.x, position.y, position.z)
+    this.helmetModeIcon.renderOrder = 72
+    this.helmetModeIcon.visible = false
+    framing.add(this.helmetModeIcon)
 
-      // A tiny ship symbol is hard to aim at with a gyro. Give it a wider
-      // transparent raycast surface, but NO visible box or clickable screen UI.
-      // Each hitbox stays narrower than the separation between the two icons.
-      const hitbox = new THREE.Mesh(
-        new THREE.PlaneGeometry(0.265, 0.34),
-        new THREE.MeshBasicMaterial({
-          transparent: true, opacity: 0, depthTest: false, depthWrite: false,
-          side: THREE.DoubleSide,
-        }),
-      )
-      hitbox.position.set(position.x, position.y, position.z + 0.035)
-      hitbox.visible = false
-      hitbox.userData.flightMode = mode
-      framing.add(hitbox)
-      this.helmetModeHitboxes[mode] = hitbox
-    }
+    // One larger invisible raycast surface follows the same position.
+    this.helmetModeHitbox = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.265, 0.34),
+      new THREE.MeshBasicMaterial({
+        transparent: true, opacity: 0, depthTest: false, depthWrite: false,
+        side: THREE.DoubleSide,
+      }),
+    )
+    this.helmetModeHitbox.position.set(position.x, position.y, position.z + 0.035)
+    this.helmetModeHitbox.visible = false
+    framing.add(this.helmetModeHitbox)
 
     this.helmetSurrenderButtons = {}
     for (const [name, x] of [["accept", -0.58], ["seize", 0.0], ["dismiss", 0.58]]) {
@@ -584,8 +569,7 @@ export class StereoSpaceView {
     }
   }
 
-  // Keep both physical mode symbols synchronized to authoritative ship state.
-  // Rebuild their tiny textures only on an actual mode or pending change.
+  // The one icon displays the current server-confirmed mode.
   setHelmetModeIcon(icon) {
     const visible = icon?.visible === true && this.helmetGazeEnabled &&
       !this.helmetDestroyed
@@ -593,14 +577,10 @@ export class StereoSpaceView {
     this.helmetModeCurrent = visible && ["cruise", "newtonian"].includes(mode)
       ? mode : null
     this.helmetModeArmed = Boolean(this.helmetModeCurrent && icon?.armed === true)
-    for (const button of Object.values(this.helmetModeIcons || {})) {
-      button.visible = Boolean(this.helmetModeCurrent)
-    }
-    for (const hitbox of Object.values(this.helmetModeHitboxes || {})) {
-      // Keep raycast targets present during the relay handshake. Otherwise
-      // removing them for a pending request resets the dwell latch, allowing
-      // an unchanged head gaze to issue the same command again on ACK.
-      hitbox.visible = Boolean(this.helmetModeCurrent)
+    if (this.helmetModeIcon) this.helmetModeIcon.visible = Boolean(this.helmetModeCurrent)
+    if (this.helmetModeHitbox) {
+      // Keep the fixed target available during relay ACK to preserve the latch.
+      this.helmetModeHitbox.visible = Boolean(this.helmetModeCurrent)
     }
     if (!this.helmetModeCurrent) {
       this.lastModeIconState = null
@@ -610,10 +590,10 @@ export class StereoSpaceView {
     const signature = mode + ":" + pending
     if (signature === this.lastModeIconState) return
     this.lastModeIconState = signature
-    for (const [name, button] of Object.entries(this.helmetModeIcons)) {
-      const old = button.material.map
-      button.material.map = modeIconTexture(name, name === mode, pending)
-      button.material.needsUpdate = true
+    if (this.helmetModeIcon) {
+      const old = this.helmetModeIcon.material.map
+      this.helmetModeIcon.material.map = modeIconTexture(mode, true, pending)
+      this.helmetModeIcon.material.needsUpdate = true
       old?.dispose()
     }
   }
@@ -668,10 +648,8 @@ export class StereoSpaceView {
     if (!this.helmetGazeEnabled || !this.helmetHeadRotation) return null
     const surrender = this.helmetSurrenderArmed ?
       Object.values(this.helmetSurrenderButtons || {}) : []
-    // Both symbols have their own explicit selection target. Previous code
-    // only raycast the inactive icon; looking at the other icon looked broken.
-    const mode = this.helmetModeCurrent
-      ? Object.values(this.helmetModeHitboxes || {}) : []
+    // A fixed gaze ID remains latched even when the displayed artwork changes.
+    const mode = this.helmetModeCurrent ? [this.helmetModeHitbox] : []
     const candidates = this.helmetDestroyed ?
       (this.helmetRespawnArmed ? [this.helmetRespawnButton] : []) :
       this.helmetNavOpen ?
@@ -687,11 +665,7 @@ export class StereoSpaceView {
     if (!hits.length || hits[0].distance >= 6) return null
     this.gazeHitDistance = hits[0].distance
     const target = hits[0].object
-    const requestedMode = target?.userData?.flightMode
-    if (modeForGazeTarget(modeGazeTarget(requestedMode)) === requestedMode &&
-        target === this.helmetModeHitboxes?.[requestedMode]) {
-      return modeGazeTarget(requestedMode)
-    }
+    if (target === this.helmetModeHitbox) return MODE_GAZE_TARGET
     if (target === this.helmetRespawnButton) return "respawn"
     if (target === this.helmetSurrenderButtons?.accept) return "surrender_accept"
     if (target === this.helmetSurrenderButtons?.seize) return "surrender_seize"
@@ -707,12 +681,11 @@ export class StereoSpaceView {
   updateGazeFeedback({target = null, armed = false, progress = 0} = {}) {
     if (!this.gazeReticle || !this.gazeArc) return
     this.gazeReticle.material.color.setHex(target ? 0xffdb8a : 0x81fbc7)
-    // The symbols stay tiny and borderless, but light up slightly when the
-    // head-gaze reticle acquires either button. The same ring then fills.
-    for (const [mode, icon] of Object.entries(this.helmetModeIcons || {})) {
-      const focused = modeForGazeTarget(target) === mode
-      icon.scale.setScalar(focused ? 1.13 : 1)
-      icon.material.color.setHex(focused ? 0xffeeb5 : 0xffffff)
+    // Highlight the single mode icon when gaze lands on its one hitbox.
+    if (this.helmetModeIcon) {
+      const focused = target === MODE_GAZE_TARGET
+      this.helmetModeIcon.scale.setScalar(focused ? 1.13 : 1)
+      this.helmetModeIcon.material.color.setHex(focused ? 0xffeeb5 : 0xffffff)
     }
     this.gazeArc.visible = Boolean(target && armed && progress > 0)
     if (!this.gazeArc.visible) return
@@ -763,16 +736,14 @@ export class StereoSpaceView {
     if (fit && this.hudPanel && this.dash) {
       this.hudPanel.scale.setScalar(fit.scale)
       this.dash.scale.setScalar(fit.scale)
-      // SBS shrinks the instrument to fit each eye. Its two mode buttons
-      // must follow that scale, otherwise the Newtonian icon covers ALT/HDG
-      // (the original screenshot regression). The pair is mounted below.
+      // Position the ONE mode symbol below the resized instrument.
       const placement = cockpitModePlacement(fit.scale)
-      for (const mode of ["cruise", "newtonian"]) {
-        const button = this.helmetModeIcons?.[mode]
-        const pos = placement[mode]
-        if (button && pos) button.position.set(pos.x, pos.y, pos.z)
-        const hitbox = this.helmetModeHitboxes?.[mode]
-        if (hitbox && pos) hitbox.position.set(pos.x, pos.y, pos.z + 0.035)
+      const pos = placement.icon
+      if (this.helmetModeIcon) {
+        this.helmetModeIcon.position.set(pos.x, pos.y, pos.z)
+      }
+      if (this.helmetModeHitbox) {
+        this.helmetModeHitbox.position.set(pos.x, pos.y, pos.z + 0.035)
       }
     }
   }
