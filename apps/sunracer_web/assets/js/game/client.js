@@ -486,14 +486,84 @@ class SpaceClient {
       },
     }).start()
 
-    // Prologue comms card. Steps are server-owned; this only offers the
-    // choice the current prompt lists and renders the server's reply.
-    this.storyHud = new StoryHud(this.root, action =>
-      this.channel?.state === "joined"
-        ? this.channel.push("story_action", {action}, 5000)
-        : null)
+    // The HUD tracks a story objective; it cannot accept a mission.
+    // Ross offers the consignment in a separate, explicit NPC dialogue.
+    this.storyHud = new StoryHud(this.root, action => {
+      if (this.channel?.state !== "joined") return null
+      if (action === "contact_dispatch") {
+        const request = this.channel.push("story_dispatch_offer", {}, 5000)
+        request.receive("ok", reply => this.showDispatcherOffer(reply.offer))
+        return request
+      }
+      return this.channel.push("story_action", {action}, 5000)
+    })
+    this.root.querySelector("#story-dispatch-accept")?.addEventListener("click",
+      () => this.acceptDispatcherOffer())
+    this.root.querySelector("#story-dispatch-decline")?.addEventListener("click",
+      () => this.closeDispatcherOffer())
+    window.addEventListener("keydown", event => {
+      if (!this.dispatchOfferOpen) return
+      if (event.code === "Escape") this.closeDispatcherOffer()
+      if (["Escape", "Space", "KeyW", "KeyA", "KeyS", "KeyD",
+           "ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(event.code)) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
+    }, true)
 
     this.joinSector(this.mapId)
+  }
+
+  showDispatcherOffer(offer) {
+    if (offer?.npc_id !== "helios_dispatch") return
+    const panel = this.root.querySelector("#story-dispatch-dialogue")
+    if (!panel) return
+    this.dispatchOfferOpen = true
+    this.root.querySelector("#story-dispatch-name").textContent = offer.name
+    this.root.querySelector("#story-dispatch-role").textContent = offer.role
+    this.root.querySelector("#story-dispatch-title").textContent = offer.title
+    this.root.querySelector("#story-dispatch-text").textContent = offer.message
+    this.root.querySelector("#story-dispatch-feedback").textContent = ""
+    panel.style.display = "flex"
+    this.flightControls?.release({silent: true})
+    this.root.querySelector("#story-dispatch-accept")?.focus({preventScroll: true})
+  }
+
+  closeDispatcherOffer() {
+    const panel = this.root.querySelector("#story-dispatch-dialogue")
+    if (panel) panel.style.display = "none"
+    this.dispatchOfferOpen = false
+    this.dispatchOfferBusy = false
+    this.canvas?.focus({preventScroll: true})
+  }
+
+  acceptDispatcherOffer() {
+    if (!this.dispatchOfferOpen || this.dispatchOfferBusy ||
+        this.channel?.state !== "joined") return
+    this.dispatchOfferBusy = true
+    const button = this.root.querySelector("#story-dispatch-accept")
+    const feedback = this.root.querySelector("#story-dispatch-feedback")
+    if (button) button.disabled = true
+    if (feedback) feedback.textContent = "Confirming assignment with Helios dispatch…"
+    const done = () => {
+      this.dispatchOfferBusy = false
+      if (button) button.disabled = false
+    }
+    this.channel.push("story_dispatch_accept", {}, 5000)
+      .receive("ok", reply => {
+        done()
+        if (reply.story) this.storyHud?.apply(reply.story)
+        this.closeDispatcherOffer()
+      })
+      .receive("error", reply => {
+        done()
+        if (feedback) feedback.textContent = "Dispatch refused: " +
+          String(reply?.reason || "unavailable").replaceAll("_", " ")
+      })
+      .receive("timeout", () => {
+        done()
+        if (feedback) feedback.textContent = "Helios dispatch did not respond."
+      })
   }
 
   joinSector(mapId, retry = 0) {
