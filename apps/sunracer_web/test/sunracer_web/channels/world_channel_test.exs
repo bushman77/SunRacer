@@ -72,7 +72,21 @@ defmodule SunracerWeb.WorldChannelTest do
 
     thrust = push(cockpit, "flight_controls", %{"mode" => "newtonian", "throttle" => 1.0})
     assert_reply thrust, :ok, %{entity: %{kind: :player}}
-    assert {:ok, impact} = Core.World.tick("sol:venus")
+    # Thrust now accelerates at the hull's rated g; a ship starting from rest
+    # four units above the exclusion radius needs several physics ticks to hit.
+    # Keep a finite bound so a broken collision check fails instead of hanging.
+    impact =
+      Enum.reduce_while(1..20, nil, fn _, _ ->
+        assert {:ok, snapshot} = Core.World.tick("sol:venus")
+
+        if Enum.find(snapshot.entities, &(&1.id == account.id)).status == :destroyed do
+          {:halt, snapshot}
+        else
+          {:cont, nil}
+        end
+      end)
+
+    assert impact, "expected a Venus collision within 20 physics ticks"
     assert Enum.find(impact.entities, &(&1.id == account.id)).status == :destroyed
     assert_push "entity_destroyed",
       %{entity: %{id: player_id, status: :destroyed},
