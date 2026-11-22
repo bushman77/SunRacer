@@ -41,12 +41,14 @@ defmodule Core.World.StationAttendants do
       role: "Ship Outfitter", x: -49.0, z: -181.0, color: 0xb7c86b,
       greeting: "Outfitting counter. Weapons, shields, generators, and equipment belong on the right mounting points.",
       topics: [
+        %{id: "console", label: "Open outfitting console"},
         %{id: "equipment", label: "What equipment can I install?"},
         %{id: "fitting", label: "How do fittings work?"}
       ],
       responses: %{
-        "equipment" => "This counter will manage compatible ship equipment, but purchasing and installation are not active from this dialogue yet.",
-        "fitting" => "A proper fitting checks hull configuration, installed slots, inventory ownership, and power before committing changes."
+        "console" => "Opening the authenticated outfitting console. Bring owned lasers, speed generators, or shield generators; purchases are not yet active.",
+        "equipment" => "I can fit gear you already own: lasers, shield generators, and speed generators. Your ship's hardpoints determine how many are available.",
+        "fitting" => "Both configurations are saved separately. I check berth, station position, inventory ownership, and each hull's hardpoint capacity before installing or removing gear."
       }
     },
     %{

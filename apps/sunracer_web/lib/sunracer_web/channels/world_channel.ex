@@ -236,6 +236,47 @@ defmodule SunracerWeb.WorldChannel do
     end
   end
 
+  def handle_in("station_outfitting", _payload, socket) do
+    case World.outfitting_snapshot(socket.assigns.world_session_id) do
+      {:ok, view} -> {:reply, {:ok, %{outfitting: view}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in("station_outfitting_preview",
+                %{"config" => config, "kind" => kind, "slot" => slot,
+                  "item_id" => item_id}, socket) do
+    case World.outfitting_preview(socket.assigns.world_session_id,
+           config, kind, slot, item_id) do
+      {:ok, preview} -> {:reply, {:ok, %{preview: preview}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in("station_outfitting_preview", _payload, socket),
+    do: {:reply, {:error, %{reason: "invalid_outfitting_command"}}, socket}
+
+  def handle_in("station_outfitting_fit",
+                %{"config" => config, "kind" => kind, "slot" => slot,
+                  "item_id" => item_id}, socket) do
+    case World.outfitting_fit(socket.assigns.world_session_id,
+           config, kind, slot, item_id) do
+      {:ok, result} ->
+        player_id = socket.assigns.current_player_id
+        case World.player_status(player_id, World.active_configuration(player_id)) do
+          {:ok, player} ->
+            {:reply, {:ok, Map.put(result, :player, player)}, socket}
+          {:error, reason} ->
+            {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+        end
+      {:error, reason} ->
+        {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in("station_outfitting_fit", _payload, socket),
+    do: {:reply, {:error, %{reason: "invalid_outfitting_command"}}, socket}
+
   def handle_in("station_talk",
                 %{"attendant_id" => id, "topic" => topic}, socket)
       when is_binary(id) and is_binary(topic) do

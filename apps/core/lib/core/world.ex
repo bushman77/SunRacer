@@ -96,6 +96,15 @@ defmodule Core.World do
     end
   end
 
+  @doc "Trusted station fitting callback, serialized by the authoritative map process."
+  def station_refit(session_id, callback, opts \\ []) when is_function(callback, 1) do
+    with {:ok, session} <- fetch_session(
+           Keyword.get(opts, :sessions, SessionManager), session_id) do
+      MapServer.station_refit(Keyword.get(opts, :registry, Core.World.Registry),
+        session.map_id, session.id, session.entity_id, callback)
+    end
+  end
+
   def station_talk(session_id, attendant_id, topic, opts \\ []) do
     with {:ok, session} <- fetch_session(
            Keyword.get(opts, :sessions, SessionManager), session_id) do

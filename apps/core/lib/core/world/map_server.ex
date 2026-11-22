@@ -86,6 +86,17 @@ defmodule Core.World.MapServer do
       {:station_talk, session_id, entity_id, attendant_id, topic})
 
   @doc """
+  Serialize a trusted station equipment transaction with docking and launch.
+
+  The callback runs only after session, docked hull, and kiosk proximity
+  verification, and must return freshly calculated ship stats and condition.
+  No client-provided stats or callback enters the channel protocol.
+  """
+  def station_refit(registry, map_id, session_id, entity_id, callback)
+      when is_function(callback, 1),
+      do: call_map(registry, map_id, {:station_refit, session_id, entity_id, callback})
+
+  @doc """
   Restore a parked ship's hull and shields (the prologue's scripted patch at
   Mara Venn's bench). Server-only; never exposed as a socket command.
   """
@@ -439,6 +450,43 @@ defmodule Core.World.MapServer do
         StationAttendants.talk(pose, ship, attendant_id, topic)
       end
     {:reply, result, state}
+  end
+
+  def handle_call({:station_refit, session_id, entity_id, callback}, _from, state) do
+    result =
+      with {:ok, ship} <- parked_station_ship(state, session_id, entity_id),
+           pose <- Map.get(state.station_avatars, entity_id, StationInterior.initial()),
+           {:ok, _} <- StationAttendants.talk(pose, ship, "outfitting", "greeting"),
+           %{status: :alive} <- ship,
+           {:ok, %{stats: stats, condition: condition, outfitting: view}} <-
+             callback.(player_ship_report(ship, state)),
+           true <- valid_stats?(stats),
+           {:ok, expected} <- Condition.rebase(player_combat_condition(ship), stats),
+           true <- condition == expected do
+        weapon = Combat.player_weapon(stats, state.tick_ms)
+        refitted = %{ship |
+          hull: condition.hull, max_hull: condition.max_hull,
+          shields: condition.shields, max_shields: condition.max_shields,
+          speed: stats.speed, acceleration_g: stats.acceleration_g,
+          reverse_factor: stats.reverse_factor,
+          shield_absorption: stats.shield_absorption,
+          damage: weapon.damage, attack_range: weapon.attack_range,
+          attack_cooldown_ticks: weapon.attack_cooldown_ticks}
+        {:ok, refitted, view}
+      else
+        %{status: :destroyed} -> {:error, :ship_not_alive}
+        false -> {:error, :invalid_refit_result}
+        {:error, _} = error -> error
+        _ -> {:error, :invalid_refit_result}
+      end
+
+    case result do
+      {:ok, refitted, view} ->
+        updated = %{state | docked_ships: Map.put(state.docked_ships, entity_id, refitted)}
+        {:reply, {:ok, %{outfitting: view, combat: player_combat_condition(refitted)}}, updated}
+      error ->
+        {:reply, error, state}
+    end
   end
 
   def handle_call({:station_patch_hull, session_id, entity_id}, _from, state) do

@@ -195,6 +195,48 @@ defmodule Sunracer.World do
     end
   end
 
+  @doc "Inspect the authenticated pilot's owned fittings at Ilya's station kiosk."
+  def outfitting_snapshot(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, _} <- Simulation.station_talk(session_id, "outfitting", "greeting"),
+         {:ok, %{docked: true, ship_instance_id: ship_id}} <-
+           Simulation.ship_condition(session_id) do
+      Sunracer.Outfitting.snapshot(session.player_id, ship_id,
+        active_configuration(session.player_id))
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+
+  @doc "Preview an owned ship-slot equipment change without mutating state."
+  def outfitting_preview(session_id, config, kind, slot, item_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, _} <- Simulation.station_talk(session_id, "outfitting", "greeting"),
+         {:ok, %{docked: true, ship_instance_id: ship_id}} <-
+           Simulation.ship_condition(session_id) do
+      Sunracer.Outfitting.preview(session.player_id, ship_id, config,
+        kind, slot, item_id)
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+
+  @doc "Apply a fitted item while MapServer serializes dock, walk and launch."
+  def outfitting_fit(session_id, config, kind, slot, item_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
+      active = active_configuration(session.player_id)
+      Simulation.station_refit(session_id, fn ship_report ->
+        Sunracer.Outfitting.fit(session.player_id, ship_report, active,
+          config, kind, slot, item_id)
+      end)
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+
   @doc """
   Talk to a nearby station attendant; no client-supplied location.
 
