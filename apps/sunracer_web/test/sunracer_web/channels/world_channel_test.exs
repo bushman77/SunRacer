@@ -171,6 +171,24 @@ defmodule SunracerWeb.WorldChannelTest do
     story = push(joined, "station_talk", %{"attendant_id" => "repair", "topic" => "story"})
     assert_reply story, :error, %{reason: "not_docked"}
 
+    # Fitting commands cannot identify arbitrary ships or fake kiosk positions.
+    console = push(joined, "station_outfitting", %{})
+    assert_reply console, :error, %{reason: "not_docked"}
+    preview = push(joined, "station_outfitting_preview", %{
+      "config" => 1, "kind" => "laser", "slot" => 0, "item_id" => "beryl",
+      "room_id" => "outfitting", "x" => -49, "z" => -181
+    })
+    assert_reply preview, :error, %{reason: "not_docked"}
+    fitting = push(joined, "station_outfitting_fit", %{
+      "config" => 1, "kind" => "laser", "slot" => 0, "item_id" => "beryl",
+      "room_id" => "outfitting", "x" => -49, "z" => -181
+    })
+    assert_reply fitting, :error, %{reason: "not_docked"}
+    malformed = push(joined, "station_outfitting_fit", %{
+      "config" => "1", "kind" => "laser"
+    })
+    assert_reply malformed, :error, %{reason: "invalid_outfitting_command"}
+
     forged = push(joined, "station_repair", %{
       "room_id" => "repair_bay", "x" => -49, "z" => -143,
       "ship_id" => account.id
