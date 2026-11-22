@@ -85,6 +85,17 @@ defmodule SunracerWeb.HelmetChannelTest do
     assert_push "helmet_mode", %{mode: "combat"}
     assert_push "helmet_snapshot", %{player_id: ^id, map: %{entities: _}}
 
+    # Genuine gaze selection is a narrow relay intent: never flight_controls
+    # from the handset, and each icon names an explicit target mode.
+    for action <- ["select_newtonian_mode", "select_cruise_mode"] do
+      ref = push(viewer, "helmet_action", %{"action" => action,
+        "player_id" => id + 777, "throttle" => 1.0})
+      assert_reply ref, :ok, %{relayed: true}
+      assert_push "helmet_gaze_action", %{action: ^action}
+    end
+    ref = push(viewer, "helmet_action", %{"action" => "set_throttle"})
+    assert_reply ref, :error, %{reason: "unknown_action"}
+
     # The phone can opt out of its redundant Phoenix WORLD feed only after
     # receiving a valid, native-authenticated LAN snapshot. All other HMD
     # controls remain read-only, and fallback must send a fresh authoritative
@@ -278,6 +289,9 @@ defmodule SunracerWeb.HelmetChannelTest do
     assert_reply ref, :ok, %{mode: "standby"}
     assert_push "helmet_mode", %{mode: "standby"}
     assert %{mode: :standby, rendering: false} = HelmetManager.status(account.id)
+    ref = push(viewer, "helmet_action", %{"action" => "select_newtonian_mode"})
+    assert_reply ref, :error, %{reason: "not_in_cockpit"}
+    refute_push "helmet_gaze_action", %{action: "select_newtonian_mode"}, 50
 
     ref = push(control, "adjust_alignment", %{"axis" => "gap", "direction" => 1})
     assert_reply ref, :error, %{reason: "not_in_cockpit"}
