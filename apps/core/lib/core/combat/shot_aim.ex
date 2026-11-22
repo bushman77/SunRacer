@@ -48,7 +48,8 @@ defmodule Core.Combat.ShotAim do
     do: {:error, :invalid_shot_aim}
 
   defp normalized(q) when is_map(q) do
-    values = Enum.map(~w(x y z w), &Map.get(q, &1))
+    values = Enum.map([{"x", :x}, {"y", :y}, {"z", :z}, {"w", :w}],
+      fn {string_key, atom_key} -> Map.get(q, string_key, Map.get(q, atom_key)) end)
     if Enum.all?(values, &finite_number?/1) do
       [x, y, z, w] = Enum.map(values, &(&1 * 1.0))
       length = :math.sqrt(x * x + y * y + z * z + w * w)
