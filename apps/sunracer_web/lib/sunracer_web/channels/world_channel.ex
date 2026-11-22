@@ -429,7 +429,7 @@ defmodule SunracerWeb.WorldChannel do
   def handle_in("fire_ready_weapon", input, socket) when is_map(input) do
     # Authenticated session still determines pilot, weapon and collision.
     # Recent, bounded client orientation determines the pilot's shot aim.
-    case World.fire_ready_weapon(socket.assigns.world_session_id, input, []) do
+    case World.fire_ready_weapon(socket.assigns.world_session_id, input) do
       {:ok, shot} -> {:reply, {:ok, shot}, socket}
       {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
     end
