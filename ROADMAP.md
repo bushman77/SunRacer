@@ -3,6 +3,16 @@
 - [x] Gaze-reachable death recovery. The headset had no death handling at all;
       a pilot who died in an HMD was stranded, because the respawn panel and
       button existed only in the laptop client.
+- [x] Gaze-reachable surrender choice: release, seize the hold, or keep
+      firing. Without it an HMD pilot could not complete prologue step 6, which
+      instructs them to accept the surrender and seize the hold.
+- [ ] Throttle is mouse-wheel only (`FlightControls.wheel/1` is the sole writer
+      of `this.throttle`), so a headset pilot cannot move without finding the
+      scroll wheel blind. This is the real headset blocker, not Ctrl+E. Options
+      weighed: keyboard throttle keys plus a single-key mode toggle (cheap,
+      everything touch-findable), or gamepad support through the existing
+      `flight_controls` payload (best ergonomics, new input path, no channel
+      change). Decide before more headset content lands.
 - [ ] Reachable flight-mode switching in the headset. Prologue step 6 now tells
       the pilot to press Ctrl+E to cut the flight assist, which is close to
       impossible to find blind while wearing a headset. Either the mode needs a

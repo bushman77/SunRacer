@@ -3,7 +3,13 @@ defmodule SunracerWeb.HelmetChannel do
   Pilot-only helmet control and read-only, individually authenticated HMD feeds.
   No movement, targeting, weapon or ship-command messages exist on this channel.
 
-  One exception exists, and it is deliberately not a ship command: `respawn`.
+  Three exceptions exist. None is a flight or combat command, none accepts a
+  single value from the phone, and each is re-verified against the map before
+  it takes effect: `respawn`, `solar_accept_surrender` and `solar_seize_cargo`.
+  They exist because an HMD pilot has no keyboard, so without them a death or
+  a surrendered captain is unresolvable from inside the headset.
+
+  The first of them is `respawn`.
   A pilot wearing an HMD cannot reach a keyboard, so a destroyed ship would
   otherwise strand them with no way back. The handler takes nothing from the
   phone, resolves the session from the authenticated `helmet_player_id`, and
@@ -191,6 +197,21 @@ defmodule SunracerWeb.HelmetChannel do
     end
   end
 
+  # Gaze-reachable settlement of a surrendered encounter; see the moduledoc.
+  # The phone names no encounter, ship, cargo or target: the encounter is
+  # resolved from this pilot's own session, and the map refuses the outcome
+  # with :enemy_not_surrendered unless the opponent has really yielded.
+  # Seizing cargo is a separate, deliberate choice, exactly as on the laptop.
+  def handle_in("solar_accept_surrender", _payload,
+                %{assigns: %{helmet_role: :viewer, helmet_player_id: player_id}} = socket) do
+    settle_surrender(socket, player_id, [])
+  end
+
+  def handle_in("solar_seize_cargo", _payload,
+                %{assigns: %{helmet_role: :viewer, helmet_player_id: player_id}} = socket) do
+    settle_surrender(socket, player_id, claim_cargo: true)
+  end
+
   # Gaze-reachable death recovery; see the moduledoc. Not a flight or combat
   # command: no coordinates, ship, map or player id are accepted from the
   # phone, and World.respawn/1 re-verifies destruction against the map before
@@ -208,6 +229,13 @@ defmodule SunracerWeb.HelmetChannel do
 
   def handle_in(_event, _payload, socket),
     do: {:reply, {:error, %{reason: "read_only_or_invalid_command"}}, socket}
+
+  defp settle_surrender(socket, player_id, opts) do
+    case World.settle_surrender_for_player(player_id, opts) do
+      {:ok, _navigation} -> {:reply, {:ok, %{settled: true}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: respawn_reason(reason)}}, socket}
+    end
+  end
 
   defp respawn_reason(reason) when is_atom(reason), do: Atom.to_string(reason)
   defp respawn_reason(reason) when is_binary(reason), do: reason

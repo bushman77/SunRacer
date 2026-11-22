@@ -110,7 +110,11 @@ test("the phone renders an accessible NAV target and explains missing gyro", () 
 })
 
 test("HUD gaze inspects read-only flight, contacts and space pages", () => {
-  assert.match(view, /\[this\.navSwitch, this\.hudPanel\]/)
+  // The resting gaze set is still the nav switch and the HUD panel. The
+  // surrender buttons are spread in only while a captain is actually
+  // yielding, and helmetSurrenderArmed is false at every other moment.
+  assert.match(view, /\[this\.navSwitch, this\.hudPanel, \.\.\.surrender\]/)
+  assert.match(view, /const surrender = this\.helmetSurrenderArmed \?/)
   assert.match(view, /return target === this\.hudPanel \? "hud_inspect"/)
   for (const key of ["hud_inspect", "hud_flight", "hud_contacts", "hud_space"]) {
     assert.ok(helmet.includes('"' + key + '"'))
@@ -203,4 +207,35 @@ test("a destroyed pilot can recover by gaze alone", () => {
   // Still no flight, combat or ship commands on this channel.
   assert.doesNotMatch(helmet,
     /channel\.push\("move"|"plot_course"|"fire"|"set_target"|"station_dock"/)
+})
+
+test("a surrendered captain can be released, robbed or ignored by gaze", () => {
+  const channel = readFileSync(new URL(
+    "../../../lib/sunracer_web/channels/helmet_channel.ex", import.meta.url), "utf8")
+  const world = readFileSync(new URL(
+    "../../../../sunracer/lib/sunracer/world.ex", import.meta.url), "utf8")
+
+  // Mid-fight prompt: additive, never exclusive, and below the sight line so
+  // a pilot tracking a target cannot dwell on it by accident.
+  assert.match(view, /this\.helmetSurrenderPanel\.position\.set\(0, -0\.44, -2\.44\)/)
+  assert.match(view, /\[this\.navSwitch, this\.hudPanel, \.\.\.surrender\]/)
+  assert.match(view, /if \(target === this\.helmetSurrenderButtons\?\.accept\) return "surrender_accept"/)
+
+  // A wreck outranks a surrender prompt: dying closes it.
+  assert.match(view, /this\.setHelmetSurrenderChoice\(\{open: false\}\)/)
+
+  // Keep firing is local only; the other two are the server's to settle.
+  assert.match(helmet, /update\.activated === "surrender_dismiss"/)
+  assert.match(helmet, /this\.surrenderDismissed = true/)
+  assert.match(helmet, /requestSurrenderOutcome\("solar_accept_surrender"\)/)
+  assert.match(helmet, /requestSurrenderOutcome\("solar_seize_cargo"\)/)
+  assert.match(helmet, /old\.push\(event, \{\}, 5_000\)/)
+
+  // Server: the phone names no encounter. The session does.
+  assert.match(channel, /def handle_in\("solar_accept_surrender", _payload,/)
+  assert.match(channel, /def handle_in\("solar_seize_cargo", _payload,/)
+  assert.match(channel, /settle_surrender\(socket, player_id, claim_cargo: true\)/)
+  assert.match(world, /def settle_surrender_for_player\(player_id, opts/)
+  assert.match(world, /SessionManager\.fetch_player\(SessionManager, player_id\)/)
+  assert.match(world, /solar_finish_tactical\(session\.id, encounter_id, :surrender, opts\)/)
 })

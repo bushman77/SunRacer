@@ -8,7 +8,7 @@
 
 ## Unreleased
 
-### Gaze-reachable death recovery in the headset (2026-11-21, branch `story_line`)
+### Gaze-reachable death recovery and surrender choice in the headset (2026-11-21, branch `story_line`)
 
 #### Added
 
@@ -21,7 +21,19 @@
 - `helmet_respawn_view.mjs` derives the panel from the world snapshot and the
   in-flight request state, so the wording and the armed/disarmed logic are
   unit-testable without a WebGL context.
-- `SunracerWeb.HelmetChannel` accepts one world-mutating message, `respawn`.
+- A surrendered captain now raises a cockpit prompt in the headset with three
+  gaze targets: RELEASE, SEIZE HOLD and KEEP FIRING. The headset already
+  received pilot-scoped surrender state but could do nothing with it, so an HMD
+  pilot could neither accept a surrender nor take a hold — which also made
+  prologue step 6 impossible to complete in a headset, since it instructs the
+  pilot to do both.
+- `helmet_surrender_choice.mjs` derives that prompt, with KEEP FIRING resolved
+  entirely locally so declining never reaches the server.
+- `Sunracer.World.settle_surrender_for_player/2` resolves the encounter from
+  the pilot's own live session, because a headset is never given an encounter
+  id to send back.
+- `SunracerWeb.HelmetChannel` accepts three world-mutating messages: `respawn`,
+  `solar_accept_surrender` and `solar_seize_cargo`.
 
 #### Changed
 
@@ -35,6 +47,15 @@
 
 #### Security
 
+- The surrender handlers take **no payload at all**: the phone names no
+  encounter, ship, cargo or target. The encounter is resolved server-side from
+  the authenticated `helmet_player_id`, and `Core.World.MapServer` refuses a
+  `:surrender` outcome with `:enemy_not_surrendered` unless the opponent has
+  genuinely yielded, so a forged or mistimed message settles nothing. Seizing
+  cargo stays a separate, deliberate choice exactly as it is on the laptop.
+- The surrender prompt is additive rather than exclusive — the pilot is still
+  flying — and sits below the sight line so tracking a target cannot dwell on
+  it by accident. A wreck outranks it: dying closes the prompt.
 - The `respawn` handler is deliberately not a ship command and is scoped to an
   authenticated `:viewer`. It accepts nothing from the phone — no coordinates,
   ship, map or player id — resolving the session from `helmet_player_id` via
@@ -46,9 +67,14 @@
 
 #### Tests
 
-- Browser JS suite 409 passing (7 new in `helmet_respawn_view_test.mjs`, 1 new
-  integration case covering the gaze candidate restriction, the client wiring
-  and the server scoping). Tauri 42, `apps/core` 302, all unchanged.
+- Browser JS suite 417 passing: 7 new in `helmet_respawn_view_test.mjs`, 7 new
+  in `helmet_surrender_choice_test.mjs`, and 2 new integration cases covering
+  the gaze candidate rules, the client wiring and the server scoping for both
+  features. Tauri 42, `apps/core` 302, `Sunracer.Story.Prologue` 14, unchanged.
+- One existing guard was updated rather than worked around: it asserted the
+  resting gaze set was exactly `[navSwitch, hudPanel]`, which the surrender
+  buttons extend. It now asserts the resting set plus the conditional spread,
+  so the read-only intent is still guarded.
 
 #### Known limitations
 

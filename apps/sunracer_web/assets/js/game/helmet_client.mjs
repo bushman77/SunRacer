@@ -11,6 +11,7 @@ import {adjustedHelmetAlignment, HELMET_GAP_MIN, HELMET_GAP_MAX} from "./helmet_
 import {restoredHelmetCalibration} from "./helmet_calibration_restore.mjs"
 import {helmetSurrenderFromEntities} from "./helmet_surrender_view.mjs"
 import {helmetRespawnView} from "./helmet_respawn_view.mjs"
+import {helmetSurrenderChoice} from "./helmet_surrender_choice.mjs"
 import {helmetPlanetaryNavigation} from "./helmet_planetary_navigation.mjs"
 import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
@@ -80,6 +81,9 @@ export class HelmetClient {
     this.helmetSurrender = null
     this.respawnPending = false
     this.respawnError = null
+    this.surrenderPending = false
+    this.surrenderError = null
+    this.surrenderDismissed = false
     this.beams = []
     this.lastLaserFeedback = null
     this.view = null
@@ -719,7 +723,11 @@ export class HelmetClient {
     this.helmetSurrender = null
     this.respawnPending = false
     this.respawnError = null
+    this.surrenderPending = false
+    this.surrenderError = null
+    this.surrenderDismissed = false
     this.view?.setHelmetDestroyed({destroyed: false})
+    this.view?.setHelmetSurrenderChoice({open: false})
     this.canvas.hidden = true
     const bandwidthOverlay = this.root.querySelector("#helmet-bandwidth-sbs")
     if (bandwidthOverlay) bandwidthOverlay.hidden = true
@@ -745,14 +753,64 @@ export class HelmetClient {
     this.view.resize(window.innerWidth, window.innerHeight, window.devicePixelRatio || 1)
   }
 
+  updateSurrenderChoice() {
+    const view = helmetSurrenderChoice(this.helmetSurrender,
+      {pending: this.surrenderPending, error: this.surrenderError,
+       dismissed: this.surrenderDismissed})
+    this.view?.setHelmetSurrenderChoice(view)
+  }
+
+  // Both outcomes are settled entirely by the server: it resolves the
+  // encounter from this pilot's own session, and the map refuses unless the
+  // opponent really has surrendered. The headset sends no encounter, ship,
+  // cargo or target of any kind.
+  requestSurrenderOutcome(event) {
+    if (this.surrenderPending || this.channel?.state !== "joined" ||
+        this.helmetSurrender?.surrendered !== true) return
+    this.surrenderPending = true
+    this.surrenderError = null
+    this.updateSurrenderChoice()
+    const old = this.channel
+
+    const failed = reason => {
+      if (this.channel !== old) return
+      this.surrenderPending = false
+      this.surrenderError = reason
+      this.gaze.reset()
+      this.updateSurrenderChoice()
+    }
+
+    old.push(event, {}, 5_000)
+      .receive("ok", () => {
+        if (this.channel !== old) return
+        this.surrenderPending = false
+        this.surrenderError = null
+        this.gaze.reset()
+        // The encounter is closed; the server stops pushing surrender state.
+        this.updateSurrender(null)
+        this.requestHelmetResync()
+      })
+      .receive("error", ({reason} = {}) => failed(reason || "refused"))
+      .receive("timeout", () => failed("timeout"))
+  }
+
   updateSurrender(payload) {
     // This field is consumed by StereoSpaceView.updateHud(), so the status
     // is part of the actual stereoscopic WebGL instrument, not HTML alone.
-    this.helmetSurrender = payload?.surrendered === true
+    const offered = payload?.surrendered === true
+    const previous = this.helmetSurrender?.call_sign
+    this.helmetSurrender = offered
       ? {surrendered: true, call_sign: payload.call_sign}
       : {surrendered: false}
+    // A different captain yielding is a new decision, so a prompt the pilot
+    // waved away with KEEP FIRING comes back rather than staying hidden.
+    if (!offered || payload.call_sign !== previous) {
+      this.surrenderDismissed = false
+      this.surrenderError = null
+    }
     // The HUD already shows the surrender line in stereo; the old flat DOM
     // overlay duplicated it at screen depth.
+    this.updateSurrenderChoice()
   }
 
   applyWorld(map, {snap = false} = {}) {
@@ -927,6 +985,15 @@ export class HelmetClient {
     } else if (update.activated === "nav_close") {
       this.view?.setHelmetNavOpen(false)
       this.gaze.reset()
+    } else if (update.activated === "surrender_accept") {
+      this.requestSurrenderOutcome("solar_accept_surrender")
+    } else if (update.activated === "surrender_seize") {
+      this.requestSurrenderOutcome("solar_seize_cargo")
+    } else if (update.activated === "surrender_dismiss") {
+      // Keep firing: purely local, nothing is sent and the fight continues.
+      this.surrenderDismissed = true
+      this.gaze.reset()
+      this.updateSurrenderChoice()
     } else if (update.activated === "respawn") {
       // Do NOT reset the latch here: the panel disarms itself while the
       // request is in flight, so a held gaze cannot fire a second recovery.

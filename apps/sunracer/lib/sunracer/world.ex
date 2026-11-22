@@ -358,6 +358,29 @@ defmodule Sunracer.World do
   end
 
   @doc """
+  Settle a surrendered tactical encounter for a pilot who cannot name it.
+
+  A paired headset has no keyboard and is never given an encounter id, so the
+  encounter is resolved here from the pilot's own live session. The outcome is
+  still map-verified downstream: `solar_finish_tactical/4` refuses with
+  `:enemy_not_surrendered` unless the opponent really has yielded.
+  """
+  @spec settle_surrender_for_player(pos_integer(), keyword()) ::
+          {:ok, map()} | {:error, atom()}
+  def settle_surrender_for_player(player_id, opts \\ [])
+      when is_integer(player_id) and player_id > 0 do
+    with {:ok, session} <- SessionManager.fetch_player(SessionManager, player_id),
+         {:ok, %{tactical_encounter: %{id: encounter_id}}} <-
+           Simulation.solar_snapshot(session.id) do
+      solar_finish_tactical(session.id, encounter_id, :surrender, opts)
+    else
+      :error -> {:error, :session_not_found}
+      {:ok, _snapshot} -> {:error, :invalid_encounter}
+      {:error, _} = error -> error
+    end
+  end
+
+  @doc """
   Authenticated recovery after verified ship destruction. Retain the owned
   ship/loadout, settle a held tactical encounter, restore SOL to Earth, and
   release the old world session before the client rejoins.

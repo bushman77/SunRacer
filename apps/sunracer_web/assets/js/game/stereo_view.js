@@ -336,6 +336,37 @@ export class StereoSpaceView {
     this.helmetRespawnButton.renderOrder = 75
     this.helmetRespawnButton.visible = false
     framing.add(this.helmetRespawnButton)
+
+    // Surrender choice. Unlike the wreck panel this appears mid-fight, so it
+    // sits BELOW the sight line and never takes the forward view: a pilot
+    // tracking a target must not dwell on it by accident.
+    this.helmetSurrenderPanel = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.62, 0.40),
+      new THREE.MeshBasicMaterial({
+        map: cockpitLabel(["CONTACT YIELDS"], {width: 1024, height: 320}),
+        transparent: true, depthTest: false,
+      }),
+    )
+    this.helmetSurrenderPanel.position.set(0, -0.44, -2.44)
+    this.helmetSurrenderPanel.renderOrder = 76
+    this.helmetSurrenderPanel.visible = false
+    framing.add(this.helmetSurrenderPanel)
+
+    this.helmetSurrenderButtons = {}
+    for (const [name, x] of [["accept", -0.58], ["seize", 0.0], ["dismiss", 0.58]]) {
+      const button = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.54, 0.22),
+        new THREE.MeshBasicMaterial({
+          map: cockpitLabel([""], {width: 512, height: 224}),
+          transparent: true, depthTest: false,
+        }),
+      )
+      button.position.set(x, -0.76, -2.38)
+      button.renderOrder = 77
+      button.visible = false
+      framing.add(button)
+      this.helmetSurrenderButtons[name] = button
+    }
     framing.add(this.helmetNavClose)
     this.helmetNavRecenter = new THREE.Mesh(
       new THREE.PlaneGeometry(0.64, 0.23),
@@ -447,6 +478,7 @@ export class StereoSpaceView {
     }
     // While the wreck panel is up, no other cockpit surface is selectable.
     this.setHelmetNavOpen(false)
+    this.setHelmetSurrenderChoice({open: false})
     const text = (view.lines || []).join("\n") + "|" + (view.button || "")
     if (text === this.lastRespawnText) return
     this.lastRespawnText = text
@@ -460,6 +492,40 @@ export class StereoSpaceView {
       cockpitLabel([view.button || ""], {width: 768, height: 256})
     this.helmetRespawnButton.material.needsUpdate = true
     buttonMap?.dispose()
+  }
+
+  // Painted from helmetSurrenderChoice(). Additive rather than exclusive:
+  // the pilot is still flying, so the normal cockpit surfaces stay live.
+  setHelmetSurrenderChoice(view) {
+    const open = view?.open === true
+    this.helmetSurrenderOpen = open
+    this.helmetSurrenderArmed = open && view?.armed === true
+    if (this.helmetSurrenderPanel) this.helmetSurrenderPanel.visible = open
+    for (const [name, button] of Object.entries(this.helmetSurrenderButtons || {})) {
+      if (button) button.visible = open && Boolean(view?.[name])
+    }
+    if (!open) {
+      this.lastSurrenderText = null
+      return
+    }
+    const text = (view.lines || []).join("\n") + "|" +
+      [view.accept, view.seize, view.dismiss].join("|")
+    if (text === this.lastSurrenderText) return
+    this.lastSurrenderText = text
+    const panelMap = this.helmetSurrenderPanel.material.map
+    this.helmetSurrenderPanel.material.map =
+      cockpitLabel(view.lines || [], {width: 1024, height: 320})
+    this.helmetSurrenderPanel.material.needsUpdate = true
+    panelMap?.dispose()
+    for (const name of ["accept", "seize", "dismiss"]) {
+      const button = this.helmetSurrenderButtons?.[name]
+      if (!button) continue
+      const old = button.material.map
+      button.material.map = cockpitLabel([view[name] || ""],
+        {width: 512, height: 224})
+      button.material.needsUpdate = true
+      old?.dispose()
+    }
   }
 
   setHelmetNavOpen(open) {
@@ -510,12 +576,14 @@ export class StereoSpaceView {
   gazeTarget() {
     this.gazeHitDistance = null
     if (!this.helmetGazeEnabled || !this.helmetHeadRotation) return null
+    const surrender = this.helmetSurrenderArmed ?
+      Object.values(this.helmetSurrenderButtons || {}) : []
     const candidates = this.helmetDestroyed ?
       (this.helmetRespawnArmed ? [this.helmetRespawnButton] : []) :
       this.helmetNavOpen ?
         [this.helmetNavClose, this.helmetNavRecenter, this.helmetNavFlight,
-          this.helmetNavContacts, this.helmetNavSpace] :
-        [this.navSwitch, this.hudPanel]
+          this.helmetNavContacts, this.helmetNavSpace, ...surrender] :
+        [this.navSwitch, this.hudPanel, ...surrender]
     this.camera.updateMatrixWorld(true)
     this.cockpitFraming.updateMatrixWorld(true)
     this.raycaster.set(this.camera.position,
@@ -526,6 +594,9 @@ export class StereoSpaceView {
     this.gazeHitDistance = hits[0].distance
     const target = hits[0].object
     if (target === this.helmetRespawnButton) return "respawn"
+    if (target === this.helmetSurrenderButtons?.accept) return "surrender_accept"
+    if (target === this.helmetSurrenderButtons?.seize) return "surrender_seize"
+    if (target === this.helmetSurrenderButtons?.dismiss) return "surrender_dismiss"
     if (target === this.helmetNavClose) return "nav_close"
     if (target === this.helmetNavRecenter) return "recenter"
     if (target === this.helmetNavFlight) return "hud_flight"
