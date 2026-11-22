@@ -95,6 +95,7 @@ on:
       - "apps/sunracer_web/assets/js/game/client.js"
       - "apps/sunracer_web/assets/js/game/station_outfitting_panel*.mjs"
       - "apps/sunracer/lib/sunracer/outfitting.ex"
+      - "apps/sunracer/lib/sunracer/outfitting/shop.ex"
       - "apps/sunracer/test/sunracer/outfitting_test.exs"
       - "apps/sunracer_web/assets/js/game/solar_atlas_view_test.mjs"
       - "apps/sunracer_web/assets/js/game/orbital_regions_test.mjs"
