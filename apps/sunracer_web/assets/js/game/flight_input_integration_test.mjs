@@ -17,7 +17,7 @@ test("compact ship icons select authoritative cruise and Newtonian modes", () =>
   assert.match(client, /button\.setAttribute\("aria-pressed"/)
 })
 
-test("keyboard and mouse share a single authoritative flight gate",
+test("keyboard and mouse share a single authoritative flight gate", () => {
   assert.match(client, /active: \(\) => this\.flightInputState\(\) === "ready"/)
   assert.match(client, /flightInputState\(\) \{[\s\S]*?sectorJoined:/)
 })
