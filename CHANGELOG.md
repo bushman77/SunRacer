@@ -8,6 +8,58 @@
 
 ## Unreleased
 
+### Gaze-reachable death recovery in the headset (2026-11-21, branch `story_line`)
+
+#### Added
+
+- A pilot whose ship is destroyed while wearing an HMD now sees a centred
+  cockpit panel reading SHIP DESTROYED and a RECOVER AT EARTH target selected
+  by the existing gaze dwell (1 s to arm, 800 ms to confirm). Previously the
+  headset had no death handling of any kind: the respawn panel and button
+  existed only in the laptop client, so a pilot who died in the headset was
+  stranded with no way back that did not involve finding a keyboard blind.
+- `helmet_respawn_view.mjs` derives the panel from the world snapshot and the
+  in-flight request state, so the wording and the armed/disarmed logic are
+  unit-testable without a WebGL context.
+- `SunracerWeb.HelmetChannel` accepts one world-mutating message, `respawn`.
+
+#### Changed
+
+- While the wreck panel is up it is the **only** gaze-selectable surface. The
+  nav switch and HUD panel are hidden and excluded from the raycast, so a pilot
+  who has just died cannot open the nav panel by looking slightly off-centre.
+- The target disarms itself while a request is in flight and `requestRespawn`
+  guards on it, so a held gaze cannot fire two recoveries.
+- A refusal re-arms the target and names the reason on the panel rather than
+  failing silently, which is the only feedback channel a headset pilot has.
+
+#### Security
+
+- The `respawn` handler is deliberately not a ship command and is scoped to an
+  authenticated `:viewer`. It accepts nothing from the phone — no coordinates,
+  ship, map or player id — resolving the session from `helmet_player_id` via
+  `SessionManager.fetch_player/2`. `Sunracer.World.respawn/1` then re-verifies
+  destruction against the map, so a pilot with an intact hull is refused. The
+  only reachable outcome is an Earth-orbit restore of the pilot's own ship.
+  The channel moduledoc records this as the single documented exception to its
+  read-only rule.
+
+#### Tests
+
+- Browser JS suite 409 passing (7 new in `helmet_respawn_view_test.mjs`, 1 new
+  integration case covering the gaze candidate restriction, the client wiring
+  and the server scoping). Tauri 42, `apps/core` 302, all unchanged.
+
+#### Known limitations
+
+- **`apps/sunracer_web` was not compiled.** This environment cannot reach
+  hex.pm for Phoenix, so the new channel handler was verified by parsing only
+  (`Code.string_to_quoted/1`) and by asserting its text from the JS integration
+  test. `session.id` and `SessionManager.fetch_player/2` were read from
+  `Core.World.SessionManager`, which does compile here, but the handler itself
+  has never been run. Run `mix precommit` before trusting it.
+- No manual verification in an actual headset.
+
 ### Newtonian flight given weight; cruise handbrake removed (2026-11-21, branch `story_line`)
 
 #### Changed

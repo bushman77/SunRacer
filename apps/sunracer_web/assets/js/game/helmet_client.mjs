@@ -10,6 +10,7 @@ import {helmetSocketParams} from "./helmet_auth.mjs"
 import {adjustedHelmetAlignment, HELMET_GAP_MIN, HELMET_GAP_MAX} from "./helmet_alignment.mjs"
 import {restoredHelmetCalibration} from "./helmet_calibration_restore.mjs"
 import {helmetSurrenderFromEntities} from "./helmet_surrender_view.mjs"
+import {helmetRespawnView} from "./helmet_respawn_view.mjs"
 import {helmetPlanetaryNavigation} from "./helmet_planetary_navigation.mjs"
 import {pilotDockedInWorld} from "./green_starbase_interior_state.mjs"
 import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_docking_countdown.mjs"
@@ -77,6 +78,8 @@ export class HelmetClient {
     this.storyHud = {stereoLine: null}
     this.selectedTargetId = null
     this.helmetSurrender = null
+    this.respawnPending = false
+    this.respawnError = null
     this.beams = []
     this.lastLaserFeedback = null
     this.view = null
@@ -714,6 +717,9 @@ export class HelmetClient {
     this.planetaryWarningDisplay = null
     this.updateSurrender(null)
     this.helmetSurrender = null
+    this.respawnPending = false
+    this.respawnError = null
+    this.view?.setHelmetDestroyed({destroyed: false})
     this.canvas.hidden = true
     const bandwidthOverlay = this.root.querySelector("#helmet-bandwidth-sbs")
     if (bandwidthOverlay) bandwidthOverlay.hidden = true
@@ -783,6 +789,52 @@ export class HelmetClient {
     this.selectedTargetId = this.entities.get(this.selfId)?.targetId || null
     this.planetaryWarningDisplay = planetaryWarningView(ownPlanetaryWarning(map, this.selfId))
     this.updateSurrender(helmetSurrenderFromEntities(this.entities, this.selfId))
+    this.updateRespawnPanel()
+  }
+
+  updateRespawnPanel() {
+    const view = helmetRespawnView(this.entities, this.selfId,
+      {pending: this.respawnPending, error: this.respawnError})
+    // A live hull clears any stale refusal left over from an earlier death.
+    if (!view.destroyed && this.respawnError) this.respawnError = null
+    this.view?.setHelmetDestroyed(view)
+  }
+
+  // The single world-mutating message the headset sends. The server refuses
+  // unless the map itself reports this pilot's ship destroyed, so a stray
+  // gaze cannot do anything but request a recovery the server already allows.
+  requestRespawn() {
+    if (this.respawnPending || this.channel?.state !== "joined" ||
+        this.entities.get(this.selfId)?.status !== "destroyed") return
+    this.respawnPending = true
+    this.respawnError = null
+    this.updateRespawnPanel()
+    const old = this.channel
+
+    const failed = reason => {
+      if (this.channel !== old) return
+      this.respawnPending = false
+      this.respawnError = reason
+      this.gaze.reset()
+      this.updateRespawnPanel()
+    }
+
+    old.push("respawn", {}, 10_000)
+      .receive("ok", () => {
+        if (this.channel !== old) return
+        this.respawnPending = false
+        this.respawnError = null
+        this.gaze.reset()
+        // The pilot is somewhere else entirely now; take a fresh map rather
+        // than smoothing the wreck across the system to Earth.
+        this.entities.clear()
+        this.selectedTargetId = null
+        this.stationDockingHold = null
+        this.updateRespawnPanel()
+        this.requestHelmetResync()
+      })
+      .receive("error", ({reason} = {}) => failed(reason || "refused"))
+      .receive("timeout", () => failed("timeout"))
   }
 
   // Same presentation smoothing the laptop uses between world updates.
@@ -875,6 +927,10 @@ export class HelmetClient {
     } else if (update.activated === "nav_close") {
       this.view?.setHelmetNavOpen(false)
       this.gaze.reset()
+    } else if (update.activated === "respawn") {
+      // Do NOT reset the latch here: the panel disarms itself while the
+      // request is in flight, so a held gaze cannot fire a second recovery.
+      this.requestRespawn()
     } else if (update.activated === "recenter") {
       if (this.headTracking.recenter()) {
         this.gaze.reset()

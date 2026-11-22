@@ -1,3 +1,15 @@
+## Headset usability (2026-11-21)
+
+- [x] Gaze-reachable death recovery. The headset had no death handling at all;
+      a pilot who died in an HMD was stranded, because the respawn panel and
+      button existed only in the laptop client.
+- [ ] Reachable flight-mode switching in the headset. Prologue step 6 now tells
+      the pilot to press Ctrl+E to cut the flight assist, which is close to
+      impossible to find blind while wearing a headset. Either the mode needs a
+      gaze target of its own or the step needs a different instruction for HMD
+      pilots. This is a live contradiction in shipped content.
+- [ ] Audit the rest of the prologue for keyboard-only instructions.
+
 ## Flight model and combat balance (2026-11-21)
 
 Design settled and recorded in `docs/flight-combat-balance.md` with the

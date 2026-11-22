@@ -174,3 +174,33 @@ test("LAN world cutover is contingent on valid world state and supports Phoenix 
   assert.match(helmet, /pilotDockedInWorld\(map, this\.selfId\)/)
   assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"|"station_talk"/)
 })
+
+test("a destroyed pilot can recover by gaze alone", () => {
+  const channel = readFileSync(new URL(
+    "../../../lib/sunracer_web/channels/helmet_channel.ex", import.meta.url), "utf8")
+
+  // The wreck panel is the only thing selectable: a pilot who has just died
+  // must not be able to open the nav panel by looking slightly off-centre.
+  assert.match(view, /this\.helmetDestroyed \?\s*\n?\s*\(this\.helmetRespawnArmed \? \[this\.helmetRespawnButton\] : \[\]\)/)
+  assert.match(view, /if \(target === this\.helmetRespawnButton\) return "respawn"/)
+  assert.match(view, /this\.helmetNavOpen = open === true && !this\.helmetDestroyed/)
+
+  // Client wiring: gaze activation pushes the request, and nothing else does.
+  assert.match(helmet, /update\.activated === "respawn"/)
+  assert.match(helmet, /old\.push\("respawn", \{\}, 10_000\)/)
+  assert.match(helmet, /setHelmetDestroyed/)
+
+  // A held gaze must not fire twice: requestRespawn guards on respawnPending,
+  // and helmetRespawnView disarms the target while a request is in flight.
+  assert.match(helmet, /if \(this\.respawnPending \|\| this\.channel\?\.state !== "joined"/)
+
+  // Server: scoped to the authenticated viewer, taking nothing from the phone.
+  assert.match(channel, /def handle_in\("respawn", _payload,/)
+  assert.match(channel, /helmet_role: :viewer, helmet_player_id: player_id/)
+  assert.match(channel, /SessionManager\.fetch_player\(SessionManager, player_id\)/)
+  assert.match(channel, /World\.respawn\(session\.id\)/)
+
+  // Still no flight, combat or ship commands on this channel.
+  assert.doesNotMatch(helmet,
+    /channel\.push\("move"|"plot_course"|"fire"|"set_target"|"station_dock"/)
+})

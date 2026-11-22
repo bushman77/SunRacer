@@ -308,6 +308,34 @@ export class StereoSpaceView {
     )
     this.helmetNavClose.position.set(0.58, 0.66, -2.40)
     this.helmetNavClose.renderOrder = 71
+
+    // Death recovery. A pilot in an HMD cannot reach the keyboard, so this is
+    // the one cockpit surface that must be reachable by gaze alone. It is
+    // centred and large on purpose: it appears only when the ship is already
+    // wreckage, and nothing else is selectable while it is up.
+    this.helmetRespawnPanel = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.70, 0.62),
+      new THREE.MeshBasicMaterial({
+        map: cockpitLabel(["SHIP DESTROYED"], {width: 1024, height: 480}),
+        transparent: true, depthTest: false,
+      }),
+    )
+    this.helmetRespawnPanel.position.set(0, 0.26, -2.44)
+    this.helmetRespawnPanel.renderOrder = 74
+    this.helmetRespawnPanel.visible = false
+    framing.add(this.helmetRespawnPanel)
+
+    this.helmetRespawnButton = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.02, 0.30),
+      new THREE.MeshBasicMaterial({
+        map: cockpitLabel(["RECOVER AT EARTH"], {width: 768, height: 256}),
+        transparent: true, depthTest: false,
+      }),
+    )
+    this.helmetRespawnButton.position.set(0, -0.30, -2.38)
+    this.helmetRespawnButton.renderOrder = 75
+    this.helmetRespawnButton.visible = false
+    framing.add(this.helmetRespawnButton)
     framing.add(this.helmetNavClose)
     this.helmetNavRecenter = new THREE.Mesh(
       new THREE.PlaneGeometry(0.64, 0.23),
@@ -404,10 +432,40 @@ export class StereoSpaceView {
     if (!this.helmetHeadRotation && this.gazeArc) this.gazeArc.visible = false
   }
 
+  // Painted from helmetRespawnView(). Keeping the texture swap behind a
+  // content check avoids rebuilding a canvas every frame while the pilot
+  // stares at the panel.
+  setHelmetDestroyed(view) {
+    const destroyed = view?.destroyed === true
+    this.helmetDestroyed = destroyed
+    this.helmetRespawnArmed = destroyed && view?.armed === true
+    if (this.helmetRespawnPanel) this.helmetRespawnPanel.visible = destroyed
+    if (this.helmetRespawnButton) this.helmetRespawnButton.visible = destroyed
+    if (!destroyed) {
+      this.lastRespawnText = null
+      return
+    }
+    // While the wreck panel is up, no other cockpit surface is selectable.
+    this.setHelmetNavOpen(false)
+    const text = (view.lines || []).join("\n") + "|" + (view.button || "")
+    if (text === this.lastRespawnText) return
+    this.lastRespawnText = text
+    const panelMap = this.helmetRespawnPanel.material.map
+    this.helmetRespawnPanel.material.map =
+      cockpitLabel(view.lines || [], {width: 1024, height: 480})
+    this.helmetRespawnPanel.material.needsUpdate = true
+    panelMap?.dispose()
+    const buttonMap = this.helmetRespawnButton.material.map
+    this.helmetRespawnButton.material.map =
+      cockpitLabel([view.button || ""], {width: 768, height: 256})
+    this.helmetRespawnButton.material.needsUpdate = true
+    buttonMap?.dispose()
+  }
+
   setHelmetNavOpen(open) {
-    this.helmetNavOpen = open === true
+    this.helmetNavOpen = open === true && !this.helmetDestroyed
     if (this.navSwitch) this.navSwitch.visible =
-      Boolean(this.helmetGazeEnabled && !this.helmetNavOpen)
+      Boolean(this.helmetGazeEnabled && !this.helmetNavOpen && !this.helmetDestroyed)
     if (this.helmetNavPanel) this.helmetNavPanel.visible =
       Boolean(this.helmetGazeEnabled && this.helmetNavOpen)
     if (this.helmetNavClose) this.helmetNavClose.visible =
@@ -452,10 +510,12 @@ export class StereoSpaceView {
   gazeTarget() {
     this.gazeHitDistance = null
     if (!this.helmetGazeEnabled || !this.helmetHeadRotation) return null
-    const candidates = this.helmetNavOpen ?
-      [this.helmetNavClose, this.helmetNavRecenter, this.helmetNavFlight,
-        this.helmetNavContacts, this.helmetNavSpace] :
-      [this.navSwitch, this.hudPanel]
+    const candidates = this.helmetDestroyed ?
+      (this.helmetRespawnArmed ? [this.helmetRespawnButton] : []) :
+      this.helmetNavOpen ?
+        [this.helmetNavClose, this.helmetNavRecenter, this.helmetNavFlight,
+          this.helmetNavContacts, this.helmetNavSpace] :
+        [this.navSwitch, this.hudPanel]
     this.camera.updateMatrixWorld(true)
     this.cockpitFraming.updateMatrixWorld(true)
     this.raycaster.set(this.camera.position,
@@ -465,6 +525,7 @@ export class StereoSpaceView {
     if (!hits.length || hits[0].distance >= 6) return null
     this.gazeHitDistance = hits[0].distance
     const target = hits[0].object
+    if (target === this.helmetRespawnButton) return "respawn"
     if (target === this.helmetNavClose) return "nav_close"
     if (target === this.helmetNavRecenter) return "recenter"
     if (target === this.helmetNavFlight) return "hud_flight"

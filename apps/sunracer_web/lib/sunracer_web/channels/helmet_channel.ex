@@ -2,6 +2,14 @@ defmodule SunracerWeb.HelmetChannel do
   @moduledoc """
   Pilot-only helmet control and read-only, individually authenticated HMD feeds.
   No movement, targeting, weapon or ship-command messages exist on this channel.
+
+  One exception exists, and it is deliberately not a ship command: `respawn`.
+  A pilot wearing an HMD cannot reach a keyboard, so a destroyed ship would
+  otherwise strand them with no way back. The handler takes nothing from the
+  phone, resolves the session from the authenticated `helmet_player_id`, and
+  delegates to `Sunracer.World.respawn/1`, which refuses unless the map itself
+  reports the ship destroyed. The only reachable outcome is an Earth-orbit
+  restore of the pilot's own ship.
   """
   use SunracerWeb, :channel
 
@@ -183,8 +191,27 @@ defmodule SunracerWeb.HelmetChannel do
     end
   end
 
+  # Gaze-reachable death recovery; see the moduledoc. Not a flight or combat
+  # command: no coordinates, ship, map or player id are accepted from the
+  # phone, and World.respawn/1 re-verifies destruction against the map before
+  # it does anything. A pilot whose hull is intact is refused.
+  def handle_in("respawn", _payload,
+                %{assigns: %{helmet_role: :viewer, helmet_player_id: player_id}} = socket) do
+    with {:ok, session} <- SessionManager.fetch_player(SessionManager, player_id),
+         {:ok, region} <- World.respawn(session.id) do
+      {:reply, {:ok, %{map_id: region.map_id, location_id: "earth"}}, socket}
+    else
+      :error -> {:reply, {:error, %{reason: "session_not_found"}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: respawn_reason(reason)}}, socket}
+    end
+  end
+
   def handle_in(_event, _payload, socket),
     do: {:reply, {:error, %{reason: "read_only_or_invalid_command"}}, socket}
+
+  defp respawn_reason(reason) when is_atom(reason), do: Atom.to_string(reason)
+  defp respawn_reason(reason) when is_binary(reason), do: reason
+  defp respawn_reason(_reason), do: "respawn_unavailable"
 
   @impl true
   def handle_info({:helmet_mode, :combat}, socket) do
