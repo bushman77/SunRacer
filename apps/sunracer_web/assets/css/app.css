@@ -514,6 +514,10 @@ body {
   box-shadow: 0 0 9px rgb(74 222 128 / 0.2);
 }
 
+.flight-mode-icon [hidden] {
+  display: none !important;
+}
+
 .flight-mode-icon:disabled {
   opacity: 0.52;
   cursor: not-allowed;

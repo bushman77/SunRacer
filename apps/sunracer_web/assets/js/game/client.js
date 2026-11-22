@@ -2262,28 +2262,37 @@ class SpaceClient {
   }
 
   setupFlightModeButtons() {
-    for (const button of this.root.querySelectorAll("[data-flight-mode]")) {
-      button.addEventListener("click", () => {
-        // All routes, including the Ctrl+E keyboard chord and HMD gaze,
-        // use the same authoritative flight_controls channel.
-        if (!this.flightControls?.active()) return
-        this.flightControls.setMode(button.dataset.flightMode)
-      })
-    }
+    const button = this.root.querySelector("[data-flight-mode-toggle]")
+    button?.addEventListener("click", () => {
+      if (!this.flightControls?.active()) return
+      const mode = this.entities.get(this.selfId)?.flightMode
+      if (mode !== "cruise" && mode !== "newtonian") return
+      // Select the opposite of authoritative mode, not an unconfirmed guess.
+      this.flightControls.setMode(mode === "cruise" ? "newtonian" : "cruise")
+    })
     this.syncFlightModeButtons()
   }
 
   syncFlightModeButtons(mode = this.entities.get(this.selfId)?.flightMode) {
+    const button = this.root.querySelector("[data-flight-mode-toggle]")
+    if (!button) return
     const enabled = this.flightControls?.active() === true
-    const signature = String(mode) + ":" + enabled
+    const currentMode = mode === "cruise" || mode === "newtonian" ? mode : null
+    const signature = String(currentMode) + ":" + enabled
     if (signature === this.lastFlightModeDisplay) return
     this.lastFlightModeDisplay = signature
-    for (const button of this.root.querySelectorAll("[data-flight-mode]")) {
-      button.disabled = !enabled
-      // Highlight only what the server actually reports. Never fake success
-      // before a mode command is accepted and replicated.
-      button.setAttribute("aria-pressed",
-        String(mode === button.dataset.flightMode))
+    button.disabled = !enabled || !currentMode
+    button.setAttribute("aria-pressed", String(currentMode === "newtonian"))
+    if (currentMode) {
+      button.title = currentMode === "cruise"
+        ? "Cruise · activate for Newtonian (Ctrl+E)"
+        : "Newtonian · activate for Cruise (Ctrl+E)"
+      button.setAttribute("aria-label", currentMode === "cruise"
+        ? "Cruise flight mode; activate for Newtonian"
+        : "Newtonian flight mode; activate for Cruise")
+    }
+    for (const icon of button.querySelectorAll("[data-mode-icon]")) {
+      icon.hidden = icon.dataset.modeIcon !== (currentMode || "cruise")
     }
   }
 

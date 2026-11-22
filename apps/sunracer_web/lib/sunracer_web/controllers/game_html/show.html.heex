@@ -813,29 +813,22 @@
     </div>
 
     <aside id="cockpit-settings" class="cockpit-settings" aria-label="Cockpit controls">
-      <%!-- Icon-only flight-mode switches. Each path represents the ship,
-            not a generic action glyph: rocket plume = assisted Cruise,
-            opposing vector arrows = Newtonian momentum. --%>
-      <div id="flight-mode-toggle" class="flight-mode-toggle" role="group"
-           aria-label="Flight propulsion mode">
-        <button id="flight-mode-cruise" data-flight-mode="cruise" type="button"
-                class="flight-mode-icon" title="Cruise · assisted flight (Ctrl+E)"
-                aria-label="Cruise mode: assisted forward flight" aria-pressed="true"
-                disabled>
-          <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"
-               fill="none" stroke="currentColor" stroke-width="1.8"
+      <%!-- One flight-mode button shows the current mode. Its artwork changes
+            only when authoritative ship state reports the new mode. --%>
+      <div id="flight-mode-toggle" class="flight-mode-toggle">
+        <button id="flight-mode-toggle-button" data-flight-mode-toggle type="button"
+                class="flight-mode-icon" title="Cruise · activate for Newtonian (Ctrl+E)"
+                aria-label="Cruise flight mode; activate for Newtonian"
+                aria-pressed="false" disabled>
+          <svg data-mode-icon="cruise" viewBox="0 0 32 32" width="26" height="26"
+               aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"
                stroke-linecap="round" stroke-linejoin="round">
             <path d="M12 9 26 16 12 23 15 18 9 16 15 14Z" />
             <path d="M9 13 5 11M8 16H2M9 19 5 21" />
           </svg>
-        </button>
-        <button id="flight-mode-newtonian" data-flight-mode="newtonian" type="button"
-                class="flight-mode-icon" title="Newtonian · free momentum (Ctrl+E)"
-                aria-label="Newtonian mode: free momentum and independent thrust"
-                aria-pressed="false" disabled>
-          <svg viewBox="0 0 32 32" width="26" height="26" aria-hidden="true"
-               fill="none" stroke="currentColor" stroke-width="1.8"
-               stroke-linecap="round" stroke-linejoin="round">
+          <svg data-mode-icon="newtonian" viewBox="0 0 32 32" width="26" height="26"
+               aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8"
+               stroke-linecap="round" stroke-linejoin="round" hidden>
             <path d="M12 10 24 16 12 22 14 18 8 16 14 14Z" />
             <path d="M10 6H2M5 3 2 6l3 3M22 26h8m-3-3 3 3-3 3" />
           </svg>

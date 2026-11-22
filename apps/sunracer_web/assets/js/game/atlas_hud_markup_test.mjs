@@ -40,3 +40,13 @@ brandingTest("Atlas HUD shows SunRacer branding", () => {
   brandingAssert.match(view, /SUNRACER/)
   brandingAssert.doesNotMatch(view, /SPACE ?NOVA/i)
 })
+
+test("desktop cockpit exposes only one flight mode toggle and one visible SVG", () => {
+  const client=readFileSync(new URL("./client.js",import.meta.url),"utf8")
+  assert.equal((markup.match(/data-flight-mode-toggle/g) || []).length, 1)
+  assert.equal((markup.match(/data-mode-icon=/g) || []).length, 2)
+  assert.match(markup, /data-mode-icon="newtonian"[^>]*hidden>/s)
+  assert.doesNotMatch(markup, /id="flight-mode-cruise"|id="flight-mode-newtonian"/)
+  assert.match(client, /icon\.hidden = icon\.dataset\.modeIcon !==/)
+  assert.match(client, /this\.flightControls\.setMode\(mode === "cruise" \? "newtonian" : "cruise"\)/)
+})
