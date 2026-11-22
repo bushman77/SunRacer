@@ -92,7 +92,8 @@ export class MouseSteering {
   axes() { return {yaw: this.yaw, pitch: this.pitch} }
 
   expire(time = this.now()) {
-    if (time - this.lastMovementAt < this.stopDelayMs()) return null
+    // Allow for floating-point time subtraction at the exact deadline.
+    if (time - this.lastMovementAt + 1e-6 < this.stopDelayMs()) return null
     if (this.yaw === 0 && this.pitch === 0) return null
 
     // One hard stop. Do not decay the last command over subsequent frames;

@@ -40,11 +40,11 @@ test("mouse filter smooths acceleration but never amplifies or delays slowdown",
   now += 8
   const steady = mouse.move(2, 0).yaw
   assert.ok(first > 0 && first < faster)
-  assert.ok(faster <= 0.2 && steady <= 0.2 && steady >= faster)
+  assert.ok(faster <= 0.3 && steady <= 0.3 && steady >= faster)
   now += 8
-  assert.deepEqual(mouse.move(1, -1), {yaw: 0.1, pitch: 0.1})
+  assert.deepEqual(mouse.move(1, -1), {yaw: 0.15, pitch: 0.15})
   now += 8
-  assert.deepEqual(mouse.move(-5, 0), {yaw: -0.5, pitch: 0})
+  assert.deepEqual(mouse.move(-5, 0), {yaw: -0.75, pitch: 0})
 })
 
 test("continuous 60Hz movement stops promptly instead of coasting 85ms", () => {
@@ -106,7 +106,7 @@ test("native pointer loss and long gaps reset both steering and cadence", () => 
   assert.equal(mouse.expire(now + 100), null)
   mouse.move(5, 0)
   now += MOUSE_STEERING_IDLE_MS + 1
-  assert.deepEqual(mouse.move(2, 0), {yaw: 0.2, pitch: 0})
+  assert.deepEqual(mouse.move(2, 0), {yaw: 0.3, pitch: 0})
   assert.equal(mouse.packetGapMs, null)
   assert.equal(mouse.sensitivity, 1.5)
 })

@@ -2424,7 +2424,7 @@ class SpaceClient {
         this.flightControls.setMouseSteering(expired)
         this.flightInputHistory?.record(performance.now(), this.flightControls.axes())
       }
-    }, this.mouseSteering.stopDelayMs())
+    }, Math.ceil(this.mouseSteering.stopDelayMs()) + 1)
   }
 
   enableNativeMouseFallback() {
