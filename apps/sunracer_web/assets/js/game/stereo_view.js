@@ -19,6 +19,7 @@ import {GreenStarbaseInterior, greenStarbaseInteriorVisible} from "./green_starb
 import {EncounterShipVisual} from "./encounter_ship.js"
 import {SpaceEnvironmentVisual} from "./space_environment_visual.js"
 import {helmetHudLines, HMD_HUD_PAGES} from "./helmet_hud_pages.mjs"
+import {paintCockpitModeIcon} from "./cockpit_mode_icons.mjs"
 
 // Rendering only: no Phoenix socket, no movement authority, no combat calculations.
 const clamp = (value, min, max) => Math.max(min, Math.min(value, max))
@@ -80,6 +81,17 @@ function cockpitLabel(lines, {width = 512, height = 256} = {}) {
   ctx.textAlign = "center"
   lines.forEach((text, i) => ctx.fillText(text, width / 2,
     height * (i + 1) / (lines.length + 1) + fontSize / 3, width - 38))
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  return texture
+}
+
+// The actual SBS cockpit used to render a big neon-green text rectangle here.
+// Flight modes now use two small illustrated ship symbols instead.
+function modeIconTexture(mode, selected = false, pending = false) {
+  const canvas = document.createElement("canvas")
+  canvas.width = canvas.height = 256
+  paintCockpitModeIcon(canvas.getContext("2d"), {mode, selected, pending})
   const texture = new THREE.CanvasTexture(canvas)
   texture.colorSpace = THREE.SRGBColorSpace
   return texture
@@ -352,21 +364,28 @@ export class StereoSpaceView {
     this.helmetSurrenderPanel.visible = false
     framing.add(this.helmetSurrenderPanel)
 
-    // Flight mode. Off to the left of the forward view so it is a glance
-    // rather than something in the way of flying, and small enough that a
-    // pilot tracking a target will not sit on it for the full dwell.
-    this.helmetModeIcon = new THREE.Mesh(
-      new THREE.PlaneGeometry(0.62, 0.26),
-      new THREE.MeshBasicMaterial({
-        map: cockpitLabel(["CRUISE"], {width: 512, height: 224}),
-        transparent: true, depthTest: false,
-      }),
-    )
-    this.helmetModeIcon.position.set(-0.92, -0.52, -2.36)
-    this.helmetModeIcon.rotation.y = 0.22
-    this.helmetModeIcon.renderOrder = 72
-    this.helmetModeIcon.visible = false
-    framing.add(this.helmetModeIcon)
+    // Two compact, truly illustrated 3D cockpit controls (not green text
+    // panels): ship with exhaust = assisted Cruise, ship with opposing
+    // arrows = free-momentum Newtonian. Keep both outside the central sight.
+    // Only the inactive icon is gaze-armed, so looking at the selected
+    // mode cannot accidentally flip the ship back.
+    this.helmetModeIcons = {}
+    for (const [mode, x] of [["cruise", -1.10], ["newtonian", -0.77]]) {
+      const button = new THREE.Mesh(
+        new THREE.PlaneGeometry(0.275, 0.275),
+        new THREE.MeshBasicMaterial({
+          map: modeIconTexture(mode),
+          transparent: true, depthTest: false, depthWrite: false,
+        }),
+      )
+      button.position.set(x, -0.52, -2.36)
+      button.rotation.y = 0.22
+      button.renderOrder = 72
+      button.visible = false
+      button.userData.flightMode = mode
+      framing.add(button)
+      this.helmetModeIcons[mode] = button
+    }
 
     this.helmetSurrenderButtons = {}
     for (const [name, x] of [["accept", -0.58], ["seize", 0.0], ["dismiss", 0.58]]) {
@@ -545,23 +564,32 @@ export class StereoSpaceView {
     }
   }
 
-  // Painted from helmetModeIcon(), whose label comes from the world snapshot.
+  // Keep both physical mode symbols synchronized to authoritative ship state.
+  // Rebuild their tiny textures only on an actual mode or pending change.
   setHelmetModeIcon(icon) {
-    const visible = icon?.visible === true && !this.helmetDestroyed
-    this.helmetModeArmed = visible && icon?.armed === true
-    if (this.helmetModeIcon) this.helmetModeIcon.visible = visible
-    if (!visible) {
-      this.lastModeText = null
+    const visible = icon?.visible === true && this.helmetGazeEnabled &&
+      !this.helmetDestroyed
+    const mode = icon?.mode
+    this.helmetModeCurrent = visible && ["cruise", "newtonian"].includes(mode)
+      ? mode : null
+    this.helmetModeArmed = Boolean(this.helmetModeCurrent && icon?.armed === true)
+    for (const button of Object.values(this.helmetModeIcons || {})) {
+      button.visible = Boolean(this.helmetModeCurrent)
+    }
+    if (!this.helmetModeCurrent) {
+      this.lastModeIconState = null
       return
     }
-    const text = (icon.lines || []).join("\n")
-    if (text === this.lastModeText) return
-    this.lastModeText = text
-    const old = this.helmetModeIcon.material.map
-    this.helmetModeIcon.material.map =
-      cockpitLabel(icon.lines || [], {width: 512, height: 224})
-    this.helmetModeIcon.material.needsUpdate = true
-    old?.dispose()
+    const pending = icon.pending === true
+    const signature = mode + ":" + pending
+    if (signature === this.lastModeIconState) return
+    this.lastModeIconState = signature
+    for (const [name, button] of Object.entries(this.helmetModeIcons)) {
+      const old = button.material.map
+      button.material.map = modeIconTexture(name, name === mode, pending)
+      button.material.needsUpdate = true
+      old?.dispose()
+    }
   }
 
   setHelmetNavOpen(open) {
@@ -614,7 +642,10 @@ export class StereoSpaceView {
     if (!this.helmetGazeEnabled || !this.helmetHeadRotation) return null
     const surrender = this.helmetSurrenderArmed ?
       Object.values(this.helmetSurrenderButtons || {}) : []
-    const mode = this.helmetModeArmed ? [this.helmetModeIcon] : []
+    const inactiveMode = this.helmetModeCurrent === "cruise"
+      ? "newtonian" : "cruise"
+    const mode = this.helmetModeArmed
+      ? [this.helmetModeIcons?.[inactiveMode]] : []
     const candidates = this.helmetDestroyed ?
       (this.helmetRespawnArmed ? [this.helmetRespawnButton] : []) :
       this.helmetNavOpen ?
@@ -630,7 +661,7 @@ export class StereoSpaceView {
     if (!hits.length || hits[0].distance >= 6) return null
     this.gazeHitDistance = hits[0].distance
     const target = hits[0].object
-    if (target === this.helmetModeIcon) return "flight_mode"
+    if (target === this.helmetModeIcons?.[inactiveMode]) return "flight_mode"
     if (target === this.helmetRespawnButton) return "respawn"
     if (target === this.helmetSurrenderButtons?.accept) return "surrender_accept"
     if (target === this.helmetSurrenderButtons?.seize) return "surrender_seize"

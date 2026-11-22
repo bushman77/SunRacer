@@ -15,6 +15,7 @@ test("cruise offers to cut the assist", () => {
   const icon = helmetModeIcon(world("cruise"), "7")
   assert.equal(icon.visible, true)
   assert.equal(icon.armed, true)
+  assert.equal(icon.pending, false)
   assert.equal(icon.mode, "cruise")
   assert.deepEqual(icon.lines, ["CRUISE", "CUT ASSIST"])
 })
@@ -27,6 +28,7 @@ test("newtonian offers to restore it", () => {
 test("the icon disarms while a switch is in flight", () => {
   const icon = helmetModeIcon(world("cruise"), "7", {pending: true})
   assert.equal(icon.armed, false)
+  assert.equal(icon.pending, true)
   assert.ok(icon.lines.includes("SWITCHING"))
 })
 

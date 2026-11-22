@@ -11,17 +11,17 @@ export const MODE_GAZE_TARGET = "flight_mode"
 export function helmetModeIcon(entities, pilotId, {pending = false} = {}) {
   const mode = entities?.get?.(pilotId)?.flightMode
   const known = mode === "cruise" || mode === "newtonian"
-  if (!known) return {visible: false, mode: null, lines: [], armed: false}
+  if (!known) return {visible: false, mode: null, lines: [], armed: false, pending: false}
 
   if (pending) {
-    return {visible: true, mode, armed: false,
+    return {visible: true, mode, armed: false, pending: true,
       lines: [mode === "cruise" ? "CRUISE" : "NEWTONIAN", "SWITCHING"]}
   }
 
   // Name the current mode first, then what a dwell will do. A pilot glancing
   // down mid-fight needs to read their state before the consequence.
   return {
-    visible: true, mode, armed: true,
+    visible: true, mode, armed: true, pending: false,
     lines: mode === "cruise"
       ? ["CRUISE", "CUT ASSIST"]
       : ["NEWTONIAN", "RESTORE ASSIST"],
