@@ -11,7 +11,8 @@ const markup = read("../../../lib/sunracer_web/controllers/game_html/show.html.h
 test("desktop NPC conversation is keyboard accessible and server authorized", () => {
   assert.match(game, /handleStationNpcKey\(event\)/)
   assert.match(game, /event\.code !== "KeyE"/)
-  assert.match(game, /this\.channel\.push\("station_talk", \{attendant_id: id, topic\}/)
+  assert.match(game, /this\.channel\.push\(repair \? "station_repair" : "station_talk"/)
+  assert.match(game, /repair \? \{\} : \{attendant_id: id, topic\}/)
   assert.match(game, /this\.stationWalking\?\.release\(\)/)
   assert.match(game, /nearestStationAttendant\(this\.stationPosition, this\.stationAttendants\)/)
   assert.match(game, /this\.root\.querySelector\("#station-npc-dialogue"\)/)
@@ -27,7 +28,8 @@ test("the paired SBS viewer renders the same server-owned kiosk staff without co
   assert.doesNotMatch(helmet, /channel\.push\("station_talk"/)
 })
 
-test("station console provides room labels and discloses non-operational services", () => {
+test("station console shows complimentary repairs and clearly identifies inactive purchases", () => {
   assert.match(markup, /Station attendants are present at each kiosk/)
-  assert.match(markup, /purchases and repairs remain offline/)
+  assert.match(markup, /Mara Venn offers complimentary hull and shield repairs/)
+  assert.match(markup, /purchases remain offline/)
 })
