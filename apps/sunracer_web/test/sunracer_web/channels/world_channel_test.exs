@@ -155,6 +155,42 @@ defmodule SunracerWeb.WorldChannelTest do
     leave_and_wait(fresh)
   end
 
+  test "authenticated inventory can be read in space but never for a forged pilot" do
+    account = verified_player_account_fixture()
+    another = verified_player_account_fixture()
+    assert {:ok, _} = Sunracer.Inventory.add_cargo(account.id, "medical_supplies", 2)
+    assert {:ok, _} = Sunracer.Inventory.add_equipment(account.id, "beryl", 1)
+    assert {:ok, _} = Sunracer.Inventory.add_cargo(another.id, "titanium", 1)
+
+    {:ok, socket} = authenticated_socket(account)
+    {:ok, _snapshot, joined} =
+      subscribe_and_join(socket, WorldChannel, "world:1-1")
+
+    # World inventory does not require docking and ignores supplied identities.
+    ref = push(joined, "pilot_inventory", %{
+      "player_id" => another.id, "credits" => 999_999,
+      "ship_id" => -1, "cargo" => %{"rare_ores" => 999}
+    })
+    assert_reply ref, :ok, %{inventory: view}
+    assert view.ship.name == "Sunracer"
+    assert view.cargo.used_tonnes == 2
+    assert view.cargo.capacity_tonnes == 4
+    assert Enum.any?(view.cargo.items,
+      &(&1.id == "medical_supplies" and &1.quantity == 2))
+    refute Enum.any?(view.cargo.items, &(&1.id == "titanium"))
+    assert Enum.any?(view.equipment,
+      &(&1.id == "beryl" and &1.quantity == 1))
+    assert view.credits == account.credits
+    assert length(view.configurations) == 2
+
+    # An inventory request cannot fit/purchase without the real station checks.
+    fit = push(joined, "station_outfitting_fit", %{
+      "config" => 1, "kind" => "laser", "slot" => 0, "item_id" => "beryl"
+    })
+    assert_reply fit, :error, %{reason: "not_docked"}
+    leave_and_wait(joined)
+  end
+
   test "station dialogue channel cannot be used from open space or forged input" do
     account = verified_player_account_fixture()
     {:ok, socket} = authenticated_socket(account)

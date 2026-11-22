@@ -46,6 +46,10 @@ on:
       - "apps/core/test/core/world/world_test.exs"
       - "apps/sunracer/test/sunracer/world_test.exs"
       - "apps/sunracer/lib/sunracer/world.ex"
+      - "apps/sunracer/lib/sunracer/inventory/view.ex"
+      - "apps/sunracer/test/sunracer/inventory/view_test.exs"
+      - "apps/sunracer_web/assets/js/game/pilot_inventory_panel*.mjs"
+      - "apps/sunracer_web/assets/js/game/flight_input_state*.mjs"
       - "apps/sunracer/lib/sunracer/story.ex"
       - "apps/sunracer/lib/sunracer/story/prologue.ex"
       - "apps/sunracer/lib/sunracer/story/scenes.ex"
@@ -176,6 +180,12 @@ jobs:
           mix test apps/core/test/core/world/station_impact_integration_test.exs
       # The station UI has its own fast gate, even if unrelated Phoenix
       # integration tests fail later in this workflow.
+      - name: Test inventory in Atlas and cockpit
+        run: |
+          mix test apps/sunracer/test/sunracer/inventory/view_test.exs
+          node --check apps/sunracer_web/assets/js/game/pilot_inventory_panel.mjs
+          node --test apps/sunracer_web/assets/js/game/pilot_inventory_panel_test.mjs
+          node --test apps/sunracer_web/assets/js/game/flight_input_state_test.mjs
       - name: Test station outfitting console
         run: |
           node --check apps/sunracer_web/assets/js/game/station_outfitting_panel.mjs
