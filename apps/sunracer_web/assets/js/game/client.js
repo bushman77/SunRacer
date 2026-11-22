@@ -44,6 +44,7 @@ import {cameraSettleSeconds, PREDICTED_OWN_SHIP_SETTLE_SECONDS} from "./camera_r
 import {predictOrientation, predictPosition, InputHistory} from "./own_ship_prediction.mjs"
 import {smoothEntityPresentation} from "./entity_smoothing.mjs"
 import {applyOwnShipMovementPreview} from "./own_ship_movement_preview.mjs"
+import {acceptOwnShipPose} from "./own_ship_pose_policy.mjs"
 import {headsetRendering, pauseDesktop3D, preferredVrOnly} from "./vr_only_rendering.mjs"
 import {planetaryImpactMessage} from "./planetary_impact.mjs"
 import {
@@ -947,7 +948,7 @@ class SpaceClient {
 
     for (const entity of state.entities) {
       activeIds.add(entityKey(entity.id))
-      this.upsertEntity(entity)
+      this.upsertEntity(entity, false, true)
     }
 
     for (const id of this.entities.keys()) {
@@ -972,9 +973,13 @@ class SpaceClient {
     this.upsertEntity(entity)
   }
 
-  upsertEntity(entity, snap = false) {
+  upsertEntity(entity, snap = false, fromWorldTick = false) {
     const id = entityKey(entity.id)
     const existing = this.entities.get(id)
+    const acceptPose = acceptOwnShipPose({
+      existing: Boolean(existing), ownShip: id === this.selfId,
+      snapshot: snap, worldTick: fromWorldTick,
+    })
     const p3 = entity.position_3d || entity.position
     const target = {x: p3.x, y: p3.y, z: p3.z ?? 0}
     const d3 = entity.destination_3d || entity.destination
@@ -989,22 +994,23 @@ class SpaceClient {
     const authoritativeAt = performance.now()
 
     if (existing) {
-      existing.authoritativeAt = authoritativeAt
-      existing.target = target
-      existing.destination = destination
-      existing.navigationMode = entity.navigation_mode || "manual"
-      existing.routeWaypoints = route3d
-      existing.attitude = attitude
-      existing.orientation = orientation
-      if (orientation && (!existing.renderOrientation || snap)) {
-        existing.renderOrientation = {...orientation}
+      if (acceptPose) {
+        existing.authoritativeAt = authoritativeAt
+        existing.target = target
+        existing.destination = destination
+        existing.navigationMode = entity.navigation_mode || "manual"
+        existing.routeWaypoints = route3d
+        existing.attitude = attitude
+        existing.orientation = orientation
+        if (orientation && (!existing.renderOrientation || snap)) {
+          existing.renderOrientation = {...orientation}
+        }
+        // A visual orientation is never fed into the authoritative simulation.
+        if (!existing.renderAttitude || snap) existing.renderAttitude = {...attitude}
+        existing.angularVelocity = entity.angular_velocity || existing.angularVelocity ||
+          {yaw: 0, pitch: 0, roll: 0}
+        existing.velocity = velocity
       }
-      // Render orientation is independent from server state; never feed the
-      // interpolated angles back into the authoritative simulation.
-      if (!existing.renderAttitude || snap) existing.renderAttitude = {...attitude}
-      existing.angularVelocity = entity.angular_velocity || existing.angularVelocity ||
-        {yaw: 0, pitch: 0, roll: 0}
-      existing.velocity = velocity
       existing.throttle = entity.throttle ?? 0
       existing.flightMode = entity.flight_mode || "cruise"
       existing.speed = entity.speed
@@ -1030,7 +1036,7 @@ class SpaceClient {
         : entityKey(entity.engaged_target_id)
       existing.state = entity.state
       existing.status = entity.status
-      if (destination) {
+      if (acceptPose && destination) {
         existing.navigationAngle = Math.atan2(
           destination.y - existing.render.y,
           destination.x - existing.render.x
