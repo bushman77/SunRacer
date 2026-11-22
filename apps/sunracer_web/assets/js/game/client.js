@@ -47,7 +47,7 @@ import {applyOwnShipMovementPreview} from "./own_ship_movement_preview.mjs"
 import {acceptOwnShipPose} from "./own_ship_pose_policy.mjs"
 import {OwnShipCameraReconciler} from "./own_ship_camera_reconciler.mjs"
 import {DesktopMouseFrameSampler, DesktopMouseTimingProbe} from "./desktop_mouse_sampling.mjs"
-import {ClientLedMouseCamera} from "./client_led_mouse_camera.mjs"
+import {ClientLedMouseCamera, preferClientLedCamera} from "./client_led_mouse_camera.mjs"
 import {headsetRendering, pauseDesktop3D, preferredVrOnly} from "./vr_only_rendering.mjs"
 import {planetaryImpactMessage} from "./planetary_impact.mjs"
 import {
@@ -96,9 +96,12 @@ class SpaceClient {
     this.mouseFrameSamplingEnabled = localStorage.getItem(this.mouseFrameSamplingKey) === "1"
     this.mouseFrameSampler = new DesktopMouseFrameSampler()
     this.clientLedCameraKey = "sunracer:client-led-mouse-camera:" + root.dataset.layoutPlayerId
-    this.clientLedCameraEnabled = localStorage.getItem(this.clientLedCameraKey) === "1"
+    this.clientLedCameraEnabled = preferClientLedCamera(
+      localStorage.getItem(this.clientLedCameraKey),
+      root.dataset.nativeClient === "true")
     this.clientLedCamera = new ClientLedMouseCamera()
     this.clientLedCameraDelta = null
+    this.clientLedCameraServerAlert = false
     this.mouseTimingProbe = new DesktopMouseTimingProbe()
     this.lastMouseTimingReport = -Infinity
     this.mouseIdleTimer = null
@@ -1120,17 +1123,19 @@ class SpaceClient {
     }
 
     if (id === this.selfId) {
-      // Server state remains canonical, but should not rewind the local
-      // cockpit while the pilot is actively controlling the visual camera.
-      // A major discrepancy still forces a real correction.
+      // The server retains true orientation/physics, but the cockpit must
+      // never be re-aimed by ordinary asynchronous world snapshots while
+      // pointer-captured steering is active. A large discrepancy is visible
+      // in diagnostic telemetry, NOT a camera snap. Real transitions still
+      // reset below; accepting invalid gameplay is never implied.
       if (fromWorldTick && this.clientLedCameraActiveForTick() && orientation) {
         this.clientLedCameraDelta = this.clientLedCamera.divergenceDegrees(orientation)
-        if (this.clientLedCamera.shouldSnap(orientation)) {
-          this.clientLedCamera.reset()
-          existing.renderOrientation = {...orientation}
-        }
+        this.clientLedCameraServerAlert = this.clientLedCamera.shouldSnap(orientation)
       }
-      if (snap || entity.status === "destroyed") this.clientLedCamera.reset()
+      if (snap || entity.status === "destroyed") {
+        this.clientLedCamera.reset()
+        this.clientLedCameraServerAlert = false
+      }
       if (beforeTickVisual) {
         const freshPredicted = this.predictOwnShip(existing, authoritativeAt,
           {uncorrected: true})?.orientation
@@ -2227,8 +2232,11 @@ class SpaceClient {
     const pointerLocked = this.mouseSteeringEnabled &&
       (document.pointerLockElement === this.canvas || this.mouseFallback)
     const own = this.entities.get(this.selfId)
+    // A delayed destination from an older server tick must not cause a
+    // one-frame switch back to the authoritative camera after taking helm.
+    // flightInputState("ready") already gates local manual steering.
     const localCameraActive = this.clientLedMouseCameraActive() &&
-      Boolean(own?.orientation) && !own?.destination
+      Boolean(own?.orientation)
     if (localCameraActive) {
       if (!this.clientLedCamera.active) {
         this.clientLedCamera.begin(
@@ -2304,8 +2312,10 @@ class SpaceClient {
   // moves every frame instead of every 100 ms server tick. Presentation only;
   // each new update restarts the prediction from server state.
   predictOwnShip(entity, now, {uncorrected = false} = {}) {
-    if (entity.id !== this.selfId || entity.destination || !entity.orientation ||
-        !Number.isFinite(entity.authoritativeAt) || !this.flightControls?.active()) return null
+    if (entity.id !== this.selfId ||
+        (entity.destination && !this.clientLedCameraActiveForTick()) ||
+        !entity.orientation || !Number.isFinite(entity.authoritativeAt) ||
+        !this.flightControls?.active()) return null
     const seconds = Math.max(0, (now - entity.authoritativeAt) / 1000)
     const predictedOrientation = this.clientLedCameraActiveForTick()
       ? this.clientLedCamera.orientation
@@ -2855,7 +2865,9 @@ class SpaceClient {
       (this.clientLedCameraEnabled ? " · CLIENT CAMERA" +
         (Number.isFinite(this.clientLedCameraDelta)
           ? " · server diff " + this.clientLedCameraDelta.toFixed(1) + "°"
-          : "") : "")
+          : "") +
+        (this.clientLedCameraServerAlert ? " · LARGE DESYNC (VIEW UNCHANGED)" : "")
+        : "")
   }
 
   mouseSteeringMessage(message) {

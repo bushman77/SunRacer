@@ -9,6 +9,12 @@ import {normalizeOrientation} from "./orientation_interpolation.mjs"
 export const LOCAL_CAMERA_MAX_STEP_SECONDS = 0.05
 export const LOCAL_CAMERA_INTEGRATION_STEP_SECONDS = 1/120
 export const LOCAL_CAMERA_SNAP_DEGREES = 65
+
+// Native laptop pilots get the client-led visual camera by default. A pilot's
+// explicit choice to disable it is always respected; browser preview keeps
+// the conservative opt-in mode.
+export const preferClientLedCamera = (saved, nativeClient = false) =>
+  saved === "1" || (saved === null && nativeClient === true)
 const AXES = ["yaw","pitch","roll"]
 const clamp = (x,a,b) => Math.max(a,Math.min(b,x))
 const finite = x => Number.isFinite(x) ? x : 0

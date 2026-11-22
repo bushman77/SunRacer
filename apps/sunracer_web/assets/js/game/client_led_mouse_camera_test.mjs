@@ -2,7 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import {readFileSync} from "node:fs"
 import {ClientLedMouseCamera, LOCAL_CAMERA_SNAP_DEGREES,
-  LOCAL_CAMERA_MAX_STEP_SECONDS} from "./client_led_mouse_camera.mjs"
+  LOCAL_CAMERA_MAX_STEP_SECONDS, preferClientLedCamera} from "./client_led_mouse_camera.mjs"
 import {fromAngles} from "./own_ship_prediction.mjs"
 import {orientationTelemetry} from "./orientation_interpolation.mjs"
 
@@ -66,7 +66,30 @@ test("resync and large authoritative corrections still take effect", () => {
   assert.equal(LOCAL_CAMERA_MAX_STEP_SECONDS,0.05)
 })
 
-test("opt-in desktop mode never changes Phoenix controls, SBS relay or authoritative updates", () => {
+test("native visual steering defaults to client-led, and explicit opt-out persists", () => {
+  assert.equal(preferClientLedCamera(null,true),true)
+  assert.equal(preferClientLedCamera(null,false),false)
+  assert.equal(preferClientLedCamera("0",true),false)
+  assert.equal(preferClientLedCamera("1",false),true)
+  assert.equal(preferClientLedCamera("1",true),true)
+  const client=read("./client.js")
+  assert.match(client,/this\.clientLedCameraEnabled = preferClientLedCamera\(/)
+  assert.match(client,/root\.dataset\.nativeClient === "true"/)
+})
+
+test("ordinary server ticks cannot forcibly rewind active client-led camera", () => {
+  const client=read("./client.js")
+  const tick=client.slice(client.indexOf("if (fromWorldTick && this.clientLedCameraActiveForTick()"),
+    client.indexOf("if (snap || entity.status === \"destroyed\")"))
+  assert.match(tick,/this\.clientLedCameraDelta = this\.clientLedCamera\.divergenceDegrees\(orientation\)/)
+  assert.match(tick,/this\.clientLedCameraServerAlert = this\.clientLedCamera\.shouldSnap\(orientation\)/)
+  assert.doesNotMatch(tick,/this\.clientLedCamera\.reset\(\)/)
+  assert.doesNotMatch(tick,/existing\.renderOrientation =/)
+  assert.match(client,/\(entity\.destination && !this\.clientLedCameraActiveForTick\(\)\)/)
+  assert.match(client,/if \(snap \|\| entity\.status === "destroyed"\)/)
+})
+
+test("client-led desktop mode never changes Phoenix controls, SBS relay or authoritative updates", () => {
   const client=read("./client.js")
   const view=read("../../../lib/sunracer_web/controllers/game_html/show.html.heex")
   assert.match(view,/id="cockpit-client-led-mouse-camera"/)
