@@ -14,8 +14,9 @@ defmodule Sunracer.Story.ScenesTest do
     ]
 
     for {id, step} <- Enum.with_index(ids, 1) do
-      assert %{id: "first_run:" <> ^id, lines: lines} =
+      assert %{id: scene_id, lines: lines} =
                Scenes.on_transition(progress(step), progress(step + 1))
+      assert scene_id == "first_run:" <> id
       assert length(lines) in 1..3
       for %{speaker: speaker, channel: channel, text: words} <- lines do
         assert String.length(speaker) > 2
