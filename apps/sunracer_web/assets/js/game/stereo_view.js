@@ -597,7 +597,10 @@ export class StereoSpaceView {
       button.visible = Boolean(this.helmetModeCurrent)
     }
     for (const hitbox of Object.values(this.helmetModeHitboxes || {})) {
-      hitbox.visible = Boolean(this.helmetModeCurrent && this.helmetModeArmed)
+      // Keep raycast targets present during the relay handshake. Otherwise
+      // removing them for a pending request resets the dwell latch, allowing
+      // an unchanged head gaze to issue the same command again on ACK.
+      hitbox.visible = Boolean(this.helmetModeCurrent)
     }
     if (!this.helmetModeCurrent) {
       this.lastModeIconState = null
@@ -667,7 +670,7 @@ export class StereoSpaceView {
       Object.values(this.helmetSurrenderButtons || {}) : []
     // Both symbols have their own explicit selection target. Previous code
     // only raycast the inactive icon; looking at the other icon looked broken.
-    const mode = this.helmetModeArmed
+    const mode = this.helmetModeCurrent
       ? Object.values(this.helmetModeHitboxes || {}) : []
     const candidates = this.helmetDestroyed ?
       (this.helmetRespawnArmed ? [this.helmetRespawnButton] : []) :

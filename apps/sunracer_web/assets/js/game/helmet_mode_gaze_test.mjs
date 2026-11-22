@@ -24,6 +24,8 @@ test("the two ship icons have distinct, explicit authenticated mode intents", ()
 test("transparent gaze targets are separate, larger than their visible icons", () => {
   const view = source("./stereo_view.js")
   assert.match(view, /this\.helmetModeHitboxes = \{\}/)
+  assert.match(view, /hitbox\.visible = Boolean\(this\.helmetModeCurrent\)/)
+  assert.match(view, /const mode = this\.helmetModeCurrent/)
   assert.match(view, /new THREE\.PlaneGeometry\(0\.265, 0\.34\)/)
   assert.match(view, /transparent: true, opacity: 0/)
   assert.match(view, /side: THREE\.DoubleSide/)
