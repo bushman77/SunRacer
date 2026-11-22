@@ -139,7 +139,7 @@ class SpaceClient {
     return flightInputState({
       atlasOpen: Boolean(this.navComputer?.isOpen),
       docked: this.docked,
-      encounterHeld: Boolean(this.solarEncounter),
+      encounterHeld: Boolean(this.solarEncounter || this.dispatchOfferOpen),
       cruiseLocked: Boolean(this.inSystemCruise()),
       regionTransferring: Boolean(navigation?.free_flight) &&
         this.mapId !== `sol:free_${this.selfId}`,
@@ -174,7 +174,8 @@ class SpaceClient {
     // Registered before flight handlers so docked WASD never controls the ship.
     this.stationWalking = new StationWalkingControls({
       active: () => this.docked && !this.navComputer?.isOpen &&
-        !this.stationNpcDialogOpen && this.channel?.state === "joined",
+        !this.stationNpcDialogOpen && !this.dispatchOfferOpen &&
+        this.channel?.state === "joined",
       canvas: this.canvas,
       sendWalk: input => this.channel?.push("station_walk", input),
       sendLook: input => this.channel?.push("station_look", input),
