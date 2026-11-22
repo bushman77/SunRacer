@@ -45,8 +45,8 @@ test("panel opens without docking, refreshes on demand and ignores closed replie
   let delivered
   let opens = 0
   const nodes = new Map([
-    ["#pilot-inventory-close", {focus() {}}],
-    ["#pilot-inventory-refresh", {disabled: false}],
+    ["#pilot-inventory-close", {focus() {}, addEventListener() {}}],
+    ["#pilot-inventory-refresh", {disabled: false, addEventListener() {}}],
     ["#pilot-inventory-message", {textContent: ""}],
   ])
   const root = {
