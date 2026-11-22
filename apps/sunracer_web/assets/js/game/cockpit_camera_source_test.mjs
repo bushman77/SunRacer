@@ -19,7 +19,7 @@ test("all cockpit eye, attitude, and lookAt branches share the same source decis
   assert.match(view,/const useDestinationView = cockpitDestinationCamera\(ownShip, clientLedActive\)/)
   assert.match(view,/const pose = !useDestinationView &&/)
   assert.match(view,/if \(!useDestinationView\) \{/)
-  assert.match(view,/this\.setCamera\(ownShip, \{clientLedActive:/)
+  assert.match(view,/this\.setCamera\(ownShip, \{\s*clientLedActive:/)
   assert.match(view,/client\.clientLedCameraActiveForTick\?\.\(\)/)
   assert.doesNotMatch(view,/const pose = !ownShip\.destination &&/)
 })
