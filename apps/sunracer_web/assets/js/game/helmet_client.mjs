@@ -26,6 +26,8 @@ import {
 } from "./helmet_bandwidth_hud.mjs"
 import {headsetScreenTapRecenterAllowed} from "./helmet_screen_recenter.mjs"
 import {upsertHelmetEntity, smoothEntityPresentation, smoothHeading} from "./entity_smoothing.mjs"
+import {localVisualPose, freshLocalVisualPose,
+  VISUAL_POSE_SETTLE_SECONDS} from "./local_visual_pose.mjs"
 import {ownPlanetaryWarning, planetaryWarningView} from "./planetary_warning.mjs"
 import {helmetMaxPixelRatio, HELMET_DEFAULT_GAP_PX} from "./helmet_display.mjs"
 import {parseLensCoefficients} from "./lens_distortion.mjs"
@@ -117,6 +119,7 @@ export class HelmetClient {
     this.localRelaySeq = 0
     this.localRelayLastSeen = -Infinity
     this.latestRelayMap = null
+    this.localVisualPose = null
     this.localRelayCheckTimer = null
   }
 
@@ -642,6 +645,10 @@ export class HelmetClient {
     }
     this.worldStream = new WorldStreamDelta(map)
     this.applyWorld(map)
+    // The LAN-only visual pose follows the desktop's current predicted
+    // camera. It never overwrites Phoenix's authoritative orientation.
+    this.localVisualPose = localVisualPose(map, this.selfId, performance.now()) ||
+      (this.localVisualPose?.mapId === map.map_id ? this.localVisualPose : null)
     this.bandwidth.record("in", "headset_lan", "world_snapshot", map)
     if (!this.localRelayActive) {
       this.localRelayActive = true
@@ -652,6 +659,7 @@ export class HelmetClient {
   }
 
   disableLocalRelay() {
+    this.localVisualPose = null
     if (!this.localRelayActive) return
     this.localRelayActive = false
     // Phoenix responds with its current authoritative snapshot to establish
@@ -940,8 +948,18 @@ export class HelmetClient {
     const deltaSeconds = this.lastFrameAt === null ? 0
       : Math.min(0.25, Math.max(0, (time - this.lastFrameAt) / 1000))
     this.lastFrameAt = time
+    const visual = this.localRelayActive
+      ? freshLocalVisualPose(this.localVisualPose, this.mapId, this.selfId, time)
+      : null
     for (const entity of this.entities.values()) {
-      smoothEntityPresentation(entity, deltaSeconds)
+      if (visual && entity.id === this.selfId && !this.docked) {
+        smoothEntityPresentation(entity, deltaSeconds,
+          VISUAL_POSE_SETTLE_SECONDS,
+          {orientation: visual.orientation, target: visual.target,
+            positionSettleSeconds: VISUAL_POSE_SETTLE_SECONDS})
+      } else {
+        smoothEntityPresentation(entity, deltaSeconds)
+      }
       entity.angle = smoothHeading(entity.angle, entity.targetAngle, deltaSeconds)
     }
   }

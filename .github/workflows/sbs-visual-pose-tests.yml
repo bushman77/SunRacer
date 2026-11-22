@@ -1,0 +1,32 @@
+name: SBS local visual pose synchronization
+
+on:
+  push:
+    branches: [story_line]
+    paths:
+      - "apps/sunracer_web/assets/js/game/client.js"
+      - "apps/sunracer_web/assets/js/game/helmet_client.mjs"
+      - "apps/sunracer_web/assets/js/game/local_visual_pose*.mjs"
+      - "apps/sunracer_web/assets/js/game/sbs_relay_world*.mjs"
+      - "clients/tauri/src-tauri/src/sbs_relay_probe.rs"
+      - ".github/workflows/sbs-visual-pose-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  node:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Check relay/phone JS
+        run: |
+          node --check apps/sunracer_web/assets/js/game/client.js
+          node --check apps/sunracer_web/assets/js/game/helmet_client.mjs
+          node --test \
+            apps/sunracer_web/assets/js/game/local_visual_pose_test.mjs \
+            apps/sunracer_web/assets/js/game/sbs_relay_world_test.mjs

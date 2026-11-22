@@ -125,6 +125,7 @@ class SpaceClient {
     this.desktopVrAvailable = false
     this.desktopVrLastPreference = null
     this.desktopVrRenderStats = {rendered: 0, skipped: 0, cpuMs: 0, lastReport: 0}
+    this.lastVisualPosePublishedAt = -Infinity
     // Read-only transport estimate; never records credentials or game state.
     this.bandwidth = new BandwidthProbe("desktop-server")
     this.sbsRelayWorld = new SbsRelayWorldPublisher({
@@ -2139,6 +2140,9 @@ class SpaceClient {
     // commands, LAN relay and the RAF simulation heartbeat keep running.
     this.syncDesktopVrOnly()
     this.interpolate(deltaSeconds)
+    // Publish the same locally predicted cockpit pose that desktop draws.
+    // Only the authenticated Rust LAN link receives it; Phoenix never does.
+    this.publishOwnVisualPose(time)
     this.stationWalking?.frame(time)
     this.updateDockingCountdown(time)
     this.flightControls?.heartbeat(time)
@@ -2284,6 +2288,22 @@ class SpaceClient {
       ? (stats.cpuMs / stats.rendered).toFixed(2) : "—"
     label.textContent = "3D draws skipped: " + stats.skipped +
       " · previous desktop draw JS avg: " + mean + " ms"
+  }
+
+  publishOwnVisualPose(time) {
+    if (this.root.dataset.nativeClient !== "true" ||
+        !this.helmet?.status?.rendering || this.navComputer?.isOpen ||
+        this.docked || time - this.lastVisualPosePublishedAt < 32 ||
+        !this.worldStream?.map || !this.selfId) return
+    const own = this.entities.get(this.selfId)
+    if (!own || !own.render || !own.renderOrientation) return
+    this.lastVisualPosePublishedAt = time
+    const visual = {
+      id: own.id,
+      orientation: own.renderOrientation || own.orientation,
+      position_3d: own.render || own.target,
+    }
+    this.sbsRelayWorld.publish(this.worldStream.map, false, visual)
   }
 
   draw(time) {
