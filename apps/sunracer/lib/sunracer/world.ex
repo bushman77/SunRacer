@@ -23,6 +23,7 @@ defmodule Sunracer.World do
   alias Sunracer.Piracy
   alias Sunracer.PilotLocation
   alias Sunracer.Story
+  alias Sunracer.Story.Prologue
   alias Sunracer.World.PubSub
 
   @legacy_test_earth_sector Application.compile_env(:sunracer, :legacy_test_earth_sector, false)
@@ -286,14 +287,34 @@ defmodule Sunracer.World do
   @doc "Pilot story state for the HUD (join payload and reconnects)."
   def story_snapshot(player_id), do: Story.snapshot(player_id)
 
-  @doc """
-  A pilot's explicit story choice: accept the consignment, skip or resume
-  the tutorial. The engine only accepts a choice the current step offers.
-  """
-  def story_action(session_id, action) when action in ["accept_consignment", "skip", "resume"] do
+  @doc "Read an authenticated pilot's current mission offer from Helios dispatch."
+  def dispatcher_offer(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
+      Prologue.mission_offer(Story.progress(session.player_id))
+    else
+      :error -> {:error, :session_not_found}
+    end
+  end
+
+  @doc "Accept Ross's NPC-issued mission; internal engine still verifies step 2."
+  def dispatcher_accept(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, _offer} <- Prologue.mission_offer(Story.progress(session.player_id)) do
+      case Story.record(session.player_id, :accept_consignment, session_id: session_id) do
+        {:ok, %{story: story}} -> {:ok, story}
+        :ignored -> {:error, :mission_unavailable}
+        {:error, _} = error -> error
+      end
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+
+  @doc "Skip/resume are HUD controls. Assignment acceptance belongs to its NPC."
+  def story_action(session_id, action) when action in ["skip", "resume"] do
     with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
       event = case action do
-        "accept_consignment" -> :accept_consignment
         "skip" -> :skip
         "resume" -> :resume
       end

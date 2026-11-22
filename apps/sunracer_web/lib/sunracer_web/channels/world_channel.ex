@@ -307,8 +307,32 @@ defmodule SunracerWeb.WorldChannel do
     end
   end
 
-  # Story choices offered by the current prologue prompt (accept the
-  # consignment, skip or resume the tutorial). The server validates the step.
+  # Mission issuance is an explicit authenticated NPC conversation.
+  # Its acceptance token is bound to this channel instance and cannot be
+  # forged using the previous generic HUD story_action command.
+  def handle_in("story_dispatch_offer", _payload, socket) do
+    case World.dispatcher_offer(socket.assigns.world_session_id) do
+      {:ok, offer} ->
+        {:reply, {:ok, %{offer: offer}}, assign(socket, :dispatch_offer, true)}
+      {:error, reason} ->
+        {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in("story_dispatch_accept", _payload,
+                %{assigns: %{dispatch_offer: true}} = socket) do
+    case World.dispatcher_accept(socket.assigns.world_session_id) do
+      {:ok, story} ->
+        {:reply, {:ok, %{story: story}}, assign(socket, :dispatch_offer, false)}
+      {:error, reason} ->
+        {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in("story_dispatch_accept", _payload, socket),
+    do: {:reply, {:error, %{reason: "dispatcher_contact_required"}}, socket}
+
+  # The HUD can skip/resume; it cannot issue or accept a contract.
   def handle_in("story_action", %{"action" => action}, socket) when is_binary(action) do
     case World.story_action(socket.assigns.world_session_id, action) do
       {:ok, story} -> {:reply, {:ok, %{story: story}}, socket}

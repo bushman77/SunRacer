@@ -63,6 +63,25 @@ defmodule Sunracer.Story.Prologue do
   @spec new() :: progress()
   def new, do: %{step: 1, flags: %{}, skipped: false}
 
+  @doc "First Run is explicitly offered by Helios dispatcher NPC, not proximity."
+  def mission_offer(%{step: 2, skipped: false}) do
+    {:ok, %{
+      npc_id: "helios_dispatch",
+      name: "Dispatcher Halden Ross",
+      role: "Helios Courier Cooperative · Earth Dispatch",
+      title: "First Run: Medical Consignment",
+      message:
+        "Systems look clean, courier. I have three crates of medical supplies " <>
+          "for the Mars refinery. You'll earn #{@first_pay} credits only after all " <>
+          "three crates arrive. Accept my assignment to authorize loading. " <>
+          "Other contracts will wait until your First Run is complete.",
+      reward_credits: @first_pay,
+      destination: "Mars refinery",
+      cargo: %{id: @cargo_id, count: @crates}
+    }}
+  end
+  def mission_offer(_), do: {:error, :mission_unavailable}
+
   @doc """
   Apply one server-confirmed event. `facts` carries server-read values the
   engine cannot know: `:crates` (medical crates aboard) for navigation events.
@@ -267,10 +286,11 @@ defmodule Sunracer.Story.Prologue do
     line(
       @ross,
       "Helios dispatch, Earth orbit",
-      "Systems look clean. Three crates of medical supplies for the Mars refinery: " <>
-        "routine, low pay, the run every new courier starts on.",
-      "Accept the Mars consignment",
-      action: %{id: "accept_consignment", label: "Accept consignment"}
+      "Systems look clean. Dispatch has a first assignment for you. " <>
+        "Contact me on the Helios channel to hear the terms. Cargo is " <>
+        "loaded only after you accept my offer.",
+      "Contact Dispatcher Ross to receive your first mission",
+      action: %{id: "contact_dispatch", label: "Contact Dispatcher Ross"}
     )
   end
 
