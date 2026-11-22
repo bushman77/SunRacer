@@ -508,6 +508,10 @@
             <.icon name="hero-map" class="inline size-4" /> Sector 1-1
           </button>
         </div>
+        <button id="nav-inventory-open" class="hud-nav-link atlas-loadout-link"
+          type="button" aria-controls="pilot-inventory-panel" title="View ship inventory [I]">
+          <.icon name="hero-archive-box" class="size-4" /> Inventory [I]
+        </button>
         <a class="hud-nav-link atlas-loadout-link" href={~p"/equipment"}>
           <.icon name="hero-wrench-screwdriver" class="size-4" /> Loadout
         </a>
@@ -807,6 +811,11 @@
     </div>
 
     <aside id="cockpit-settings" class="cockpit-settings" aria-label="Cockpit layout settings">
+      <button id="cockpit-inventory-open" type="button"
+        class="cockpit-settings-button" aria-controls="pilot-inventory-panel"
+        title="View ship inventory [I]">
+        <.icon name="hero-archive-box" class="size-4" /> Inventory [I]
+      </button>
       <button
         id="cockpit-lock-toggle"
         data-cockpit-lock-toggle
@@ -930,6 +939,72 @@
       <% end %>
     </div>
   </nav>
+
+  <%!-- Both Atlas and cockpit open the same authenticated read-only inventory.
+       It overlays the mode without rerouting, docking or changing propulsion. --%>
+  <section id="pilot-inventory-panel" style="display: none" role="dialog"
+           aria-modal="true" aria-labelledby="pilot-inventory-title"
+           class="pointer-events-auto absolute inset-0 z-[165] items-center justify-center bg-slate-950/60 p-3 backdrop-blur-sm">
+    <div class="max-h-[93vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-cyan-400/55 bg-slate-950/95 p-5 font-mono text-slate-100 shadow-2xl sm:p-7">
+      <div class="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-bold uppercase tracking-[0.2em] text-cyan-400">
+            SUNRACER / PILOT CARGO & EQUIPMENT
+          </p>
+          <h2 id="pilot-inventory-title" class="mt-2 text-xl font-bold text-white">
+            Ship Inventory
+          </h2>
+          <p id="pilot-inventory-ship" class="mt-1 text-sm text-slate-400">
+            Synchronizing ship data…
+          </p>
+        </div>
+        <div class="flex gap-2">
+          <button id="pilot-inventory-refresh" type="button" class="nav-button text-xs">
+            Refresh
+          </button>
+          <button id="pilot-inventory-close" type="button" class="nav-button text-xs">
+            Close [I / Esc]
+          </button>
+        </div>
+      </div>
+      <p id="pilot-inventory-message" role="status" aria-live="polite"
+         class="mt-4 min-h-5 text-xs text-cyan-200">Requesting inventory…</p>
+      <div class="mt-4 grid gap-3 sm:grid-cols-3">
+        <div class="rounded-xl border border-slate-700/60 bg-slate-900/70 p-3">
+          <p class="text-xs text-slate-400">Credits</p>
+          <p id="pilot-inventory-credits" class="mt-1 text-lg font-bold text-amber-300">—</p>
+        </div>
+        <div class="rounded-xl border border-slate-700/60 bg-slate-900/70 p-3">
+          <p class="text-xs text-slate-400">Cargo hold</p>
+          <p id="pilot-inventory-capacity" class="mt-1 text-lg font-bold text-emerald-300">—</p>
+        </div>
+        <div class="rounded-xl border border-slate-700/60 bg-slate-900/70 p-3">
+          <p class="text-xs text-slate-400">Active configuration</p>
+          <p id="pilot-inventory-active" class="mt-1 text-lg font-bold text-cyan-300">—</p>
+        </div>
+      </div>
+      <div class="mt-5 grid gap-5 md:grid-cols-2">
+        <section aria-label="Cargo hold">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-emerald-300">Cargo hold</h3>
+          <ul id="pilot-inventory-cargo" class="mt-2 grid gap-2 text-xs"></ul>
+        </section>
+        <section aria-label="Uninstalled equipment">
+          <h3 class="text-sm font-bold uppercase tracking-wider text-cyan-300">Stored equipment</h3>
+          <ul id="pilot-inventory-equipment" class="mt-2 grid gap-2 text-xs"></ul>
+        </section>
+      </div>
+      <section aria-label="Installed equipment" class="mt-5">
+        <h3 class="text-sm font-bold uppercase tracking-wider text-amber-300">
+          Installed loadouts
+        </h3>
+        <div id="pilot-inventory-configs" class="mt-2 grid gap-3 sm:grid-cols-2"></div>
+      </section>
+      <p class="mt-5 text-xs text-slate-400">
+        Read-only while flying. Equipment can be purchased and fitted at Ilya Quill's
+        Green Starbase outfitting counter.
+      </p>
+    </div>
+  </section>
 
   <%!-- Authenticated recovery: the server checks real death and chooses Earth,
        not coordinates or a ship ID supplied by this interface. --%>

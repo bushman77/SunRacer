@@ -18,6 +18,7 @@ import {MinimapRenderer} from "./minimap_renderer.mjs"
 import {PointerNavigation} from "./pointer_navigation.mjs"
 import {StereoSpaceView} from "./stereo_view.js"
 import {StoryHud} from "./story_hud.mjs"
+import {PilotInventoryPanel} from "./pilot_inventory_panel.mjs"
 import {StoryRadio} from "./story_radio.mjs"
 import {HelmetControl} from "./helmet_control.mjs"
 import {SbsRelayWorldPublisher} from "./sbs_relay_world.mjs"
@@ -123,6 +124,7 @@ class SpaceClient {
     this.stationAttendants = []
     this.stationNpcDialogOpen = false
     this.outfittingPanel = null
+    this.inventoryPanel = null
     this.stationNpcId = null
     this.stationNpcBusy = false
     this.stationNpcRequestSeq = 0
@@ -141,6 +143,7 @@ class SpaceClient {
       atlasOpen: Boolean(this.navComputer?.isOpen),
       docked: this.docked,
       encounterHeld: Boolean(this.solarEncounter || this.dispatchOfferOpen),
+      inventoryOpen: Boolean(this.inventoryPanel?.opened),
       cruiseLocked: Boolean(this.inSystemCruise()),
       regionTransferring: Boolean(navigation?.free_flight) &&
         this.mapId !== `sol:free_${this.selfId}`,
@@ -176,6 +179,7 @@ class SpaceClient {
     this.stationWalking = new StationWalkingControls({
       active: () => this.docked && !this.navComputer?.isOpen &&
         !this.stationNpcDialogOpen && !this.dispatchOfferOpen &&
+        !this.inventoryPanel?.opened &&
         this.channel?.state === "joined",
       canvas: this.canvas,
       sendWalk: input => this.channel?.push("station_walk", input),
@@ -370,6 +374,22 @@ class SpaceClient {
       },
     }).start()
     this.root.querySelector("#nav-open")?.addEventListener("click", () => this.navComputer.open())
+    this.inventoryPanel = new PilotInventoryPanel({
+      root: this.root.querySelector("#pilot-inventory-panel"),
+      fetch: done => this.fetchPilotInventory(done),
+      onOpen: () => {
+        this.exitMouseSteering({silent: true})
+        this.flightControls?.release({silent: true})
+        this.stationWalking?.release()
+        this.manualLaserPointerHeld = false
+        this.spaceLaser?.release()
+      },
+    })
+    for (const id of ["#nav-inventory-open", "#cockpit-inventory-open"]) {
+      this.root.querySelector(id)?.addEventListener("click",
+        () => this.togglePilotInventory())
+    }
+    window.addEventListener("keydown", event => this.handlePilotInventoryKey(event), true)
     window.addEventListener("keydown", event => this.navComputer.handleKey(event))
     this.root.querySelector("#display-mode")?.addEventListener("change", event => this.setDisplayMode(event.target.value))
     window.addEventListener("keydown", event => this.handleDisplayModeKey(event))
@@ -576,6 +596,51 @@ class SpaceClient {
       })
   }
 
+  fetchPilotInventory(done) {
+    if (this.channel?.state !== "joined") {
+      done(false, {reason: "sector_link_unavailable"})
+      return
+    }
+    this.channel.push("pilot_inventory", {}, 5000)
+      .receive("ok", response => done(true, response.inventory))
+      .receive("error", response => done(false, response))
+      .receive("timeout", () => done(false, {reason: "timeout"}))
+  }
+
+  togglePilotInventory() {
+    if (this.inventoryPanel?.opened) return this.inventoryPanel.close()
+    if (this.stationNpcDialogOpen || this.outfittingPanel?.opened ||
+        this.dispatchOfferOpen || this.solarEncounter || this.respawnPending) return
+    this.inventoryPanel?.open()
+  }
+
+  handlePilotInventoryKey(event) {
+    if (this.inventoryPanel?.opened) {
+      if (event.code === "Escape" || event.code === "KeyI") {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+        if (!event.repeat) this.inventoryPanel.close()
+      } else if ([
+        "KeyM", "KeyE", "KeyW", "KeyA", "KeyS", "KeyD", "KeyQ",
+        "KeyL", "KeyT", "KeyR", "Space", "ArrowUp", "ArrowDown",
+        "ArrowLeft", "ArrowRight", "Equal", "Minus",
+        "NumpadAdd", "NumpadSubtract",
+      ].includes(event.code)) {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
+      return
+    }
+    if (event.code !== "KeyI" || event.repeat || event.ctrlKey ||
+        event.altKey || event.metaKey || event.target?.isContentEditable ||
+        event.target?.closest?.("input,textarea,select,[contenteditable='true']")) return
+    if (this.stationNpcDialogOpen || this.outfittingPanel?.opened ||
+        this.dispatchOfferOpen || this.solarEncounter || this.respawnPending) return
+    event.preventDefault()
+    event.stopImmediatePropagation()
+    this.togglePilotInventory()
+  }
+
   joinSector(mapId, retry = 0) {
     // Map identity comes from an authenticated region redirect/arrival event,
     // never from browser-provided world coordinates.
@@ -767,6 +832,7 @@ class SpaceClient {
     this.root.dataset.mapId = this.mapId
     this.entities.clear()
     this.player = response.player
+    if (this.inventoryPanel?.opened) this.inventoryPanel.refresh()
     if (Array.isArray(response.hotbar) && this.root.dataset.nativeClient === "true") {
       this.populateNativeHotbar(response.hotbar)
     }

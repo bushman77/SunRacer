@@ -9,6 +9,7 @@ defmodule Sunracer.Inventory.View do
   """
 
   alias Core.Ships.Catalog, as: Ships
+  alias Core.Equipment.Catalog, as: Gear
   alias Sunracer.{Fleet, Inventory, Outfitting}
   alias Sunracer.Cargo.Catalog, as: Cargo
 
@@ -44,6 +45,10 @@ defmodule Sunracer.Inventory.View do
           capacity_tonnes: definition.cargo_capacity
         },
         equipment: fitting.inventory,
+        catalog: Enum.map(Gear.all(), fn item ->
+          %{id: item.id, name: item.name,
+            category: Atom.to_string(item.category)}
+        end),
         configurations: fitting.configurations,
         active_configuration: fitting.active_configuration
       }}

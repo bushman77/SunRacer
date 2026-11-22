@@ -2,7 +2,7 @@
 // share this predicate; rendering the cockpit never silently changes propulsion.
 export function flightInputState({
   atlasOpen = false, docked = false, encounterHeld = false,
-  cruiseLocked = false, regionTransferring = false,
+  inventoryOpen = false, cruiseLocked = false, regionTransferring = false,
   sectorJoined = false, ship = null,
 } = {}) {
   if (atlasOpen) return "atlas"
@@ -10,6 +10,7 @@ export function flightInputState({
   if (!sectorJoined) return "disconnected"
   if (!ship) return "synchronizing"
   if (ship.status === "destroyed") return "destroyed"
+  if (inventoryOpen) return "inventory"
   if (encounterHeld) return "encounter"
   if (regionTransferring) return "transferring"
   if (cruiseLocked) return "cruise"
@@ -18,6 +19,7 @@ export function flightInputState({
 
 export const FLIGHT_INPUT_LABELS = Object.freeze({
   docked: "DOCKED · LAUNCH FROM THE STATION TO ENABLE FLIGHT",
+  inventory: "INVENTORY OPEN · CLOSE [I] TO RESUME MANUAL CONTROL",
   encounter: "ENCOUNTER HOLD · CHOOSE HAIL, ENGAGE OR CONTINUE",
   cruise: "AUTOPILOT ACTIVE · TAKE HELM OR HOLD RMB TO ENABLE LASERS",
   transferring: "TRANSFERRING HELM · WAITING FOR DEEP-SPACE COMBAT LINK",
