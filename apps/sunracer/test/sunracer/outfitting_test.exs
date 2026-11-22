@@ -6,7 +6,19 @@ defmodule Sunracer.OutfittingTest do
   alias Core.Universe.{FreeFlightRegion, GreenStarbase, Navigation}
   alias Core.World
   alias Sunracer.{Fleet, Inventory, Loadouts, Outfitting, ShipCondition, ShipStats}
+  alias Sunracer.Outfitting.Shop
   alias Sunracer.World, as: GameWorld
+
+  test "fixed prices require saving beyond the first 500-credit payout" do
+    prices = Shop.stock()
+    assert length(prices) == length(Core.Equipment.Catalog.all())
+    assert Enum.all?(prices, &(&1.price > Sunracer.Story.Prologue.first_pay()))
+    assert {:ok, 2_000} = Shop.price("beryl")
+    assert {:ok, 6_000} = Shop.price("sg1")
+    assert {:ok, 300_000} = Shop.price("lf4")
+    assert {:error, :not_for_sale} = Shop.price("not-real")
+    assert {:error, :not_for_sale} = Shop.price(nil)
+  end
 
   test "only owned compatible items may be previewed for real ship hardpoints" do
     pilot = player_account_fixture()
@@ -67,6 +79,7 @@ defmodule Sunracer.OutfittingTest do
     on_exit(fn -> GameWorld.disconnect(session.id) end)
     assert session.map_id == FreeFlightRegion.map_id(pilot.id)
     assert {:error, :not_docked} = GameWorld.outfitting_snapshot(session.id)
+    assert {:error, :not_docked} = GameWorld.outfitting_purchase(session.id, "beryl")
     assert {:error, :not_docked} =
       GameWorld.outfitting_fit(session.id, 1, "laser", 0, "beryl")
     assert Inventory.laser_count(pilot.id, "beryl") == 1
@@ -85,6 +98,8 @@ defmodule Sunracer.OutfittingTest do
     assert {:ok, %{docked: true}} = GameWorld.dock(session.id)
     assert {:error, :station_attendant_out_of_range} =
       GameWorld.outfitting_fit(session.id, 1, "laser", 0, "beryl")
+    assert {:error, :station_attendant_out_of_range} =
+      GameWorld.outfitting_purchase(session.id, "beryl")
     assert Inventory.laser_count(pilot.id, "beryl") == 1
 
     # Only the server's station-position restore helper can set a test pose.
@@ -128,11 +143,40 @@ defmodule Sunracer.OutfittingTest do
     assert durable.shields == 0
     assert Sunracer.Accounts.get_player_account!(pilot.id).credits == pilot.credits
 
+    assert {:error, :insufficient_credits} =
+      GameWorld.outfitting_purchase(session.id, "beryl")
+    assert {:error, :not_for_sale} =
+      GameWorld.outfitting_purchase(session.id, "fake")
+    assert Inventory.laser_count(pilot.id, "beryl") == 1
+
+    account = Sunracer.Accounts.get_player_account!(pilot.id)
+    {:ok, _funded} =
+      account
+      |> Ecto.Changeset.change(credits: 4_500)
+      |> Repo.update()
+
+    assert {:ok, %{receipt: first, outfitting: stocked}} =
+      GameWorld.outfitting_purchase(session.id, "beryl")
+    assert first.price == 2_000
+    assert first.credits_remaining == 2_500
+    assert stocked.credits == 2_500
+    assert Enum.find(stocked.inventory, &(&1.id == "beryl")).quantity == 2
+
+    assert {:ok, %{receipt: second}} =
+      GameWorld.outfitting_purchase(session.id, "beryl")
+    assert second.credits_remaining == 500
+    assert {:error, :insufficient_credits} =
+      GameWorld.outfitting_purchase(session.id, "beryl")
+    assert Inventory.laser_count(pilot.id, "beryl") == 3
+    assert Sunracer.Accounts.get_player_account!(pilot.id).credits == 500
+
     assert {:ok, %{docked: false, entity: launched}} = GameWorld.launch(session.id)
     assert launched.damage == 10
     assert launched.hull == damaged.hull
     assert launched.shields == 0
     assert {:error, :not_docked} =
       GameWorld.outfitting_fit(session.id, 1, "laser", 0, "beryl")
+    assert {:error, :not_docked} =
+      GameWorld.outfitting_purchase(session.id, "beryl")
   end
 end

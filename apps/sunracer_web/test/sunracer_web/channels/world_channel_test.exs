@@ -189,6 +189,18 @@ defmodule SunracerWeb.WorldChannelTest do
     })
     assert_reply malformed, :error, %{reason: "invalid_outfitting_command"}
 
+    # Client prices and coordinates cannot bypass the server-owned shop.
+    fake_purchase = push(joined, "station_outfitting_purchase", %{
+      "item_id" => "beryl", "price" => 1, "credits" => 999_999,
+      "room_id" => "outfitting", "x" => -49, "z" => -181
+    })
+    assert_reply fake_purchase, :error, %{reason: "not_docked"}
+
+    malformed_purchase = push(joined, "station_outfitting_purchase", %{
+      "item_id" => 123
+    })
+    assert_reply malformed_purchase, :error, %{reason: "invalid_purchase"}
+
     forged = push(joined, "station_repair", %{
       "room_id" => "repair_bay", "x" => -49, "z" => -143,
       "ship_id" => account.id
