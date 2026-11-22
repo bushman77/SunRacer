@@ -52,7 +52,7 @@ test("reversal changes angular velocity and does not teleport orientation", () =
   assert.ok(yaw(camera.orientation)<after)
 })
 
-test("resync and large authoritative corrections still take effect", () => {
+test("large divergence is detectable; explicit transition resets still take effect", () => {
   const camera=new ClientLedMouseCamera()
   camera.begin(identity)
   camera.advance({yaw:1},1/60)
@@ -94,7 +94,7 @@ test("client-led desktop mode never changes Phoenix controls, SBS relay or autho
   const view=read("../../../lib/sunracer_web/controllers/game_html/show.html.heex")
   assert.match(view,/id="cockpit-client-led-mouse-camera"/)
   assert.match(client,/this\.clientLedCamera = new ClientLedMouseCamera\(\)/)
-  assert.match(client,/this\.clientLedCameraEnabled = localStorage\.getItem/)
+  assert.match(client,/this\.clientLedCameraEnabled = preferClientLedCamera\(/)
   assert.match(client,/this\.clientLedMouseCameraActive\(\)/)
   assert.match(client,/this\.clientLedCamera\.advance\(this\.flightControls\.axes\(\), deltaSeconds/)
   assert.match(client,/entity\.renderOrientation = \{\.\.\.this\.clientLedCamera\.orientation\}/)
