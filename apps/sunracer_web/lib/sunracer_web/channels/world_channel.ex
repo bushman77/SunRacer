@@ -236,6 +236,15 @@ defmodule SunracerWeb.WorldChannel do
     end
   end
 
+  # The session owns the inventory identity. The client cannot request
+  # another account's items or mutate gear from Atlas/cockpit mode.
+  def handle_in("pilot_inventory", _payload, socket) do
+    case World.pilot_inventory(socket.assigns.world_session_id) do
+      {:ok, inventory} -> {:reply, {:ok, %{inventory: inventory}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
   def handle_in("station_outfitting_purchase", %{"item_id" => item_id}, socket)
       when is_binary(item_id) do
     case World.outfitting_purchase(socket.assigns.world_session_id, item_id) do

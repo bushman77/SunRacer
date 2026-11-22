@@ -17,6 +17,7 @@ defmodule Sunracer.World do
   alias Sunracer.Accounts
   alias Sunracer.Accounts.PlayerAccount
   alias Sunracer.Fleet
+  alias Sunracer.Inventory.View, as: InventoryView
   alias Sunracer.Loadouts
   alias Sunracer.ShipStats
   alias Sunracer.ShipCondition
@@ -283,6 +284,20 @@ defmodule Sunracer.World do
 
   defp with_story_topics(%{attendant_id: id, topics: topics} = reply, player_id),
     do: %{reply | topics: topics ++ Story.topics(player_id, id)}
+
+  @doc """
+  Read-only, authenticated pilot hold and equipment inventory. Unlike
+  station outfitting, this works during Atlas cruise, cockpit flight and
+  docking. Client-provided player IDs and item counts are never accepted.
+  """
+  def pilot_inventory(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
+      InventoryView.snapshot(session.player_id, active_configuration(session.player_id))
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
 
   @doc "Pilot story state for the HUD (join payload and reconnects)."
   def story_snapshot(player_id), do: Story.snapshot(player_id)
