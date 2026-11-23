@@ -187,13 +187,21 @@ defmodule Core.World.GreenStarbaseDockingIntegrationTest do
     assert {:ok, %{name: "Tarek Sol", role: "Trade Broker", topics: topics}} =
       World.station_talk(session.id, "trade", "greeting", ctx.opts)
     assert Enum.any?(topics, &(&1.id == "prices"))
+    assert Enum.any?(topics, &(&1.id == "console"))
     assert {:ok, %{message: message}} =
       World.station_talk(session.id, "trade", "prices", ctx.opts)
-    assert message =~ "not connected"
+    assert message =~ "trading desk"
     assert {:error, :invalid_station_topic} =
       World.station_talk(session.id, "trade", "pay_99999_credits", ctx.opts)
     assert {:error, :station_attendant_out_of_range} =
       World.station_talk(session.id, "repair", "condition", ctx.opts)
+
+    # Kiosk transactions run only at the named attendant: standing at the
+    # Trade Exchange runs a trade callback but not an outfitting purchase.
+    assert {:ok, :traded} = World.station_purchase(session.id,
+      fn _ship -> {:ok, :traded} end, Keyword.put(ctx.opts, :attendant, "trade"))
+    assert {:error, :station_attendant_out_of_range} =
+      World.station_purchase(session.id, fn _ship -> {:ok, :bought} end, ctx.opts)
 
     assert {:ok, _} = World.launch(session.id, ctx.opts)
     assert {:error, :not_docked} =

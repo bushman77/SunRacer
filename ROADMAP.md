@@ -1,3 +1,14 @@
+## Trade Exchange (2026-11-23)
+
+- [x] Sell looted cargo and buy common goods at Tarek Sol's Trade Exchange,
+      fixed tight prices, buy above sell (no same-desk arbitrage).
+- [ ] Run `mix test` on a machine with Hex access (not run in the session
+      that built it).
+- [ ] Manual verification in game: dock, walk to Tarek, sell seized cargo,
+      buy goods, hold/credit limits. Not yet performed.
+- [ ] A second market (another station or a hauling mission) with its own
+      prices, so bought cargo can be traded for profit.
+
 ## Mouse steering and SBS headset (2026-11-22)
 
 - [x] Full-screen virtual-joystick mouse steering with a faint steering line

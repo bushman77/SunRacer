@@ -8,6 +8,46 @@
 
 ## Unreleased
 
+### Trade Exchange: sell looted cargo, buy common goods (2026-11-23, branch `story_line`)
+
+#### Added
+
+- Tarek Sol's Trade Exchange is live (`Sunracer.Trade`,
+  `Sunracer.Trade.Market`). Pilots sell any cargo in their hold and buy
+  stocked common goods at fixed, tight prices (sell 75 / 200 / 450 credits
+  per tonne by tier; buy at sell x 1.3, so same-desk arbitrage always
+  loses). See `docs/green-starbase-trade-exchange.md`.
+- Tarek's dialogue gains **Open trade console**; a new console
+  (`station_trade_panel.mjs`, `#station-trade-panel`) lists the cargo board,
+  hold usage and credits, with a tonnes picker and Sell / Buy buttons.
+- Channel events `station_trade`, `station_trade_sell`, `station_trade_buy`
+  (cargo id + whole amount 1-1,000 only; anything else is `invalid_trade`).
+- `Core.World.station_purchase/3` and `MapServer.station_purchase` take the
+  kiosk to check (`attendant:` option, default `"outfitting"`), so trades are
+  proven to happen at Tarek's kiosk.
+
+#### Changed
+
+- Station help text and Tarek's "market"/"prices" lines no longer say cargo
+  trading is offline.
+
+#### Tests
+
+- Added `apps/sunracer/test/sunracer/trade_test.exs` (price book, sell, buy,
+  refusals leave credits and cargo unchanged, no same-desk arbitrage, input
+  validation, snapshot); a kiosk check in
+  `green_starbase_docking_integration_test.exs`; channel refusals in
+  `world_channel_test.exs`; `station_trade_panel_test.mjs`.
+- **Not run here:** `mix test` / `mix precommit`. The session's network
+  policy blocked the Hex package registry (`repo.hex.pm`), so project
+  dependencies could not be fetched. Instead: every changed Elixir file was
+  parsed with Elixir 1.18.4 / OTP 25; `Sunracer.Trade.Market` was compiled
+  with the real cargo catalog and its tests passed standalone (and its
+  compile-time catalog guard was shown to fail the build on a mismatch);
+  `Sunracer.Trade` was compiled against in-memory stand-ins for Ecto, Repo
+  and Inventory and its sell/buy/rollback flow tests passed. All browser JS
+  and Tauri tests pass under Node 22. `mix test` must be run before merging.
+
 ### Virtual-joystick mouse steering and SBS headset smoothing (2026-11-22, branch `story_line`)
 
 #### Changed

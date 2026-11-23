@@ -123,6 +123,10 @@ on:
       - "apps/sunracer/lib/sunracer/outfitting.ex"
       - "apps/sunracer/lib/sunracer/outfitting/shop.ex"
       - "apps/sunracer/test/sunracer/outfitting_test.exs"
+      - "apps/sunracer/lib/sunracer/trade.ex"
+      - "apps/sunracer/lib/sunracer/trade/**"
+      - "apps/sunracer/test/sunracer/trade_test.exs"
+      - "apps/sunracer_web/assets/js/game/station_trade_panel*.mjs"
       - "apps/sunracer_web/assets/js/game/solar_atlas_view_test.mjs"
       - "apps/sunracer_web/assets/js/game/orbital_regions_test.mjs"
       - ".github/workflows/sol-free-flight-tests.yml"
@@ -193,6 +197,7 @@ jobs:
           mix test apps/core/test/core/world/world_test.exs
           mix test apps/sunracer/test/sunracer/world_test.exs
           mix test apps/sunracer/test/sunracer/outfitting_test.exs
+          mix test apps/sunracer/test/sunracer/trade_test.exs
           mix test apps/core/test/core/world/station_attendants_test.exs
           mix test apps/sunracer/test/sunracer/pilot_location_test.exs
           mix test apps/core/test/core/universe/orbital_entry_test.exs
@@ -241,6 +246,7 @@ jobs:
           node --test apps/sunracer_web/assets/js/game/space_laser_trigger_test.mjs
           node --test apps/sunracer_web/assets/js/game/station_npc_integration_test.mjs
           node --test apps/sunracer_web/assets/js/game/station_outfitting_panel_test.mjs
+          node --test apps/sunracer_web/assets/js/game/station_trade_panel_test.mjs
           node --test apps/sunracer_web/assets/js/game/bandwidth_probe_test.mjs
           node --test apps/sunracer_web/assets/js/game/bandwidth_panel_test.mjs
           node --test apps/sunracer_web/assets/js/game/space_environment_field_test.mjs

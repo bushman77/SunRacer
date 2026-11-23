@@ -77,7 +77,7 @@
         <p class="font-bold tracking-wider text-emerald-300">STATION DIRECTORY</p>
         <p class="mt-2">Concourse: Repairs · Trade Exchange · Outfitting · Resupply</p>
         <p class="mt-2">Far end: Mission Office · Communications</p>
-        <p class="mt-2 text-slate-500">Station attendants are present at each kiosk. Press E nearby to talk; Mara Venn offers complimentary hull and shield repairs; Ilya Quill sells equipment for credits; cargo trading remains offline.</p>
+        <p class="mt-2 text-slate-500">Station attendants are present at each kiosk. Press E nearby to talk; Mara Venn offers complimentary hull and shield repairs; Ilya Quill sells equipment for credits; Tarek Sol buys your cargo and sells common goods at the Trade Exchange.</p>
       </div>
       <p id="starbase-launch-feedback" role="status" aria-live="polite" class="mt-6 text-xs text-emerald-300">Ready for departure.</p>
       <button id="starbase-launch" type="button" class="nav-button nav-primary mt-3 w-full">Launch from Green Starbase</button>
@@ -146,6 +146,47 @@
       <button id="station-outfitting-apply" type="button" disabled
               class="nav-button nav-primary mt-3 w-full">Confirm fitting</button>
       <p class="mt-3 text-xs text-slate-400">Only owned equipment can be installed. You can edit both saved configurations, but only the active configuration affects current flight performance. Purchases are charged in credits by the server. Fitting owned equipment is free.</p>
+    </div>
+  </section>
+
+  <%!-- Tarek's Trade Exchange: prices, credits and hold come from the server
+       ledger; the client sends only a cargo id and a whole-unit amount. --%>
+  <section id="station-trade-panel" style="display: none" role="dialog"
+           aria-modal="true" aria-labelledby="station-trade-title"
+           class="pointer-events-none absolute inset-0 z-[145] items-center justify-center p-3">
+    <div class="pointer-events-auto max-h-[92vh] w-full max-w-3xl overflow-y-auto rounded-2xl border border-cyan-500/60 bg-slate-950/95 p-5 font-mono text-slate-100 shadow-2xl backdrop-blur-xl">
+      <div class="flex items-start justify-between gap-3">
+        <div>
+          <p class="text-xs font-bold tracking-widest text-emerald-400">GREEN STARBASE · TRADE EXCHANGE</p>
+          <h2 id="station-trade-title" class="mt-2 text-xl font-bold">Tarek Sol / Trading Desk</h2>
+          <p class="mt-1 text-sm text-slate-300">Fixed exchange prices per tonne · Sell anything aboard · Buy common goods</p>
+        </div>
+        <button id="station-trade-close" type="button"
+                class="nav-button shrink-0 px-3 py-2 text-xs">Close [Esc]</button>
+      </div>
+      <div class="mt-4 flex flex-wrap items-center justify-between gap-2">
+        <p id="station-trade-credits" class="font-bold text-sm text-amber-200"
+           aria-live="polite">Loading account credits…</p>
+        <p id="station-trade-hold" class="text-sm text-cyan-200">Hold: …</p>
+      </div>
+      <p id="station-trade-message" class="mt-3 text-sm text-emerald-300" role="status" aria-live="polite"></p>
+      <p class="mt-5 text-xs font-bold uppercase tracking-wide text-cyan-300">Cargo board</p>
+      <div id="station-trade-goods" class="mt-2 grid max-h-72 gap-2 overflow-y-auto"></div>
+      <div class="mt-5 flex flex-wrap items-center gap-2">
+        <label for="station-trade-amount" class="text-xs font-bold uppercase tracking-wide text-cyan-300">Tonnes</label>
+        <button type="button" data-trade-step="-1" class="nav-button px-3 py-2 text-xs" aria-label="One tonne fewer">−</button>
+        <input id="station-trade-amount" type="number" min="1" step="1" value="1" disabled
+               class="w-20 rounded-lg border border-cyan-600/40 bg-slate-900 px-2 py-2 text-center text-sm" />
+        <button type="button" data-trade-step="1" class="nav-button px-3 py-2 text-xs" aria-label="One tonne more">+</button>
+        <button type="button" data-trade-step="max" class="nav-button px-3 py-2 text-xs">Max</button>
+      </div>
+      <div class="mt-3 grid gap-2 sm:grid-cols-2">
+        <button id="station-trade-sell" type="button" disabled
+                class="nav-button nav-primary w-full">Select cargo</button>
+        <button id="station-trade-buy" type="button" disabled
+                class="nav-button w-full border-amber-500/60">Select cargo</button>
+      </div>
+      <p class="mt-3 text-xs text-slate-400">The exchange always sells for more than it pays, so profit comes from cargo you bring in. Every trade is settled by the server against your verified credits and hold.</p>
     </div>
   </section>
 

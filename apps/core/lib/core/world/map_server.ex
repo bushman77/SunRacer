@@ -97,10 +97,16 @@ defmodule Core.World.MapServer do
       when is_function(callback, 1),
       do: call_map(registry, map_id, {:station_refit, session_id, entity_id, callback})
 
-  @doc "Execute a docked outfitter purchase while server-owned proximity remains valid."
-  def station_purchase(registry, map_id, session_id, entity_id, callback)
-      when is_function(callback, 1),
-      do: call_map(registry, map_id, {:station_purchase, session_id, entity_id, callback})
+  @doc """
+  Execute a docked kiosk transaction while server-owned proximity remains
+  valid. `attendant_id` names the kiosk the pilot must be standing at:
+  "outfitting" (Ilya Quill, default) or "trade" (Tarek Sol).
+  """
+  def station_purchase(registry, map_id, session_id, entity_id, callback,
+                       attendant_id \\ "outfitting")
+      when is_function(callback, 1) and is_binary(attendant_id),
+      do: call_map(registry, map_id,
+        {:station_purchase, session_id, entity_id, attendant_id, callback})
 
   @doc """
   Restore a parked ship's hull and shields (the prologue's scripted patch at
@@ -460,11 +466,16 @@ defmodule Core.World.MapServer do
     {:reply, result, state}
   end
 
-  def handle_call({:station_purchase, session_id, entity_id, callback}, _from, state) do
+  def handle_call({:station_purchase, session_id, entity_id, callback}, from, state),
+    do: handle_call({:station_purchase, session_id, entity_id, "outfitting", callback},
+      from, state)
+
+  def handle_call({:station_purchase, session_id, entity_id, attendant_id, callback},
+                  _from, state) do
     result =
       with {:ok, ship} <- parked_station_ship(state, session_id, entity_id),
            pose <- Map.get(state.station_avatars, entity_id, StationInterior.initial()),
-           {:ok, _} <- StationAttendants.talk(pose, ship, "outfitting", "greeting"),
+           {:ok, _} <- StationAttendants.talk(pose, ship, attendant_id, "greeting"),
            %{status: :alive} <- ship do
         callback.(player_ship_report(ship, state))
       else

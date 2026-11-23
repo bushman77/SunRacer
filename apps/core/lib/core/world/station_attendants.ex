@@ -28,12 +28,14 @@ defmodule Core.World.StationAttendants do
       role: "Trade Broker", x: 49.0, z: -143.0, color: 0x56bbcb,
       greeting: "This is the Trade Exchange. Cargo comes and goes with our visiting traders.",
       topics: [
+        %{id: "console", label: "Open trade console"},
         %{id: "market", label: "What goods do you trade?"},
         %{id: "prices", label: "Can I see live prices?"}
       ],
       responses: %{
-        "market" => "Our exchange will handle legal cargo purchases and sales. All inventories and credits will be verified by the station's transaction ledger.",
-        "prices" => "The public trading desk is not connected to its live order book yet. I won't quote prices that haven't been supplied by the market."
+        "console" => "Opening the trading desk. I buy any legal cargo in your hold, and sell common goods from our own stock. Every trade is settled against your verified credits.",
+        "market" => "I'll take anything you bring in: ore, mail, salvage, research data. I only stock common goods myself: methane, hydrogen cells, titanium, parts, brandy, refined minerals and dilithium.",
+        "prices" => "Prices are fixed by the exchange and posted on the trading desk. What I sell always costs more than what I pay, so the profit is in what you bring me."
       }
     },
     %{

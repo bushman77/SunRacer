@@ -297,6 +297,32 @@ defmodule SunracerWeb.WorldChannel do
   def handle_in("station_outfitting_fit", _payload, socket),
     do: {:reply, {:error, %{reason: "invalid_outfitting_command"}}, socket}
 
+  # Tarek Sol's Trade Exchange. The client names only a cargo id and a
+  # whole-unit amount; prices, balances and hold capacity are server values,
+  # and MapServer proves the pilot is docked at the exchange kiosk.
+  def handle_in("station_trade", _payload, socket) do
+    case World.trade_snapshot(socket.assigns.world_session_id) do
+      {:ok, view} -> {:reply, {:ok, %{exchange: view}}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in(event, %{"cargo_id" => cargo_id, "amount" => amount}, socket)
+      when event in ["station_trade_sell", "station_trade_buy"] and
+             is_binary(cargo_id) and is_integer(amount) and amount > 0 and
+             amount <= 1_000 do
+    action = if event == "station_trade_sell", do: :sell, else: :buy
+
+    case World.trade(socket.assigns.world_session_id, action, cargo_id, amount) do
+      {:ok, result} -> {:reply, {:ok, result}, socket}
+      {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in(event, _payload, socket)
+      when event in ["station_trade_sell", "station_trade_buy"],
+      do: {:reply, {:error, %{reason: "invalid_trade"}}, socket}
+
   def handle_in("station_talk",
                 %{"attendant_id" => id, "topic" => topic}, socket)
       when is_binary(id) and is_binary(topic) do

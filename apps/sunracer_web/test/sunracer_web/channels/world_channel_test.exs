@@ -225,6 +225,21 @@ defmodule SunracerWeb.WorldChannelTest do
     })
     assert_reply malformed, :error, %{reason: "invalid_outfitting_command"}
 
+    # Trade Exchange: undocked pilots cannot trade; malformed requests and
+    # client-supplied prices are refused before reaching the server ledger.
+    exchange = push(joined, "station_trade", %{})
+    assert_reply exchange, :error, %{reason: "not_docked"}
+    sell = push(joined, "station_trade_sell", %{
+      "cargo_id" => "dilithium", "amount" => 1, "price" => 999_999})
+    assert_reply sell, :error, %{reason: "not_docked"}
+    for bad <- [%{"cargo_id" => "dilithium", "amount" => "1"},
+                %{"cargo_id" => "dilithium", "amount" => 0},
+                %{"cargo_id" => "dilithium", "amount" => 1_001},
+                %{"cargo_id" => 7, "amount" => 1}, %{}] do
+      ref = push(joined, "station_trade_buy", bad)
+      assert_reply ref, :error, %{reason: "invalid_trade"}
+    end
+
     # Client prices and coordinates cannot bypass the server-owned shop.
     fake_purchase = push(joined, "station_outfitting_purchase", %{
       "item_id" => "beryl", "price" => 1, "credits" => 999_999,

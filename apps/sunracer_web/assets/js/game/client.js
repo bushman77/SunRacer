@@ -60,6 +60,7 @@ import {dockingHoldFromEvent, syncDockingHold, dockingSeconds} from "./starbase_
 import {StationWalkingControls} from "./station_walking_controls.mjs"
 import {nearestStationAttendant} from "./station_attendants.mjs"
 import {StationOutfittingPanel} from "./station_outfitting_panel.mjs"
+import {StationTradePanel} from "./station_trade_panel.mjs"
 import {validOrbitalMapId, shouldEnterOrbitalRegion} from "./orbital_regions.mjs"
 import {tacticalEncounterAction} from "./solar_encounter_actions.mjs"
 
@@ -162,6 +163,7 @@ class SpaceClient {
     this.stationAttendants = []
     this.stationNpcDialogOpen = false
     this.outfittingPanel = null
+    this.tradePanel = null
     this.inventoryPanel = null
     this.stationNpcId = null
     this.stationNpcBusy = false
@@ -525,6 +527,21 @@ class SpaceClient {
         }
       },
     })
+    // Tarek's Trade Exchange sends only a cargo id and whole-unit amount.
+    this.tradePanel = new StationTradePanel({
+      root: this.root.querySelector("#station-trade-panel"),
+      sell: (payload, done) =>
+        this.sendStationOutfitting("station_trade_sell", payload, done),
+      buy: (payload, done) =>
+        this.sendStationOutfitting("station_trade_buy", payload, done),
+      onClose: () => {
+        if (this.stationNpcDialogOpen && this.stationNpcId === "trade" &&
+            this.nearbyStationNpc()?.id === "trade") {
+          const modal = this.root.querySelector("#station-npc-dialogue")
+          if (modal) modal.style.display = "flex"
+        }
+      },
+    })
     this.root.querySelector("#station-npc-close")?.addEventListener("click",
       () => this.closeStationNpc())
     this.root.querySelector("#station-npc-dialogue")?.addEventListener("click", event => {
@@ -666,6 +683,7 @@ class SpaceClient {
   togglePilotInventory() {
     if (this.inventoryPanel?.opened) return this.inventoryPanel.close()
     if (this.stationNpcDialogOpen || this.outfittingPanel?.opened ||
+        this.tradePanel?.opened ||
         this.dispatchOfferOpen || this.solarEncounter || this.respawnPending) return
     this.inventoryPanel?.open()
   }
@@ -691,6 +709,7 @@ class SpaceClient {
         event.altKey || event.metaKey || event.target?.isContentEditable ||
         event.target?.closest?.("input,textarea,select,[contenteditable='true']")) return
     if (this.stationNpcDialogOpen || this.outfittingPanel?.opened ||
+        this.tradePanel?.opened ||
         this.dispatchOfferOpen || this.solarEncounter || this.respawnPending) return
     event.preventDefault()
     event.stopImmediatePropagation()
@@ -1919,8 +1938,10 @@ class SpaceClient {
   }
 
   handleStationNpcKey(event) {
-    if (this.outfittingPanel?.opened) {
-      if (event.code === "Escape") this.outfittingPanel.close()
+    const panel = this.outfittingPanel?.opened ? this.outfittingPanel
+      : this.tradePanel?.opened ? this.tradePanel : null
+    if (panel) {
+      if (event.code === "Escape") panel.close()
       if (["Escape", "KeyW", "KeyA", "KeyS", "KeyD",
            "ArrowLeft", "ArrowRight", "KeyM", "KeyE"].includes(event.code)) {
         event.preventDefault()
@@ -1955,6 +1976,10 @@ class SpaceClient {
         this.nearbyStationNpc()?.id !== id) return
     if (id === "outfitting" && topic === "console") {
       this.openStationOutfitting()
+      return
+    }
+    if (id === "trade" && topic === "console") {
+      this.openStationTrade()
       return
     }
     const fresh = !this.stationNpcDialogOpen
@@ -2030,6 +2055,24 @@ class SpaceClient {
     })
   }
 
+  openStationTrade() {
+    if (this.stationNpcBusy || this.stationNpcId !== "trade" ||
+        this.nearbyStationNpc()?.id !== "trade") return
+    this.stationNpcBusy = true
+    this.sendStationOutfitting("station_trade", {}, (ok, response) => {
+      this.stationNpcBusy = false
+      if (!this.stationNpcDialogOpen || this.stationNpcId !== "trade") return
+      if (!ok) {
+        const message = this.root.querySelector("#station-npc-message")
+        if (message) message.textContent = "Trade Exchange unavailable: " +
+          String(response?.reason || "unknown error").replaceAll("_", " ")
+        return
+      }
+      this.root.querySelector("#station-npc-dialogue").style.display = "none"
+      this.tradePanel?.open(response.exchange)
+    })
+  }
+
   applyStationOutfitting(response) {
     if (!response?.player) return
     this.player = response.player
@@ -2068,6 +2111,7 @@ class SpaceClient {
 
   closeStationNpc({focus = true} = {}) {
     this.outfittingPanel?.close({restoreDialogue: false})
+    this.tradePanel?.close({restoreDialogue: false})
     if (!this.stationNpcDialogOpen) return
     this.stationNpcDialogOpen = false
     this.stationNpcBusy = false

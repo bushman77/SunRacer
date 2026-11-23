@@ -30,9 +30,10 @@ test("the paired SBS viewer renders the same server-owned kiosk staff without co
   assert.doesNotMatch(helmet, /channel\.push\("station_talk"/)
 })
 
-test("station console shows complimentary repairs and clearly identifies inactive purchases", () => {
+test("station console lists each attendant's live service", () => {
   assert.match(markup, /Station attendants are present at each kiosk/)
   assert.match(markup, /Mara Venn offers complimentary hull and shield repairs/)
   assert.match(markup, /Ilya Quill sells equipment for credits/)
-  assert.match(markup, /cargo trading remains offline/)
+  assert.match(markup, /Tarek Sol buys your cargo and sells common goods/)
+  assert.doesNotMatch(markup, /cargo trading remains offline/)
 })

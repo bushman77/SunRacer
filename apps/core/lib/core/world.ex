@@ -96,12 +96,17 @@ defmodule Core.World do
     end
   end
 
-  @doc "Trusted purchase callback, serialized against dock and station movement."
+  @doc """
+  Trusted kiosk transaction callback, serialized against dock and station
+  movement. `opts[:attendant]` names the kiosk the pilot must stand at
+  ("outfitting" by default, "trade" for the Trade Exchange).
+  """
   def station_purchase(session_id, callback, opts \\ []) when is_function(callback, 1) do
     with {:ok, session} <- fetch_session(
            Keyword.get(opts, :sessions, SessionManager), session_id) do
       MapServer.station_purchase(Keyword.get(opts, :registry, Core.World.Registry),
-        session.map_id, session.id, session.entity_id, callback)
+        session.map_id, session.id, session.entity_id, callback,
+        Keyword.get(opts, :attendant, "outfitting"))
     end
   end
 

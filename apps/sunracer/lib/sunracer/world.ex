@@ -197,6 +197,34 @@ defmodule Sunracer.World do
     end
   end
 
+  @doc "Tarek Sol's Trade Exchange board: credits, hold usage and prices."
+  def trade_snapshot(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, _} <- Simulation.station_talk(session_id, "trade", "greeting"),
+         {:ok, %{docked: true}} <- Simulation.ship_condition(session_id) do
+      Sunracer.Trade.snapshot(session.player_id)
+    else
+      :error -> {:error, :session_not_found}
+      {:ok, %{docked: false}} -> {:error, :not_docked}
+      error -> error
+    end
+  end
+
+  @doc """
+  Sell or buy cargo at the Trade Exchange. MapServer serializes the trade
+  against dock, walk and launch and proves the pilot stands at Tarek's kiosk.
+  """
+  def trade(session_id, action, cargo_id, amount) when action in [:sell, :buy] do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
+      Simulation.station_purchase(session_id, fn _ship_report ->
+        apply(Sunracer.Trade, action, [session.player_id, cargo_id, amount])
+      end, attendant: "trade")
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+
   @doc "Inspect the authenticated pilot's owned fittings at Ilya's station kiosk."
   def outfitting_snapshot(session_id) do
     with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
