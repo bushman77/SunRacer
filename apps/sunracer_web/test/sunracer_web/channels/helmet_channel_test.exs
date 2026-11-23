@@ -33,7 +33,12 @@ defmodule SunracerWeb.HelmetChannelTest do
     assert {:ok, %{helmet_https_origin: "https://192.168.0.48:4443"},
             control} =
       subscribe_and_join(pilot, HelmetChannel, "helmet:control:#{account.id}")
+
+    # Observe termination before the sandbox owner exits (see below).
+    control_pid = control.channel_pid
+    control_monitor = Process.monitor(control_pid)
     leave(control)
+    assert_receive {:DOWN, ^control_monitor, :process, ^control_pid, _}, 1_000
   end
 
   test "the Atlas pairing code authorizes exactly one persistent read-only helmet" do
@@ -77,8 +82,15 @@ defmodule SunracerWeb.HelmetChannelTest do
     assert_reply ref, :error, %{reason: "read_only_or_invalid_command"}
     ref = push(viewer, "solar_retreat_encounter", %{"encounter_id" => "forged"})
     assert_reply ref, :error, %{reason: "read_only_or_invalid_command"}
-    ref = push(viewer, "solar_accept_surrender", %{"encounter_id" => "forged"})
-    assert_reply ref, :error, %{reason: "read_only_or_invalid_command"}
+
+    # Settling a surrender is the deliberate gaze exception (HelmetChannel
+    # moduledoc): the phone's payload is ignored and the encounter is
+    # resolved from this pilot's own world session. This pilot has none, so
+    # a forged encounter id gets nowhere.
+    for event <- ["solar_accept_surrender", "solar_seize_cargo"] do
+      ref = push(viewer, event, %{"encounter_id" => "forged", "player_id" => id + 3})
+      assert_reply ref, :error, %{reason: "session_not_found"}
+    end
 
     ref = push(control, "set_mode", %{"mode" => "combat"})
     assert_reply ref, :ok, %{mode: "combat"}

@@ -277,7 +277,14 @@ defmodule Core.World.MapServer do
 
   @spec available?(atom(), String.t()) :: boolean()
   def available?(registry, map_id) do
-    Registry.lookup(registry, {:world_map, map_id}) != []
+    # Registry drops a stopped map's entry asynchronously, after the process
+    # has exited. Without the liveness check a map that just stopped still
+    # reads as available, so FreeFlightRegion.ensure_started/2 could skip
+    # starting a fresh one for a pilot who re-enters immediately.
+    case Registry.lookup(registry, {:world_map, map_id}) do
+      [{pid, _value} | _] -> Process.alive?(pid)
+      [] -> false
+    end
   end
 
   @impl true

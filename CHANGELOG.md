@@ -31,6 +31,23 @@
 - Station help text and Tarek's "market"/"prices" lines no longer say cargo
   trading is offline.
 
+#### Fixed (CI: "Verify SOL free-flight mechanics", red since at least 2026-11-22)
+
+- `helmet_channel_test.exs` still expected `solar_accept_surrender` from the
+  headset to be refused as read-only, but the 2026-11-21 gaze surrender
+  feature deliberately allows it (payload ignored, resolved from the
+  pilot's own session). The test now asserts that behaviour for both
+  `solar_accept_surrender` and `solar_seize_cargo`. That stale assertion
+  skipped the test's cleanup, so `HelmetManager` crashed on teardown and the
+  next test's join failed ("join crashed"); the first test now also waits
+  for its channel to close before the sandbox is released.
+- `MapServer.available?/2` reported a map that had just stopped as available,
+  because `Registry` drops entries asynchronously after the process exits
+  (about 22% of the time in a 2,000-run standalone reproduction). It now also
+  checks that the registered process is alive. This fixes the flaky
+  `world_test.exs` free-flight assertion and a real window in which
+  `FreeFlightRegion.ensure_started/2` could skip restarting a pilot's map.
+
 #### Tests
 
 - Added `apps/sunracer/test/sunracer/trade_test.exs` (price book, sell, buy,
