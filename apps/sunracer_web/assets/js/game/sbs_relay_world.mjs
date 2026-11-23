@@ -7,6 +7,11 @@ const MAX_BYTES = 256 * 1024
 // change the authoritative Phoenix/EC2 tick or create new remote traffic.
 // Keep one latest map instead of a queue; prioritize timely HMD frames.
 export const WORLD_INTERVAL_MS = 32
+// Authoritative world updates publish WITHOUT the laptop's visual pose. If
+// one replaces a pending frame, carry the latest pose forward for a short
+// time so the headset never receives a pose-less frame mid-flight. Well
+// under the headset's own 150ms freshness limit; stale poses still expire.
+export const VISUAL_POSE_CARRY_MS = 100
 const entityScalar = [
   "id", "kind", "npc_type_id", "ship_class", "display_name", "status",
   "angle", "throttle", "flight_mode", "target_id", "hull", "max_hull",
@@ -121,14 +126,25 @@ export function projectSbsRelayWorld(map, visualPose = null) {
 // The native process holds one snapshot; it never accumulates an unbounded
 // stream queue or opens another world subscription.
 export class SbsRelayWorldPublisher {
-  constructor({invoke, delay = WORLD_INTERVAL_MS}) {
+  constructor({invoke, delay = WORLD_INTERVAL_MS, now = () => performance.now()}) {
     this.invoke = invoke
     this.delay = delay
+    this.now = now
+    this.lastVisualPose = null
     this.pending = null
     this.timer = null
     this.inFlight = false
   }
   publish(map, immediate = false, visualPose = null) {
+    const time = this.now()
+    if (visualPose) {
+      this.lastVisualPose = {pose: visualPose, at: time, mapId: map?.map_id}
+    } else if (this.lastVisualPose &&
+               this.lastVisualPose.mapId === map?.map_id &&
+               time - this.lastVisualPose.at <= VISUAL_POSE_CARRY_MS) {
+      // projectLocalVisualPose still re-validates it against THIS map.
+      visualPose = this.lastVisualPose.pose
+    }
     const projected = projectSbsRelayWorld(map, visualPose)
     if (!projected) return
     this.pending = projected
@@ -164,5 +180,6 @@ export class SbsRelayWorldPublisher {
     if (this.timer) clearTimeout(this.timer)
     this.timer = null
     this.pending = null
+    this.lastVisualPose = null
   }
 }

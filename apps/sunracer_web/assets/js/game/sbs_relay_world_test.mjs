@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {projectSbsRelayWorld, projectLocalVisualPose,
-  SbsRelayWorldPublisher, WORLD_INTERVAL_MS} from "./sbs_relay_world.mjs"
+  SbsRelayWorldPublisher, WORLD_INTERVAL_MS, VISUAL_POSE_CARRY_MS} from "./sbs_relay_world.mjs"
 
 const map = () => ({
   map_id: "sol:free_earth", tick: 102, tick_ms: 100,
@@ -110,4 +110,40 @@ test("string-normalized local client IDs match numeric authoritative IDs exactly
   const local = projectLocalVisualPose(input, pose)
   assert.equal(local.id, 12)
   assert.equal(projectSbsRelayWorld(input, pose).visual_pose.id, 12)
+})
+
+test("a world update without a pose does not strip a fresh cockpit pose", async () => {
+  const calls = []
+  let now = 1000
+  const p = new SbsRelayWorldPublisher({
+    invoke: () => async (_command, {world}) => calls.push(world),
+    delay: 10, now: () => now,
+  })
+  const pose = {id: 12, position_3d: {x: 7, y: 1, z: 1},
+    orientation: {x: 0, y: 0, z: 0, w: 1}}
+  p.publish(map(), false, pose)
+  now += 20
+  p.publish({...map(), tick: 103})
+  await new Promise(resolve => setTimeout(resolve, 30))
+  assert.equal(calls.length, 1)
+  assert.equal(calls[0].tick, 103)
+  assert.equal(calls[0].visual_pose.position_3d.x, 7)
+  // Once the cockpit stops publishing poses, they expire.
+  now += VISUAL_POSE_CARRY_MS + 1
+  p.publish({...map(), tick: 104}, true)
+  await new Promise(resolve => setTimeout(resolve, 5))
+  assert.equal(calls.at(-1).tick, 104)
+  assert.equal(calls.at(-1).visual_pose, undefined)
+  // Never carried across a map change.
+  p.publish(map(), false, pose)
+  p.publish({...map(), map_id: "other-map", tick: 1})
+  await new Promise(resolve => setTimeout(resolve, 30))
+  assert.equal(calls.at(-1).map_id, "other-map")
+  assert.equal(calls.at(-1).visual_pose, undefined)
+  // clear() forgets the pose entirely.
+  p.publish(map(), false, pose)
+  p.clear()
+  p.publish({...map(), tick: 105}, true)
+  await new Promise(resolve => setTimeout(resolve, 5))
+  assert.equal(calls.at(-1).visual_pose, undefined)
 })
