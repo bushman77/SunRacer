@@ -114,6 +114,9 @@ function disposeMesh(root) {
 const SIGHT_BASE_DISTANCE = 5
 export const SIGHT_FAR_DISTANCE = 60
 export const STEERING_LINE_DISTANCE = SIGHT_FAR_DISTANCE
+// About 0.17 degrees wide at that distance: a few pixels per eye on a phone.
+export const STEERING_LINE_RADIUS = 0.09
+const STEERING_LINE_AXIS = new THREE.Vector3(0, 1, 0)
 // SBS is viewed through headset lenses: parallel eye axes (zero parallax at
 // infinity). Lens alignment is handled by the calibrated centre gap, not by
 // converging the virtual cameras on a plane 10 units ahead.
@@ -291,15 +294,22 @@ export class StereoSpaceView {
     // Headset copy of the laptop's virtual-joystick line. It is SHIP-fixed
     // (cockpit frame, not head), from the nose to the laptop stick's world
     // direction, drawn far away so both eyes converge on it comfortably.
-    // The alpha gradient fades it in from the nose like the laptop line.
-    const steeringGeometry = new THREE.BufferGeometry()
-    steeringGeometry.setAttribute("position",
-      new THREE.Float32BufferAttribute([0, 0, -STEERING_LINE_DISTANCE, 0, 0, -STEERING_LINE_DISTANCE], 3))
-    steeringGeometry.setAttribute("color",
-      new THREE.Float32BufferAttribute([0.21, 0.77, 0.87, 0, 0.21, 0.77, 0.87, 0.4], 4))
-    this.steeringLine = new THREE.Line(steeringGeometry, new THREE.LineBasicMaterial({
+    // A WebGL Line is always ONE physical pixel wide, which vanishes on a
+    // high-DPI phone behind headset lenses, so this is a thin open tube
+    // with a real width. Unit length along +Y; alpha fades in from the nose.
+    const steeringGeometry = new THREE.CylinderGeometry(
+      STEERING_LINE_RADIUS, STEERING_LINE_RADIUS, 1, 6, 1, true)
+    steeringGeometry.translate(0, 0.5, 0)
+    const along = steeringGeometry.getAttribute("position")
+    const rgba = []
+    for (let i = 0; i < along.count; i++) rgba.push(0.21, 0.77, 0.87, along.getY(i))
+    steeringGeometry.setAttribute("color", new THREE.Float32BufferAttribute(rgba, 4))
+    this.steeringLine = new THREE.Mesh(steeringGeometry, new THREE.MeshBasicMaterial({
       vertexColors: true, transparent: true, depthTest: false, depthWrite: false,
+      side: THREE.DoubleSide,
     }))
+    this.steeringLine.position.set(0, 0, -STEERING_LINE_DISTANCE)
+    this.steeringLineDirection = new THREE.Vector3()
     this.steeringLine.frustumCulled = false
     this.steeringLine.renderOrder = 49
     this.steeringLine.visible = false
@@ -1026,12 +1036,15 @@ export class StereoSpaceView {
     if (!line) return
     line.visible = Boolean(tip?.visible)
     if (!line.visible) return
-    const position = line.geometry.getAttribute("position")
-    position.setXYZ(1, tip.x, tip.y, tip.z)
-    position.needsUpdate = true
-    const color = line.geometry.getAttribute("color")
-    color.setW(1, tip.opacity)
-    color.needsUpdate = true
+    // Stretch the unit tube from the nose point to the tip. Both lie on the
+    // z = -distance plane, so the direction is purely sideways/up.
+    const direction = this.steeringLineDirection.set(
+      tip.x, tip.y, tip.z + STEERING_LINE_DISTANCE)
+    const length = direction.length()
+    if (length < 1e-6) { line.visible = false; return }
+    line.quaternion.setFromUnitVectors(STEERING_LINE_AXIS, direction.divideScalar(length))
+    line.scale.set(1, length, 1)
+    line.material.opacity = tip.opacity
   }
 
   updateDockingCountdown(seconds) {
