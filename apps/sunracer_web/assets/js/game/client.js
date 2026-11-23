@@ -2467,7 +2467,10 @@ class SpaceClient {
       position_3d: own.render || own.target,
     }
     const steering = this.mouseSteeringRelay()
-    if (steering) visual.steering = steering
+    if (steering) {
+      visual.steering = steering
+      this.lastSteeringRelayAt = time
+    }
     this.sbsRelayWorld.publish(this.worldStream.map, false, visual)
   }
 
@@ -2927,6 +2930,8 @@ class SpaceClient {
   updateDesktopMouseTiming(time) {
     if (time - this.lastMouseTimingReport < 1000) return
     this.lastMouseTimingReport = time
+    // Refresh the SBS stick-link note once a second while steering.
+    if (this.mouseSteeringCaptured()) this.updateMouseSteeringStatus()
     const stats = this.mouseTimingProbe.summary()
     const panel = this.root.querySelector("#cockpit-mouse-jitter-metrics")
     if (!panel) return
@@ -2958,10 +2963,16 @@ class SpaceClient {
     node.hidden = !this.mouseSteeringEnabled || Boolean(this.navComputer?.isOpen)
     if (node.hidden) return
     const captured = document.pointerLockElement === this.canvas || this.mouseFallback
+    // Whether the headset steering line is being fed right now.
+    const sbs = this.root.dataset.nativeClient !== "true" ? "" :
+      performance.now() - (this.lastSteeringRelayAt ?? -Infinity) < 500
+        ? " · SBS STICK SENT"
+        : this.helmet?.status?.rendering ? " · SBS STICK NOT SENT"
+          : " · SBS HEADSET NOT RENDERING"
     node.textContent = this.mouseFallback
-      ? "MOUSE STEERING ACTIVE · NATIVE FALLBACK · ESC RELEASES"
+      ? "MOUSE STEERING ACTIVE · NATIVE FALLBACK · ESC RELEASES" + sbs
       : captured
-        ? "MOUSE STEERING ACTIVE · MOVE TO PITCH/YAW · ESC RELEASES"
+        ? "MOUSE STEERING ACTIVE · MOVE TO PITCH/YAW · ESC RELEASES" + sbs
       : this.mouseCaptureLost
         ? "MOUSE STEERING PAUSED · CLICK COCKPIT TO RESUME"
         : "MOUSE STEERING ENABLED · CLICK COCKPIT TO CAPTURE"

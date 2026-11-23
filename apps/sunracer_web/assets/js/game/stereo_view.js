@@ -114,8 +114,10 @@ function disposeMesh(root) {
 const SIGHT_BASE_DISTANCE = 5
 export const SIGHT_FAR_DISTANCE = 60
 export const STEERING_LINE_DISTANCE = SIGHT_FAR_DISTANCE
-// About 0.17 degrees wide at that distance: a few pixels per eye on a phone.
-export const STEERING_LINE_RADIUS = 0.09
+// About 0.3 degrees wide at that distance: several pixels per eye on a phone.
+export const STEERING_LINE_RADIUS = 0.16
+// Dot at the stick tip, ~1.1 degrees across, so the pointer is unmistakable.
+export const STEERING_TIP_RADIUS = 0.6
 const STEERING_LINE_AXIS = new THREE.Vector3(0, 1, 0)
 // SBS is viewed through headset lenses: parallel eye axes (zero parallax at
 // infinity). Lens alignment is handled by the calibrated centre gap, not by
@@ -302,7 +304,10 @@ export class StereoSpaceView {
     steeringGeometry.translate(0, 0.5, 0)
     const along = steeringGeometry.getAttribute("position")
     const rgba = []
-    for (let i = 0; i < along.count; i++) rgba.push(0.21, 0.77, 0.87, along.getY(i))
+    // Fade in over the first third, then solid out to the tip.
+    for (let i = 0; i < along.count; i++) {
+      rgba.push(0.47, 0.90, 0.99, Math.min(1, 0.2 + along.getY(i) * 2.4))
+    }
     steeringGeometry.setAttribute("color", new THREE.Float32BufferAttribute(rgba, 4))
     this.steeringLine = new THREE.Mesh(steeringGeometry, new THREE.MeshBasicMaterial({
       vertexColors: true, transparent: true, depthTest: false, depthWrite: false,
@@ -314,6 +319,24 @@ export class StereoSpaceView {
     this.steeringLine.renderOrder = 49
     this.steeringLine.visible = false
     framing.add(this.steeringLine)
+    this.steeringTip = new THREE.Mesh(
+      new THREE.CircleGeometry(STEERING_TIP_RADIUS, 24),
+      new THREE.MeshBasicMaterial({color: 0x78e6fc, transparent: true,
+        depthTest: false, depthWrite: false, side: THREE.DoubleSide}),
+    )
+    this.steeringTip.renderOrder = 49
+    this.steeringTip.visible = false
+    framing.add(this.steeringTip)
+    // Diagnostic: names which link is missing when the line cannot be drawn.
+    this.steeringStatus = new THREE.Mesh(
+      new THREE.PlaneGeometry(1.5, 0.19),
+      new THREE.MeshBasicMaterial({transparent: true, depthTest: false, depthWrite: false}),
+    )
+    this.steeringStatus.position.set(0, 0.62, -2.5)
+    this.steeringStatus.renderOrder = 72
+    this.steeringStatus.visible = false
+    this.steeringStatusText = null
+    framing.add(this.steeringStatus)
 
     // A NAV switch mounted right of the main telemetry instrument.
     this.navSwitch = new THREE.Mesh(
@@ -1035,6 +1058,7 @@ export class StereoSpaceView {
     const line = this.steeringLine
     if (!line) return
     line.visible = Boolean(tip?.visible)
+    this.steeringTip.visible = line.visible
     if (!line.visible) return
     // Stretch the unit tube from the nose point to the tip. Both lie on the
     // z = -distance plane, so the direction is purely sideways/up.
@@ -1045,6 +1069,19 @@ export class StereoSpaceView {
     line.quaternion.setFromUnitVectors(STEERING_LINE_AXIS, direction.divideScalar(length))
     line.scale.set(1, length, 1)
     line.material.opacity = tip.opacity
+    this.steeringTip.position.set(tip.x, tip.y, tip.z)
+    this.steeringTip.material.opacity = Math.min(1, tip.opacity + 0.1)
+  }
+
+  updateSteeringStatus(status) {
+    const label = this.steeringStatus
+    if (!label) return
+    label.visible = typeof status === "string"
+    if (!label.visible || status === this.steeringStatusText) return
+    this.steeringStatusText = status
+    label.material.map?.dispose()
+    label.material.map = cockpitLabel(["STICK LINE: " + status], {width: 1024, height: 130})
+    label.material.needsUpdate = true
   }
 
   updateDockingCountdown(seconds) {
@@ -1123,6 +1160,8 @@ export class StereoSpaceView {
     // Headset only: the laptop draws its own SVG line over the canvas.
     this.updateSteeringLine(this.helmetGazeEnabled && !docked
       ? client.steeringDeflection : null)
+    this.updateSteeringStatus(this.helmetGazeEnabled && !docked
+      ? client.steeringLinkStatus : null)
     if (this.helmetGazeEnabled && this.helmetHeadRotation) {
       this.camera.quaternion.multiply(this.helmetHeadRotation)
       this.camera.updateMatrixWorld(true)

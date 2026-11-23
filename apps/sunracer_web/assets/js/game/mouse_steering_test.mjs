@@ -161,7 +161,7 @@ test("client wiring: no idle stop, F recentres, line is presentation-only", () =
   assert.match(markup, /<svg id="mouse-steering-vector" hidden/)
   assert.match(markup, /id="mouse-steering-vector-line"/)
   // Only the presentation deflection rides the LAN pose, never Phoenix.
-  assert.match(client, /if \(steering\) visual\.steering = steering/)
+  assert.match(client, /if \(steering\) \{\n\s+visual\.steering = steering/)
   assert.doesNotMatch(read("./flight_controls.mjs"), /aspect/)
 })
 
@@ -195,4 +195,31 @@ test("headset draws the ship-fixed line only in SBS gaze mode", () => {
   assert.match(view, /new THREE\.PerspectiveCamera\(COCKPIT_VERTICAL_FOV_DEG/)
   assert.match(view, /framing\.add\(this\.steeringLine\)/)
   assert.match(view, /this\.updateSteeringLine\(this\.helmetGazeEnabled && !docked/)
+})
+
+test("end to end: laptop stick reaches the headset line through the LAN pose", async () => {
+  const {projectSbsRelayWorld} = await import("./sbs_relay_world.mjs")
+  const {localVisualPose} = await import("./local_visual_pose.mjs")
+  const stick = new MouseSteering({span: screen(1600, 900)})
+  stick.move(480, -180)
+  const map = {map_id: "sol:free_1", tick: 9, entities: [{id: 7, kind: "player"}]}
+  const relay = projectSbsRelayWorld(map, {id: 7,
+    position_3d: {x: 1, y: 2, z: 3}, orientation: {x: 0, y: 0, z: 0, w: 1},
+    steering: {...stick.deflection(), aspect: 1600 / 900}})
+  // The Rust relay forwards JSON; the phone parses it back.
+  const onPhone = localVisualPose(JSON.parse(JSON.stringify(relay)), "7", 1000)
+  const tip = steeringLineTip(onPhone.steering, 60)
+  assert.equal(tip.visible, true)
+  assert.ok(tip.x > 0 && tip.y > 0, "right and up on the laptop is right and up in the headset")
+})
+
+test("headset and laptop both report the stick-link state", () => {
+  const helmet = read("./helmet_client.mjs")
+  for (const state of ["NO LAN RELAY", "NO LAPTOP POSE", "LAPTOP NOT SENDING STICK"]) {
+    assert.match(helmet, new RegExp(state))
+  }
+  assert.match(read("./stereo_view.js"), /"STICK LINE: " \+ status/)
+  const client = read("./client.js")
+  assert.match(client, /SBS STICK SENT/)
+  assert.match(client, /SBS HEADSET NOT RENDERING/)
 })

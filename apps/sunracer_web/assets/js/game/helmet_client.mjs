@@ -954,6 +954,10 @@ export class HelmetClient {
     // Laptop virtual-joystick deflection; StereoSpaceView draws the line.
     // Expires with the visual pose, so a stale stick is never shown.
     this.steeringDeflection = visual?.steering || null
+    // Shown in the headset so a missing line names the broken link.
+    this.steeringLinkStatus = !this.localRelayActive ? "NO LAN RELAY" :
+      !visual ? "NO LAPTOP POSE" :
+      !visual.steering ? "LAPTOP NOT SENDING STICK" : "OK"
     for (const entity of this.entities.values()) {
       if (visual && entity.id === this.selfId && !this.docked) {
         smoothEntityPresentation(entity, deltaSeconds,

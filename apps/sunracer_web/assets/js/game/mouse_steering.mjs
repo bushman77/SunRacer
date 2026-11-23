@@ -139,7 +139,7 @@ export function steeringLineTip(steering, distance,
     x: valid.x * tanV * valid.aspect * distance,
     y: -valid.y * tanV * distance,
     z: -distance,
-    // A touch brighter than the laptop line: thin lines fade in a headset.
-    opacity: 0.25 + magnitude * 0.45,
+    // Much stronger than the laptop line: it must read through headset optics.
+    opacity: 0.55 + magnitude * 0.4,
   }
 }
