@@ -1,3 +1,4 @@
+import {relaySteering} from "./mouse_steering.mjs"
 // Laptop-only, read-only projection of an already authenticated world stream.
 // Never send raw Phoenix join replies, player records, credentials, inventory,
 // currency, station dialogue or full navigation/contact data to the S21.
@@ -52,7 +53,7 @@ export function projectLocalVisualPose(map, pose) {
       !["x", "y", "z", "w"].every(axis => coordinate(rotation[axis]))) return null
   const norm = Math.hypot(rotation.x, rotation.y, rotation.z, rotation.w)
   if (norm < 0.9 || norm > 1.1) return null
-  return {
+  const result = {
     // Mirror the original authoritative entity ID type. Rust's second
     // allowlist requires an exact JSON identity match, not string coercion.
     id: member.id,
@@ -62,6 +63,10 @@ export function projectLocalVisualPose(map, pose) {
       z: rotation.z / norm, w: rotation.w / norm,
     },
   }
+  // Optional virtual-joystick deflection for the headset steering line.
+  const steering = relaySteering(pose.steering)
+  if (steering) result.steering = steering
+  return result
 }
 
 export function projectSbsRelayWorld(map, visualPose = null) {

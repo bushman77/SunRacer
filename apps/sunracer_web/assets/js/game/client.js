@@ -2466,6 +2466,8 @@ class SpaceClient {
       orientation: own.renderOrientation || own.orientation,
       position_3d: own.render || own.target,
     }
+    const steering = this.mouseSteeringRelay()
+    if (steering) visual.steering = steering
     this.sbsRelayWorld.publish(this.worldStream.map, false, visual)
   }
 
@@ -2689,13 +2691,27 @@ class SpaceClient {
   }
 
   // Faint line from the crosshair to the virtual-joystick deflection.
-  // Laptop presentation only; it is never sent to Phoenix or the SBS relay.
+  // Laptop SVG only; the headset draws its own copy from mouseSteeringRelay().
+  mouseSteeringCaptured() {
+    return this.mouseSteeringEnabled &&
+      (document.pointerLockElement === this.canvas || this.mouseFallback) &&
+      Boolean(this.flightControls?.active()) && !this.navComputer?.isOpen
+  }
+
+  // Stick deflection for the SBS headset line, or null when not steering.
+  // Presentation only: it rides the LAN visual pose, never Phoenix.
+  mouseSteeringRelay() {
+    const width = this.canvas?.clientWidth
+    const height = this.canvas?.clientHeight
+    if (!this.mouseSteeringCaptured() || !(width > 0) || !(height > 0)) return null
+    const {x, y} = this.mouseSteering.deflection()
+    return {x, y, aspect: width / height}
+  }
+
   drawMouseSteeringVector() {
     const svg = this.mouseSteeringVector
     if (!svg) return
-    const captured = this.mouseSteeringEnabled &&
-      (document.pointerLockElement === this.canvas || this.mouseFallback) &&
-      Boolean(this.flightControls?.active()) && !this.navComputer?.isOpen
+    const captured = this.mouseSteeringCaptured()
     const vector = mouseSteeringVector(this.mouseSteering.deflection(),
       this.canvas?.clientWidth, this.canvas?.clientHeight)
     const show = captured && vector.visible

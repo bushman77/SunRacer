@@ -55,3 +55,16 @@ test("phone follows LAN-only pose without mutating server-owned entity fields", 
   assert.doesNotMatch(phone, /entity\.orientation = visual\.orientation/)
   assert.doesNotMatch(phone, /entity\.target = visual\.target/)
 })
+
+test("headset receives the laptop stick deflection with the visual pose", () => {
+  const steered = {...map, visual_pose: {...map.visual_pose,
+    steering: {x: 0.4, y: -0.2, aspect: 1.78}}}
+  assert.deepEqual(localVisualPose(steered, "10", 1000).steering,
+    {x: 0.4, y: -0.2, aspect: 1.78})
+  assert.equal(localVisualPose(map, "10", 1000).steering, null)
+  const bad = {...map, visual_pose: {...map.visual_pose,
+    steering: {x: 3, y: 0, aspect: 1.78}}}
+  assert.equal(localVisualPose(bad, "10", 1000).steering, null)
+  const helmet = read("./helmet_client.mjs")
+  assert.match(helmet, /this\.steeringDeflection = visual\?\.steering \|\| null/)
+})

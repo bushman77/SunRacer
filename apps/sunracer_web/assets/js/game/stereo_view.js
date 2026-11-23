@@ -7,6 +7,7 @@ import {cockpitHudFit, HUD_GEOMETRY} from "./stereo_layout.mjs"
 import {flightBasis, degrees} from "./flight_basis.mjs"
 import {orientationTelemetry} from "./orientation_interpolation.mjs"
 import {cockpitDestinationCamera} from "./cockpit_camera_source.mjs"
+import {steeringLineTip, COCKPIT_VERTICAL_FOV_DEG} from "./mouse_steering.mjs"
 import {targetRange, LASER_FEEDBACK_MS} from "./laser_feedback.mjs"
 import {createDartModel, dartHeadingRotation} from "./dart_model.mjs"
 import {createScowModel} from "./scow_model.mjs"
@@ -112,6 +113,7 @@ function disposeMesh(root) {
 // angular size at any depth.
 const SIGHT_BASE_DISTANCE = 5
 export const SIGHT_FAR_DISTANCE = 60
+export const STEERING_LINE_DISTANCE = SIGHT_FAR_DISTANCE
 // SBS is viewed through headset lenses: parallel eye axes (zero parallax at
 // infinity). Lens alignment is handled by the calibrated centre gap, not by
 // converging the virtual cameras on a plane 10 units ahead.
@@ -125,7 +127,7 @@ export class StereoSpaceView {
     this.renderer.setClearColor(0x020816)
     this.scene = new THREE.Scene()
     this.scene.background = new THREE.Color(0x020816)
-    this.camera = new THREE.PerspectiveCamera(70, 1, 0.1, 3000)
+    this.camera = new THREE.PerspectiveCamera(COCKPIT_VERTICAL_FOV_DEG, 1, 0.1, 3000)
     this.stereo = new THREE.StereoCamera()
     this.stereo.eyeSep = 0.064
     this.eyeGapPx = 0
@@ -285,6 +287,23 @@ export class StereoSpaceView {
 
     this.cockpitFraming = framing
     this.scene.add(framing)
+
+    // Headset copy of the laptop's virtual-joystick line. It is SHIP-fixed
+    // (cockpit frame, not head), from the nose to the laptop stick's world
+    // direction, drawn far away so both eyes converge on it comfortably.
+    // The alpha gradient fades it in from the nose like the laptop line.
+    const steeringGeometry = new THREE.BufferGeometry()
+    steeringGeometry.setAttribute("position",
+      new THREE.Float32BufferAttribute([0, 0, -STEERING_LINE_DISTANCE, 0, 0, -STEERING_LINE_DISTANCE], 3))
+    steeringGeometry.setAttribute("color",
+      new THREE.Float32BufferAttribute([0.21, 0.77, 0.87, 0, 0.21, 0.77, 0.87, 0.4], 4))
+    this.steeringLine = new THREE.Line(steeringGeometry, new THREE.LineBasicMaterial({
+      vertexColors: true, transparent: true, depthTest: false, depthWrite: false,
+    }))
+    this.steeringLine.frustumCulled = false
+    this.steeringLine.renderOrder = 49
+    this.steeringLine.visible = false
+    framing.add(this.steeringLine)
 
     // A NAV switch mounted right of the main telemetry instrument.
     this.navSwitch = new THREE.Mesh(
@@ -1001,6 +1020,20 @@ export class StereoSpaceView {
     this.hudTexture.needsUpdate = true
   }
 
+  updateSteeringLine(steering) {
+    const tip = steering ? steeringLineTip(steering, STEERING_LINE_DISTANCE) : null
+    const line = this.steeringLine
+    if (!line) return
+    line.visible = Boolean(tip?.visible)
+    if (!line.visible) return
+    const position = line.geometry.getAttribute("position")
+    position.setXYZ(1, tip.x, tip.y, tip.z)
+    position.needsUpdate = true
+    const color = line.geometry.getAttribute("color")
+    color.setW(1, tip.opacity)
+    color.needsUpdate = true
+  }
+
   updateDockingCountdown(seconds) {
     const visible = Number.isInteger(seconds) && seconds >= 0
     this.dockingCountdownMesh.visible = visible
@@ -1074,6 +1107,9 @@ export class StereoSpaceView {
       this.cockpitFraming.position.copy(this.camera.position)
       this.cockpitFraming.quaternion.copy(this.camera.quaternion)
     }
+    // Headset only: the laptop draws its own SVG line over the canvas.
+    this.updateSteeringLine(this.helmetGazeEnabled && !docked
+      ? client.steeringDeflection : null)
     if (this.helmetGazeEnabled && this.helmetHeadRotation) {
       this.camera.quaternion.multiply(this.helmetHeadRotation)
       this.camera.updateMatrixWorld(true)

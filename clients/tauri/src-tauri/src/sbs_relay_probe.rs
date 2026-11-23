@@ -322,10 +322,21 @@ fn sanitized_visual_pose(input: &Value, entities: &[Value]) -> Option<Value> {
         (f(rot, "x")?, f(rot, "y")?, f(rot, "z")?, f(rot, "w")?);
     let norm = (qx*qx + qy*qy + qz*qz + qw*qw).sqrt();
     if !(0.9..=1.1).contains(&norm) { return None; }
-    Some(serde_json::json!({
+    let mut pose = serde_json::json!({
         "id": id, "position_3d": {"x":x,"y":y,"z":z},
         "orientation": {"x":qx/norm,"y":qy/norm,"z":qz/norm,"w":qw/norm},
-    }))
+    });
+    // Optional laptop virtual-joystick deflection for the headset steering
+    // line. Bounded scalars only; anything else is silently dropped.
+    if let Some(steering) = input.get("steering") {
+        let (sx, sy, aspect) = (f(steering, "x"), f(steering, "y"), f(steering, "aspect"));
+        if let (Some(sx), Some(sy), Some(aspect)) = (sx, sy, aspect) {
+            if sx.abs() <= 1.0 && sy.abs() <= 1.0 && (0.2..=5.0).contains(&aspect) {
+                pose["steering"] = serde_json::json!({"x":sx,"y":sy,"aspect":aspect});
+            }
+        }
+    }
+    Some(pose)
 }
 
 fn picked_array(input: &Value, max: usize, allowed: &[&str]) -> Value {
@@ -649,6 +660,20 @@ mod tests {
         assert!(sanitized_visual_pose(&serde_json::json!({"id":3,
             "position_3d":valid["position_3d"],
             "orientation":{"x":0,"y":0,"z":0,"w":0}}), &entities).is_none());
+        // Optional steering line: bounded scalars pass, anything else drops.
+        let mut steered = valid.clone();
+        steered["steering"] = serde_json::json!({"x":0.5,"y":-0.25,"aspect":1.6,"extra":"no"});
+        let pose = sanitized_visual_pose(&steered, &entities).unwrap();
+        assert_eq!(pose["steering"], serde_json::json!({"x":0.5,"y":-0.25,"aspect":1.6}));
+        for bad in [serde_json::json!({"x":1.5,"y":0,"aspect":1.6}),
+                    serde_json::json!({"x":0,"y":0,"aspect":50}),
+                    serde_json::json!({"x":"0.5","y":0,"aspect":1.6}),
+                    serde_json::json!("left")] {
+            let mut input = valid.clone();
+            input["steering"] = bad;
+            let pose = sanitized_visual_pose(&input, &entities).unwrap();
+            assert!(pose.get("steering").is_none());
+        }
     }
     #[test]
     fn listener_accepts_only_explicit_private_addresses() {

@@ -6,6 +6,7 @@ import {
   MOUSE_STEERING_DEAD_ZONE, MOUSE_STEERING_CURVE,
   MOUSE_STEERING_DEFAULT_SENSITIVITY,
   validMouseSensitivity, enabledMouseSteering,
+  relaySteering, steeringLineTip, COCKPIT_VERTICAL_FOV_DEG,
 } from "./mouse_steering.mjs"
 import {FlightControls} from "./flight_controls.mjs"
 
@@ -159,6 +160,39 @@ test("client wiring: no idle stop, F recentres, line is presentation-only", () =
   assert.match(client, /this\.drawMouseSteeringVector\(\)/)
   assert.match(markup, /<svg id="mouse-steering-vector" hidden/)
   assert.match(markup, /id="mouse-steering-vector-line"/)
-  // Never part of the SBS relay projection.
-  assert.doesNotMatch(read("./sbs_relay_world.mjs"), /steering/i)
+  // Only the presentation deflection rides the LAN pose, never Phoenix.
+  assert.match(client, /if \(steering\) visual\.steering = steering/)
+  assert.doesNotMatch(read("./flight_controls.mjs"), /aspect/)
+})
+
+test("relay steering accepts only bounded deflection and aspect", () => {
+  assert.deepEqual(relaySteering({x: 0.3, y: -1, aspect: 1.78, extra: 1}),
+    {x: 0.3, y: -1, aspect: 1.78})
+  for (const bad of [null, "left", {x: 1.01, y: 0, aspect: 1},
+    {x: 0, y: 0, aspect: 0.1}, {x: 0, y: 0, aspect: 6}, {x: 0, y: NaN, aspect: 1}]) {
+    assert.equal(relaySteering(bad), null)
+  }
+})
+
+test("headset line tip points where the laptop line tip points", () => {
+  const tanV = Math.tan(COCKPIT_VERTICAL_FOV_DEG * Math.PI / 360)
+  const edge = steeringLineTip({x: 1, y: 0, aspect: 2}, 60)
+  near(edge.x, tanV * 2 * 60)
+  near(edge.y, 0)
+  assert.equal(edge.z, -60)
+  // Laptop screen top (y = -1, mouse up) is the top of the vertical FOV.
+  const up = steeringLineTip({x: 0, y: -1, aspect: 1.5}, 10)
+  near(up.y, tanV * 10)
+  assert.equal(up.visible, true)
+  assert.equal(steeringLineTip({x: 0.01, y: 0, aspect: 1.5}, 10).visible, false)
+  assert.equal(steeringLineTip(null, 10), null)
+  assert.ok(steeringLineTip({x: 0.9, y: 0, aspect: 1}, 10).opacity >
+    steeringLineTip({x: 0.2, y: 0, aspect: 1}, 10).opacity)
+})
+
+test("headset draws the ship-fixed line only in SBS gaze mode", () => {
+  const view = read("./stereo_view.js")
+  assert.match(view, /new THREE\.PerspectiveCamera\(COCKPIT_VERTICAL_FOV_DEG/)
+  assert.match(view, /framing\.add\(this\.steeringLine\)/)
+  assert.match(view, /this\.updateSteeringLine\(this\.helmetGazeEnabled && !docked/)
 })

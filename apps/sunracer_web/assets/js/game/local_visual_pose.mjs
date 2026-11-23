@@ -1,3 +1,4 @@
+import {relaySteering} from "./mouse_steering.mjs"
 // Only the current, authenticated LAN world's own-ship visual pose is used
 // for headset presentation. Phoenix continues to own all entity state.
 export const VISUAL_POSE_MAX_AGE_MS = 150
@@ -20,7 +21,9 @@ export function localVisualPose(map, selfId, receivedAt) {
   if (norm < 0.9 || norm > 1.1 || !Number.isFinite(receivedAt)) return null
   return {mapId: map.map_id, id: String(id), receivedAt,
     target: {...pose.position_3d},
-    orientation: {x: q.x/norm, y: q.y/norm, z: q.z/norm, w: q.w/norm}}
+    orientation: {x: q.x/norm, y: q.y/norm, z: q.z/norm, w: q.w/norm},
+    // Laptop virtual-joystick deflection for the headset line (or null).
+    steering: relaySteering(pose.steering)}
 }
 
 export function freshLocalVisualPose(stored, mapId, selfId, now) {

@@ -951,6 +951,9 @@ export class HelmetClient {
     const visual = this.localRelayActive
       ? freshLocalVisualPose(this.localVisualPose, this.mapId, this.selfId, time)
       : null
+    // Laptop virtual-joystick deflection; StereoSpaceView draws the line.
+    // Expires with the visual pose, so a stale stick is never shown.
+    this.steeringDeflection = visual?.steering || null
     for (const entity of this.entities.values()) {
       if (visual && entity.id === this.selfId && !this.docked) {
         smoothEntityPresentation(entity, deltaSeconds,

@@ -108,3 +108,38 @@ export class MouseSteering {
     return this.axes()
   }
 }
+
+// ---- SBS headset relay -------------------------------------------------
+// The laptop camera's vertical field of view (StereoSpaceView's camera).
+export const COCKPIT_VERTICAL_FOV_DEG = 70
+
+// Validated stick deflection for the LAN visual pose. The aspect is the
+// laptop cockpit's width/height, so the headset can point its line at the
+// SAME world direction the laptop line's tip shows. Returns null if invalid.
+export function relaySteering(value) {
+  if (!value || typeof value !== "object") return null
+  const {x, y, aspect} = value
+  if (![x, y, aspect].every(Number.isFinite) ||
+      Math.abs(x) > 1 || Math.abs(y) > 1 ||
+      aspect < 0.2 || aspect > 5) return null
+  return {x, y, aspect}
+}
+
+// Ship-local endpoint (cockpit frame: -Z is the nose, +Y up) of the headset
+// steering line at `distance`. Matches the laptop's perspective projection:
+// a screen-edge deflection points at the edge of the laptop's view.
+export function steeringLineTip(steering, distance,
+  verticalFovDeg = COCKPIT_VERTICAL_FOV_DEG) {
+  const valid = relaySteering(steering)
+  if (!valid || !Number.isFinite(distance) || distance <= 0) return null
+  const tanV = Math.tan(verticalFovDeg * Math.PI / 360)
+  const magnitude = Math.min(1, Math.hypot(valid.x, valid.y))
+  return {
+    visible: magnitude > MOUSE_STEERING_DEAD_ZONE,
+    x: valid.x * tanV * valid.aspect * distance,
+    y: -valid.y * tanV * distance,
+    z: -distance,
+    // A touch brighter than the laptop line: thin lines fade in a headset.
+    opacity: 0.25 + magnitude * 0.45,
+  }
+}
