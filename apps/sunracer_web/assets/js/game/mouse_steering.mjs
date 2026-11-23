@@ -1,5 +1,6 @@
-// Optional pointer-locked cockpit steering. Mouse input is an impulse on
-// server-authoritative yaw/pitch; throttle, roll and weapons remain separate.
+// Captured cockpit mouse steering. Each browser pointer event contributes
+// displacement to a stable turn-intent window; Phoenix still owns orientation,
+// position, physics and combat. Throttle, roll and weapons remain separate.
 //
 // Native WebKitGTK pointer events can arrive in irregular bursts. Missing
 // one or two packets is not necessarily an intentional stop. Tolerate short
@@ -11,6 +12,10 @@ export const MOUSE_STEERING_MIN_STOP_MS = 95
 // Normalize event packet displacement to a consistent 60Hz reference. Without
 // this, varying mouse packet rates become visible fluctuations in turn speed.
 export const MOUSE_STEERING_SAMPLE_MS = 16
+// Like a held keyboard key, the latest yaw/pitch intention stays constant
+// between input updates. Aggregate raw pixels over 40ms rather than turning
+// every irregular WebKitGTK packet into a new angular-rate command.
+export const MOUSE_STEERING_INTENT_MS = 40
 export const MOUSE_STEERING_ACCUMULATE_MS = 45
 export const MOUSE_STEERING_FILTER = 0.65
 // A tiny up/down difference between adjacent captured mouse packets is not
@@ -71,6 +76,9 @@ export class MouseSteering {
     this.lastMovementAt = -Infinity
     this.packetGapMs = null
     this.lastAxisMotionAt = {yaw: -Infinity, pitch: -Infinity}
+    this.lastIntentAt = -Infinity
+    this.pendingDx = 0
+    this.pendingDy = 0
   }
 
   // For a pointer stream at 20-30Hz, one missing packet can exceed 85ms.
@@ -84,69 +92,80 @@ export class MouseSteering {
   }
 
   move(deltaX, deltaY) {
-    // Zero-delta events must not cancel the current movement or keep
-    // resetting the idle clock. Browsers can generate many of these.
+    // Browser-native pointer packets can be irregular, integer-quantized and
+    // even single-axis during continuous diagonal motion. They are samples
+    // of hand movement, NOT independent ship turn commands.
     if (!Number.isFinite(deltaX) || !Number.isFinite(deltaY) ||
         (deltaX === 0 && deltaY === 0)) return this.axes()
 
     const time = this.now()
     const elapsed = time - this.lastMovementAt
-    // With a rate-based server control, "pixels per packet" is NOT a stable
-    // velocity: a 120Hz device gives half the delta of a 60Hz device for the
-    // same physical motion. Convert to an equivalent 16ms displacement, and
-    // bound tiny/long event gaps to avoid burst spikes and stalled motion.
-    const packetMs = elapsed > 0 && elapsed < MOUSE_STEERING_IDLE_MS
-      ? clamp(elapsed, 8, 50) : MOUSE_STEERING_SAMPLE_MS
-    const scale = MOUSE_STEERING_SAMPLE_MS / packetMs
-    const {yaw, pitch} = mouseSteeringAxes(
-      deltaX * scale, deltaY * scale, this.sensitivity)
-    if (elapsed < 0 || elapsed >= MOUSE_STEERING_IDLE_MS) {
+    const newStream = elapsed < 0 || elapsed >= MOUSE_STEERING_IDLE_MS
+    if (newStream) {
       this.yaw = 0
       this.pitch = 0
       this.packetGapMs = null
       this.lastAxisMotionAt = {yaw: -Infinity, pitch: -Infinity}
+      this.lastIntentAt = -Infinity
+      this.pendingDx = 0
+      this.pendingDy = 0
     } else {
-      // Widen immediately for slower 30Hz/20Hz pointer packets, but shorten
-      // gradually when event timing fluctuates to avoid turning chatter.
       this.packetGapMs = this.packetGapMs === null ? elapsed :
         elapsed > this.packetGapMs ? elapsed :
           this.packetGapMs * 0.65 + elapsed * 0.35
     }
-    const adjacent = elapsed >= 0 && elapsed < MOUSE_STEERING_ACCUMULATE_MS
-    const smoothAxis = (previous, raw) => {
-      // A hard stop or reversal must not pass through any smoothing.
-      if (raw === 0 || !adjacent || previous === 0 ||
-          Math.sign(previous) !== Math.sign(raw)) return raw
-      const reducing = Math.abs(raw) < Math.abs(previous)
-      // Deliberately slowing the mouse a lot remains immediate: do not
-      // keep steering toward the old target after a clear hand slowdown.
-      if (reducing &&
-          Math.abs(raw) <= Math.abs(previous) *
-            MOUSE_STEERING_HARD_SLOWDOWN_RATIO) return raw
-      const change = Math.abs(raw - previous)
-      // Symmetric filtering ONLY in the jitter band eliminates the
-      // 1px/2px sawtooth at high sensitivity. No extra filtering is
-      // applied to large reductions or direction changes.
-      const weight = change <= MOUSE_STEERING_JITTER_BAND
-        ? MOUSE_STEERING_JITTER_FILTER
-        : reducing ? 1 : MOUSE_STEERING_FILTER
-      return clamp(previous + (raw - previous) * weight, -1, 1)
-    }
-    const axisValue = (axis, raw) => {
-      if (raw !== 0) {
-        this.lastAxisMotionAt[axis] = time
-        return smoothAxis(this[axis], raw)
-      }
-      // A raw zero component means "no X in THIS packet", not necessarily
-      // "the user stopped X". This distinction matters on WebKitGTK where
-      // continuous diagonal input arrives as alternating X-only/Y-only
-      // integer packets. Hold for at most 36ms, never indefinitely.
-      return time - this.lastAxisMotionAt[axis] <= MOUSE_STEERING_AXIS_GAP_MS
-        ? this[axis] : 0
-    }
-    this.yaw = axisValue("yaw", yaw)
-    this.pitch = axisValue("pitch", pitch)
     this.lastMovementAt = time
+    if (deltaX !== 0) this.lastAxisMotionAt.yaw = time
+    if (deltaY !== 0) this.lastAxisMotionAt.pitch = time
+
+    const first = this.lastIntentAt === -Infinity
+    // A real, substantial direction reversal gets an immediate command.
+    // Small opposite-pixel quantization is aggregated before judging intent.
+    const reverseYaw = !first && Math.abs(deltaX) >= 2 &&
+      this.yaw !== 0 && Math.sign(deltaX) !== Math.sign(this.yaw)
+    const reversePitch = !first && Math.abs(deltaY) >= 2 &&
+      this.pitch !== 0 && Math.sign(-deltaY) !== Math.sign(this.pitch)
+    this.pendingDx += deltaX
+    this.pendingDy += deltaY
+    const duration = time - this.lastIntentAt
+    if (!first && !reverseYaw && !reversePitch &&
+        duration < MOUSE_STEERING_INTENT_MS) return this.axes()
+
+    // Normalize ALL pixels accumulated since the previous command to the
+    // same 16ms reference. Event frequency no longer changes turn strength.
+    // First packet and significant reversals respond immediately.
+    const packetMs = elapsed > 0 && elapsed < MOUSE_STEERING_IDLE_MS
+      ? clamp(elapsed, 8, 50) : MOUSE_STEERING_SAMPLE_MS
+    const scale = first || reverseYaw || reversePitch
+      ? MOUSE_STEERING_SAMPLE_MS / packetMs
+      : MOUSE_STEERING_SAMPLE_MS / Math.max(MOUSE_STEERING_SAMPLE_MS, duration)
+    const dx = reverseYaw || reversePitch ? deltaX : this.pendingDx
+    const dy = reverseYaw || reversePitch ? deltaY : this.pendingDy
+    const raw = mouseSteeringAxes(dx * scale, dy * scale, this.sensitivity)
+    this.pendingDx = 0
+    this.pendingDy = 0
+    this.lastIntentAt = time
+
+    const settle = (axis, value) => {
+      const previous = this[axis]
+      if (value === 0) {
+        // No component in a window is not necessarily a stopped axis:
+        // continuous diagonal mouse input may alternate X-only/Y-only.
+        return time - this.lastAxisMotionAt[axis] <= MOUSE_STEERING_AXIS_GAP_MS
+          ? previous : 0
+      }
+      // Never filter an actual reversal or substantial slowdown.
+      if (!previous || Math.sign(value) !== Math.sign(previous) ||
+          Math.abs(value) <= Math.abs(previous) * MOUSE_STEERING_HARD_SLOWDOWN_RATIO) {
+        return value
+      }
+      const change = Math.abs(value - previous)
+      const weight = change <= MOUSE_STEERING_JITTER_BAND
+        ? MOUSE_STEERING_JITTER_FILTER : MOUSE_STEERING_FILTER
+      return clamp(previous + (value - previous) * weight, -1, 1)
+    }
+    this.yaw = settle("yaw", raw.yaw)
+    this.pitch = settle("pitch", raw.pitch)
     return this.axes()
   }
 
@@ -162,6 +181,9 @@ export class MouseSteering {
     this.yaw = 0
     this.pitch = 0
     this.lastAxisMotionAt = {yaw: -Infinity, pitch: -Infinity}
+    this.lastIntentAt = -Infinity
+    this.pendingDx = 0
+    this.pendingDy = 0
     return this.axes()
   }
 
@@ -171,6 +193,9 @@ export class MouseSteering {
     this.lastMovementAt = -Infinity
     this.packetGapMs = null
     this.lastAxisMotionAt = {yaw: -Infinity, pitch: -Infinity}
+    this.lastIntentAt = -Infinity
+    this.pendingDx = 0
+    this.pendingDy = 0
     return this.axes()
   }
 }
