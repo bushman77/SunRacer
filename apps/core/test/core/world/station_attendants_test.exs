@@ -23,7 +23,8 @@ defmodule Core.World.StationAttendantsTest do
       assert {:ok, %{name: name, topics: topics}} =
         StationAttendants.talk(position, @ship, npc.id, "greeting")
       assert name == npc.name
-      assert length(topics) == (if npc.id in ["repair", "outfitting"], do: 3, else: 2)
+      assert length(topics) ==
+        (if npc.id in ["repair", "outfitting", "trade"], do: 3, else: 2)
       for topic <- topics do
         assert {:ok, %{message: message}} =
           StationAttendants.talk(position, @ship, npc.id, topic.id)
