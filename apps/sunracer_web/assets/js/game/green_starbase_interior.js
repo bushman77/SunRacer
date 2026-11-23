@@ -2,7 +2,7 @@ import {greenStarbaseInteriorVisible} from "./green_starbase_interior_state.mjs"
 import {buildGreenStarbaseArt} from "./green_starbase_art.mjs"
 import {
   STATION_CHARACTER_ASSETS, positionStationCharacter,
-  disposeStationCharacter,
+  disposeStationCharacter, createCharacterAnimator,
 } from "./station_character_models.mjs"
 
 // Shared lightweight Three.js station interior. The docked ship has no actor
@@ -20,6 +20,7 @@ export class GreenStarbaseInterior {
     this.loadGltf = loadGltf
     this.modelAttempted = false
     this.importedCharacters = []
+    this.characterAnimators = []
     this.disposed = false
     this.materials = []
     this.geometries = []
@@ -380,6 +381,8 @@ export class GreenStarbaseInterior {
       }
       this.node.add(model)
       this.importedCharacters.push(model)
+      const animator = createCharacterAnimator(this.THREE, gltf)
+      if (animator) this.characterAnimators.push(animator)
       // Keep the server-authorized E-to-talk interaction unchanged.
       for (const mesh of this.node.children) {
         if (mesh.name?.startsWith("attendant:repair:") ||
@@ -402,6 +405,7 @@ export class GreenStarbaseInterior {
     const delta = this.lastUpdatedAt == null ? 0 :
       Math.min(0.1, Math.max(0, (time - this.lastUpdatedAt) / 1000))
     this.lastUpdatedAt = time
+    for (const animator of this.characterAnimators) animator.update(delta)
     this.doorOpen += (Number(Boolean(near)) - this.doorOpen) *
       Math.min(1, delta * 12)
     this.doorLeft.position.set(-3.95 - this.doorOpen * 8, 5.5, -83.1)
@@ -410,6 +414,8 @@ export class GreenStarbaseInterior {
 
   dispose() {
     this.disposed = true
+    this.characterAnimators.forEach(animator => animator.dispose())
+    this.characterAnimators = []
     this.importedCharacters.forEach(disposeStationCharacter)
     this.importedCharacters = []
     this.scene.remove(this.node)

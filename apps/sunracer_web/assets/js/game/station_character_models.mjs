@@ -40,6 +40,43 @@ export function positionStationCharacter(THREE, gltf, npc, {
   return anchor
 }
 
+// ai3d exports "idle" (looping) plus "ai3d_pose_test" (a deformation check
+// for its report, never for gameplay). Prefer idle; otherwise any clip that
+// is not the test; otherwise none (the character simply stands still).
+export function pickIdleClip(clips = []) {
+  const usable = clips.filter(clip => clip && !/pose_test/i.test(clip.name || ""))
+  return usable.find(clip => clip.name === "idle") ||
+    usable.find(clip => /idle/i.test(clip.name || "")) || usable[0] || null
+}
+
+// Plays the character's idle loop. Presentation only: nothing is networked.
+// Returns null when the GLB has no usable animation.
+export function createCharacterAnimator(THREE, gltf) {
+  const clip = pickIdleClip(gltf?.animations)
+  if (!clip || !gltf?.scene || typeof THREE.AnimationMixer !== "function") return null
+  // Bounds are computed from the rest pose; an animated skinned mesh can
+  // move outside them, so never let the camera frustum cull it mid-pose.
+  gltf.scene.traverse?.(node => {
+    if (node.isSkinnedMesh) node.frustumCulled = false
+  })
+  const mixer = new THREE.AnimationMixer(gltf.scene)
+  const action = mixer.clipAction(clip)
+  action.setLoop(THREE.LoopRepeat, Infinity)
+  action.play()
+  mixer.update(0) // first rendered frame already shows the idle, not the T-pose
+  return {
+    clip: clip.name,
+    mixer,
+    update(delta) {
+      if (Number.isFinite(delta) && delta > 0) mixer.update(delta)
+    },
+    dispose() {
+      mixer.stopAllAction()
+      mixer.uncacheRoot(gltf.scene)
+    },
+  }
+}
+
 // Release only imported GLB resources; the procedural station's shared
 // materials and geometry belong to GreenStarbaseInterior.dispose().
 export function disposeStationCharacter(root) {

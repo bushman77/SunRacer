@@ -1431,6 +1431,10 @@ docking, station walking and mission completion. Branch `story_line`.
   Neither enters shared traffic; live raider settings untouched.
 - [x] Mara Venn, Juno Rook and Eno Kade story topics driven by story state;
   Mara's topic applies the scripted hull patch.
+- [x] Mara's ai3d-generated 3D model plays its looping idle in the repair bay
+  (client code and tests, 2026-11-23). The GLB file still has to be copied
+  into `priv/static/images/game/station/`; not yet viewed in the cockpit or
+  headset.
 - [x] Combat balance for the first fight: player beam range 540 against
   NPC 420/380, so Corsair-17 is beaten by holding the range band
   (simulated; not flown).

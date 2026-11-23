@@ -8,6 +8,36 @@
 
 ## Unreleased
 
+### Mara Venn's 3D model plays an idle animation (2026-11-23, branch `story_line`)
+
+#### Added
+
+- The Green Starbase repair bay plays the imported character's **idle**
+  animation (`createCharacterAnimator` in `station_character_models.mjs`,
+  driven by the interior's existing frame delta). Clip choice: `idle`, then
+  any clip with "idle" in its name, then any clip except ai3d's report-only
+  `ai3d_pose_test`; a GLB without clips simply stands still, as before.
+  Skinned meshes are exempt from frustum culling (rest-pose bounds do not
+  cover animated poses). The mixer is stopped and uncached on dispose.
+- Mara's GLB comes from the ai3d pipeline (github.com/bushman77/ai3d):
+  single closed mesh, Mixamo bone names (`mixamorig:*`), automatic weights,
+  8 s looping `idle` clip (arms relaxed, breathing, slow look-around).
+  Placement, scaling and the existing fallback are unchanged.
+
+#### Tests
+
+- `station_character_models_test.mjs`: idle clip selection (never the pose
+  test), looping and culling on a skinned fixture, and the Green Starbase
+  interior advancing and disposing the animation. `npm test` in
+  `apps/sunracer_web/assets`: 527 passed, 0 failed. `npm test` in
+  `clients/tauri`: 43 passed, 0 failed.
+- **Not run here:** `mix precommit` (JavaScript-only change; no Elixir files
+  touched).
+- **Manual verification not yet performed:** viewing the animated model in
+  the laptop cockpit and the paired SBS headset. The GLB itself is not in
+  this commit; copy it as described in
+  `apps/sunracer_web/priv/static/images/game/station/README.md`.
+
 ### Trade Exchange: sell looted cargo, buy common goods (2026-11-23, branch `story_line`)
 
 #### Added
