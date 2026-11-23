@@ -68,6 +68,7 @@ on:
       - "apps/sunracer_web/assets/js/game/story_hud*.mjs"
       - "apps/sunracer_web/assets/js/game/story_radio*.mjs"
       - "apps/core/lib/core/world/station_attendants.ex"
+      - "apps/core/test/core/world/station_attendants_test.exs"
       - "docs/story-first-run.md"
       - "apps/sunracer/lib/sunracer/pilot_location.ex"
       - "apps/sunracer/test/sunracer/pilot_location_test.exs"
