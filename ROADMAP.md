@@ -1,3 +1,16 @@
+## Mouse steering and SBS headset (2026-11-22)
+
+- [x] Full-screen virtual-joystick mouse steering with a faint steering line
+      on the laptop, replacing idle-timer rate steering.
+- [x] Steering line relayed to the SBS headset through the LAN visual pose
+      and the Rust allowlist; drawn ship-fixed with a tip dot.
+- [x] Headset own-ship view predicted from relayed body rates between LAN
+      poses, removing scenery judder while turning (simulation-tested).
+- [ ] Manual verification on the S21: headset line visible, scenery smooth
+      while turning. Not yet performed.
+- [ ] Remove the temporary `STICK LINE` headset diagnostic once verified.
+- [ ] Optional: drift-back-to-centre setting for the virtual joystick.
+
 ## Headset usability (2026-11-21)
 
 - [x] Gaze-reachable death recovery. The headset had no death handling at all;

@@ -1,4 +1,5 @@
 import {relaySteering} from "./mouse_steering.mjs"
+import {relayRates} from "./local_visual_pose.mjs"
 // Laptop-only, read-only projection of an already authenticated world stream.
 // Never send raw Phoenix join replies, player records, credentials, inventory,
 // currency, station dialogue or full navigation/contact data to the S21.
@@ -66,6 +67,9 @@ export function projectLocalVisualPose(map, pose) {
   // Optional virtual-joystick deflection for the headset steering line.
   const steering = relaySteering(pose.steering)
   if (steering) result.steering = steering
+  // Optional camera body rates so the headset can rotate between poses.
+  const rates = relayRates(pose.rates)
+  if (rates) result.rates = rates
   return result
 }
 

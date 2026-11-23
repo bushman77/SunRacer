@@ -8,6 +8,70 @@
 
 ## Unreleased
 
+### Virtual-joystick mouse steering and SBS headset smoothing (2026-11-22, branch `story_line`)
+
+#### Changed
+
+- Mouse steering is now a full-screen virtual joystick
+  (`mouse_steering.mjs`). Mouse movement moves a persistent stick
+  deflection: screen centre is neutral, the screen edges are full yaw/pitch,
+  with a 5% dead zone and a 1.5 response curve. The deflection holds until the
+  pilot moves back to centre (F, Esc, Atlas and capture loss recentre it).
+  This replaces the idle-timer rate steering, whose guesses at "the hand
+  stopped" from pointer-event gaps caused stop/turn pulses (jank) on
+  WebKitGTK. The idle timer, `expire()`, intent window and jitter heuristics
+  are removed.
+- Sensitivity now means steering-line travel per mouse pixel (1.0 = 1:1),
+  stored under a new key, `sunracer:mouse-stick-sensitivity:<id>`.
+- The headset (SBS) own-ship view now keeps rotating at the laptop camera's
+  body rates (and moving at the ship's velocity) between LAN visual poses,
+  and blends each new pose's small error out with the existing
+  `OwnShipCameraReconciler` (`headset_pose_prediction.mjs`). Previously it
+  chased each ~32 ms pose with a 25 ms settle, which juddered the stars and
+  scenery while turning (the cockpit is ship-fixed, so it did not show).
+
+#### Added
+
+- A faint steering line from the crosshair to the stick deflection on the
+  laptop (SVG overlay, `#mouse-steering-vector`).
+- The same line in the headset: a ship-fixed tube in the cockpit frame from
+  the nose to the laptop stick's world direction, with a dot at the tip.
+- LAN visual pose fields `steering` {x, y, aspect} and `rates`
+  {yaw, pitch, roll} (rad/s), validated in `sbs_relay_world.mjs`,
+  `local_visual_pose.mjs` and the Rust relay allowlist
+  (`sanitized_visual_pose`). Phoenix never receives either.
+- Diagnostics: the headset shows `STICK LINE: <state>` (NO LAN RELAY,
+  NO LAPTOP POSE, LAPTOP NOT SENDING STICK, OK); the laptop steering status
+  appends SBS STICK SENT / NOT SENT / HEADSET NOT RENDERING.
+
+#### Fixed
+
+- A world update without a visual pose could replace a pending LAN frame and
+  strip the cockpit pose; the publisher now carries the latest pose forward
+  for up to 100 ms on the same map.
+
+#### Tests
+
+- Browser JS: all `assets/js/game/*_test.mjs` files pass under Node 22
+  (the three `three`-dependent model tests were run with `three@0.187.0`
+  installed temporarily). New: `headset_pose_prediction_test.mjs`, including
+  a jittery-Wi-Fi simulation of a steady 60 deg/s turn at 60 fps: the largest
+  deviation of the per-frame rotation step fell from 0.75 deg (old chase) to
+  0.11 deg. Rewritten `mouse_steering_test.mjs`, plus an end-to-end test from
+  laptop stick to headset line tip through a JSON round trip.
+- Tauri `tests/*.test.mjs` pass. The Rust `sanitized_visual_pose` and its test
+  were compiled and run in a standalone crate with `serde_json`; the full
+  Tauri crate was not built (no GTK/WebKit libraries in that environment).
+- No Elixir code was changed in this entry, and `mix precommit` / `mix test`
+  were not run (no Elixir toolchain in that environment).
+
+#### Known limitations and manual verification
+
+- The user reported the joystick feels right on the laptop and asked for the
+  headset jitter to be fixed next. The headset jitter fix has not been
+  manually verified on the S21; nor has the headset line's visibility.
+- The `STICK LINE` headset label is a temporary diagnostic.
+
 ### Gaze icon for the flight mode switch (2026-11-21, branch `story_line`)
 
 #### Added

@@ -336,6 +336,15 @@ fn sanitized_visual_pose(input: &Value, entities: &[Value]) -> Option<Value> {
             }
         }
     }
+    // Optional laptop camera body rates (rad/s) so the headset can keep
+    // rotating smoothly between relayed poses. Bounded scalars only.
+    if let Some(rates) = input.get("rates") {
+        let bounded = |key: &str| f(rates, key).filter(|n| n.abs() <= 10.0);
+        if let (Some(yaw), Some(pitch), Some(roll)) =
+            (bounded("yaw"), bounded("pitch"), bounded("roll")) {
+            pose["rates"] = serde_json::json!({"yaw":yaw,"pitch":pitch,"roll":roll});
+        }
+    }
     Some(pose)
 }
 
@@ -674,6 +683,15 @@ mod tests {
             let pose = sanitized_visual_pose(&input, &entities).unwrap();
             assert!(pose.get("steering").is_none());
         }
+        // Optional body rates: bounded scalars pass, anything else drops.
+        let mut turning = valid.clone();
+        turning["rates"] = serde_json::json!({"yaw":1.5,"pitch":-0.5,"roll":0.0,"x":9});
+        let pose = sanitized_visual_pose(&turning, &entities).unwrap();
+        assert_eq!(pose["rates"], serde_json::json!({"yaw":1.5,"pitch":-0.5,"roll":0.0}));
+        turning["rates"] = serde_json::json!({"yaw":50.0,"pitch":0.0,"roll":0.0});
+        assert!(sanitized_visual_pose(&turning, &entities).unwrap().get("rates").is_none());
+        turning["rates"] = serde_json::json!({"yaw":1.0,"pitch":0.0});
+        assert!(sanitized_visual_pose(&turning, &entities).unwrap().get("rates").is_none());
     }
     #[test]
     fn listener_accepts_only_explicit_private_addresses() {

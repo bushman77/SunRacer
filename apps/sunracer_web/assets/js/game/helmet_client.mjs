@@ -26,6 +26,7 @@ import {
 } from "./helmet_bandwidth_hud.mjs"
 import {headsetScreenTapRecenterAllowed} from "./helmet_screen_recenter.mjs"
 import {upsertHelmetEntity, smoothEntityPresentation, smoothHeading} from "./entity_smoothing.mjs"
+import {HeadsetPoseSmoother} from "./headset_pose_prediction.mjs"
 import {localVisualPose, freshLocalVisualPose,
   VISUAL_POSE_SETTLE_SECONDS} from "./local_visual_pose.mjs"
 import {ownPlanetaryWarning, planetaryWarningView} from "./planetary_warning.mjs"
@@ -120,6 +121,7 @@ export class HelmetClient {
     this.localRelayLastSeen = -Infinity
     this.latestRelayMap = null
     this.localVisualPose = null
+    this.headsetPose = new HeadsetPoseSmoother()
     this.localRelayCheckTimer = null
   }
 
@@ -960,11 +962,18 @@ export class HelmetClient {
       !visual.steering ? "LAPTOP NOT SENDING STICK" : "OK"
     for (const entity of this.entities.values()) {
       if (visual && entity.id === this.selfId && !this.docked) {
+        // Keep turning at the laptop's body rates between LAN poses and
+        // blend out each new pose's small error, instead of chasing poses
+        // that arrive every ~32ms (which juddered the scenery while turning).
+        const pose = this.headsetPose.step(visual, entity.velocity, time)
         smoothEntityPresentation(entity, deltaSeconds,
           VISUAL_POSE_SETTLE_SECONDS,
-          {orientation: visual.orientation, target: visual.target,
+          {orientation: pose.orientation, target: pose.target,
             positionSettleSeconds: VISUAL_POSE_SETTLE_SECONDS})
+        entity.renderOrientation = pose.orientation
       } else {
+        if (entity.id === this.selfId &&
+            this.headsetPose.lastReceivedAt !== null) this.headsetPose.reset()
         smoothEntityPresentation(entity, deltaSeconds)
       }
       entity.angle = smoothHeading(entity.angle, entity.targetAngle, deltaSeconds)

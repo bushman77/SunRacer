@@ -2466,6 +2466,11 @@ class SpaceClient {
       orientation: own.renderOrientation || own.orientation,
       position_3d: own.render || own.target,
     }
+    // Body rates of the pose actually drawn, so the headset can keep turning
+    // smoothly between LAN poses instead of stepping at the relay rate.
+    const rates = this.clientLedCameraActiveForTick()
+      ? this.clientLedCamera.rates : own.angularVelocity
+    if (rates) visual.rates = {yaw: rates.yaw, pitch: rates.pitch, roll: rates.roll}
     const steering = this.mouseSteeringRelay()
     if (steering) {
       visual.steering = steering
