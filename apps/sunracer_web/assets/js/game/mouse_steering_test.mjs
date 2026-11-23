@@ -218,7 +218,10 @@ test("headset and laptop both report the stick-link state", () => {
   for (const state of ["NO LAN RELAY", "NO LAPTOP POSE", "LAPTOP NOT SENDING STICK"]) {
     assert.match(helmet, new RegExp(state))
   }
-  assert.match(read("./stereo_view.js"), /"STICK LINE: " \+ status/)
+  assert.match(read("./stereo_view.js"), /"STICK LINE: " \+ link, \.\.\.rest/)
+  // Second line: once-a-second headset frame rate / slow frames / sensor rate.
+  assert.match(helmet, /" FPS · "/)
+  assert.match(helmet, /this\.measureHeadsetPerformance\(time\)/)
   const client = read("./client.js")
   assert.match(client, /SBS STICK SENT/)
   assert.match(client, /SBS HEADSET NOT RENDERING/)

@@ -88,7 +88,9 @@ test("calibrates present head direction, tracks relative yaw, recenters, holds w
   near(fresh.w, 1)
   time = 2_310
   phone.emit({alpha: 79, beta: 30, gamma: 0})
-  const moved = tracking.rotation()
+  const moved = tracking.rawRotation()
+  // The rendered (filtered) pose heads the same way without the shimmer.
+  assert.ok(Math.abs(tracking.rotation().w) < 1)
   // In landscape orientation a heading change rotates about a mixture of
   // local axes, not necessarily Y. Check the physical 8-degree rotation,
   // independent of screen orientation or Euler-axis convention.
@@ -107,4 +109,61 @@ test("only a real sensor failure counts as unavailable", () => {
   for (const status of ["off", "waiting", "tracking", "recentered"]) {
     assert.equal(headTrackingUnavailable(status), false)
   }
+})
+
+import {HeadPoseFilter, angleBetweenDegrees} from "./helmet_head_tracking.mjs"
+
+const yawQ = degrees => ({x: 0, y: Math.sin(degrees * Math.PI / 360), z: 0,
+  w: Math.cos(degrees * Math.PI / 360)})
+
+test("head filter removes still-head sensor shimmer", () => {
+  const filter = new HeadPoseFilter()
+  let seed = 3
+  const noise = () => ((seed = (seed * 16807) % 2147483647) / 2147483647 - 0.5)
+  let rawWorst = 0
+  let outWorst = 0
+  let prevRaw = null
+  let prevOut = null
+  for (let i = 0; i < 300; i++) {
+    // +/-0.5 degree noise on two axes, sampled at 60 Hz.
+    const a = noise() * 1.0, b = noise() * 1.0
+    const raw = {x: Math.sin(a * Math.PI / 360), y: Math.sin(b * Math.PI / 360), z: 0,
+      w: Math.cos(a * Math.PI / 360) * Math.cos(b * Math.PI / 360)}
+    const n = Math.hypot(raw.x, raw.y, raw.z, raw.w)
+    for (const k of ["x", "y", "z", "w"]) raw[k] /= n
+    const out = filter.step(raw, i * 1000 / 60)
+    if (i > 60) {
+      rawWorst = Math.max(rawWorst, angleBetweenDegrees(prevRaw, raw))
+      outWorst = Math.max(outWorst, angleBetweenDegrees(prevOut, out))
+    }
+    prevRaw = raw
+    prevOut = out
+  }
+  // Raw frame-to-frame shimmer approaches a full degree; filtered ~0.18.
+  assert.ok(rawWorst > 0.6, `raw ${rawWorst}`)
+  assert.ok(outWorst < 0.22, `filtered ${outWorst}`)
+  assert.ok(outWorst < rawWorst / 4)
+})
+
+test("head filter follows a real head turn with little lag", () => {
+  const filter = new HeadPoseFilter()
+  let lag = 0
+  for (let i = 0; i <= 60; i++) {
+    const raw = yawQ(90 * i / 60) // 90 deg/s
+    const out = filter.step(raw, i * 1000 / 60)
+    if (i === 60) lag = angleBetweenDegrees(raw, out)
+  }
+  assert.ok(lag < 3, `lag ${lag}`)
+  // And settles onto the final pose once the head stops.
+  let out
+  for (let i = 61; i < 150; i++) out = filter.step(yawQ(90), i * 1000 / 60)
+  assert.ok(angleBetweenDegrees(out, yawQ(90)) < 0.05)
+})
+
+test("recenter is never smoothed across", () => {
+  const filter = new HeadPoseFilter()
+  filter.step(yawQ(0), 0)
+  filter.step(yawQ(0), 16)
+  filter.reset()
+  assert.ok(angleBetweenDegrees(filter.step(yawQ(40), 32), yawQ(40)) < 1e-9)
 })

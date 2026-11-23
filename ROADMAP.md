@@ -6,8 +6,11 @@
       and the Rust allowlist; drawn ship-fixed with a tip dot.
 - [x] Headset own-ship view predicted from relayed body rates between LAN
       poses, removing scenery judder while turning (simulation-tested).
-- [ ] Manual verification on the S21: headset line visible, scenery smooth
-      while turning. Not yet performed.
+- [x] One-Euro filter on handset head tracking (constant shimmer when still).
+- [ ] Manual verification on the S21: headset line visible, view steady when
+      still and smooth while turning. Not yet performed; read the FPS / SLOW /
+      HEAD HZ diagnostic line. If FPS is low or SLOW high, lower the headset
+      pixel ratio before considering a native Android viewer.
 - [ ] Remove the temporary `STICK LINE` headset diagnostic once verified.
 - [ ] Optional: drift-back-to-centre setting for the virtual joystick.
 

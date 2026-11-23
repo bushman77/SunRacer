@@ -20,6 +20,61 @@ const product = (a, b) => ({
   w: a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
 })
 const inverseUnit = q => ({x: -q.x, y: -q.y, z: -q.z, w: q.w})
+
+// One-Euro filter for the head pose (Casiez et al. 2012). Phone orientation
+// sensors carry constant sub-degree noise and arrive out of step with the
+// display; applied raw, the whole headset view shimmered even with the head
+// still. The filter smooths hard when the head is still and opens up as the
+// head turns, so noise vanishes without adding much lag to real motion.
+// Tuned by simulation: +/-0.5 deg sensor noise -> ~0.18 deg frame-to-frame
+// (from ~0.9 raw); a 90 deg/s head turn lags ~2.6 deg (~30 ms). Raise
+// MIN_CUTOFF/BETA for less lag, lower them for less shimmer.
+export const HEAD_FILTER_MIN_CUTOFF_HZ = 1.0
+export const HEAD_FILTER_BETA = 0.05 // extra Hz per deg/s of head speed
+export const HEAD_FILTER_DERIVATIVE_CUTOFF_HZ = 1.0
+const DEGREES = 180 / Math.PI
+const smoothingFactor = (cutoffHz, dt) => {
+  const tau = 1 / (2 * Math.PI * cutoffHz)
+  return 1 / (1 + tau / dt)
+}
+export const angleBetweenDegrees = (a, b) => 2 * Math.acos(Math.min(1,
+  Math.abs(a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w))) * DEGREES
+// Normalized lerp along the short arc; exact enough for per-frame steps.
+const nlerp = (a, b, t) => {
+  const sign = a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w < 0 ? -1 : 1
+  const q = {x: a.x + (b.x*sign - a.x)*t, y: a.y + (b.y*sign - a.y)*t,
+    z: a.z + (b.z*sign - a.z)*t, w: a.w + (b.w*sign - a.w)*t}
+  const n = Math.hypot(q.x, q.y, q.z, q.w) || 1
+  return {x: q.x/n, y: q.y/n, z: q.z/n, w: q.w/n}
+}
+
+export class HeadPoseFilter {
+  constructor() { this.reset() }
+  reset() {
+    this.value = null
+    this.previousRaw = null
+    this.speed = 0
+    this.at = null
+  }
+  step(raw, time) {
+    if (!this.value || !Number.isFinite(time) || this.at === null) {
+      this.value = {...raw}
+      this.previousRaw = {...raw}
+      this.speed = 0
+      this.at = time
+      return {...this.value}
+    }
+    const dt = Math.min(0.1, Math.max(0.001, (time - this.at) / 1000))
+    this.at = time
+    const rawSpeed = angleBetweenDegrees(this.previousRaw, raw) / dt
+    this.previousRaw = {...raw}
+    this.speed += (rawSpeed - this.speed) *
+      smoothingFactor(HEAD_FILTER_DERIVATIVE_CUTOFF_HZ, dt)
+    const cutoff = HEAD_FILTER_MIN_CUTOFF_HZ + HEAD_FILTER_BETA * this.speed
+    this.value = nlerp(this.value, raw, smoothingFactor(cutoff, dt))
+    return {...this.value}
+  }
+}
 const eulerYXZ = (x, y, z) => {
   const c1=Math.cos(x/2), c2=Math.cos(y/2), c3=Math.cos(z/2)
   const s1=Math.sin(x/2), s2=Math.sin(y/2), s3=Math.sin(z/2)
@@ -51,6 +106,8 @@ export class HelmetHeadTracking {
     this.baseline = null
     this.pendingRecenter = false
     this.lastAt = -Infinity
+    this.filter = new HeadPoseFilter()
+    this.eventCount = 0
     this.onOrientation = event => {
       if (!this.enabled) return
       const screenAngle = Number(this.win?.screen?.orientation?.angle ??
@@ -61,7 +118,10 @@ export class HelmetHeadTracking {
       if (!this.baseline || this.pendingRecenter) {
         this.baseline = q
         this.pendingRecenter = false
+        // A recenter is a deliberate jump: never smooth across it.
+        this.filter.reset()
       }
+      this.eventCount++
       this.lastAt = this.now()
       if (this.status !== "tracking") this.setStatus("tracking")
     }
@@ -105,6 +165,7 @@ export class HelmetHeadTracking {
   recenter() {
     if (!this.ready()) return false
     this.baseline = {...this.last}
+    this.filter.reset()
     return true
   }
 
@@ -130,10 +191,19 @@ export class HelmetHeadTracking {
   // Relative head pose, held between sensor events. Neutral while waiting
   // for the first sample or a requested recenter. Null only when tracking is
   // not running at all.
-  rotation(_time = this.now()) {
+  // Unfiltered relative pose (exact sensor geometry).
+  rawRotation() {
     if (!this.enabled) return null
     if (!this.ready()) return {...INITIAL}
     return product(inverseUnit(this.baseline), this.last)
+  }
+
+  // Filtered relative pose for rendering. Call once per frame: the One-Euro
+  // filter is stateful and advances with `time`.
+  rotation(time = this.now()) {
+    const raw = this.rawRotation()
+    if (!raw || !this.ready()) return raw
+    return this.filter.step(raw, time)
   }
 
   stop() {
@@ -143,6 +213,7 @@ export class HelmetHeadTracking {
     this.baseline = null
     this.pendingRecenter = false
     this.lastAt = -Infinity
+    this.filter.reset()
     this.setStatus("off")
   }
 }

@@ -957,9 +957,10 @@ export class HelmetClient {
     // Expires with the visual pose, so a stale stick is never shown.
     this.steeringDeflection = visual?.steering || null
     // Shown in the headset so a missing line names the broken link.
-    this.steeringLinkStatus = !this.localRelayActive ? "NO LAN RELAY" :
+    this.steeringLinkStatus = (!this.localRelayActive ? "NO LAN RELAY" :
       !visual ? "NO LAPTOP POSE" :
-      !visual.steering ? "LAPTOP NOT SENDING STICK" : "OK"
+      !visual.steering ? "LAPTOP NOT SENDING STICK" : "OK") +
+      (this.headsetPerf?.text ? "\n" + this.headsetPerf.text : "")
     for (const entity of this.entities.values()) {
       if (visual && entity.id === this.selfId && !this.docked) {
         // Keep turning at the laptop's body rates between LAN poses and
@@ -1028,6 +1029,7 @@ export class HelmetClient {
       this.stationDockingSeconds = this.docked ? null :
         dockingSeconds(this.stationDockingHold, time)
       this.smooth(time)
+      this.measureHeadsetPerformance(time)
       this.view.setHelmetHeadRotation(this.headTracking.rotation(time))
       this.view.render(this, time)
       this.frameCount++
@@ -1038,6 +1040,27 @@ export class HelmetClient {
       return
     }
     this.requestFrame()
+  }
+
+  // Once-a-second headset readout: frame rate, share of slow (>25 ms)
+  // frames, and head-sensor event rate. Shown under the STICK LINE label so
+  // judder can be told apart: dropped frames vs. sensor vs. relay.
+  measureHeadsetPerformance(time) {
+    const perf = this.headsetPerf ||= {since: time, frames: 0, slow: 0,
+      last: null, events: this.headTracking.eventCount, text: ""}
+    if (perf.last !== null && time - perf.last > 25) perf.slow++
+    perf.last = time
+    perf.frames++
+    const elapsed = time - perf.since
+    if (elapsed < 1000) return
+    const events = this.headTracking.eventCount - perf.events
+    perf.text = Math.round(perf.frames * 1000 / elapsed) + " FPS · " +
+      Math.round(perf.slow * 100 / perf.frames) + "% SLOW · HEAD " +
+      Math.round(events * 1000 / elapsed) + " HZ"
+    perf.since = time
+    perf.frames = 0
+    perf.slow = 0
+    perf.events = this.headTracking.eventCount
   }
 
   updateHelmetGaze(target, time) {

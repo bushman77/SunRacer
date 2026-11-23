@@ -329,7 +329,7 @@ export class StereoSpaceView {
     framing.add(this.steeringTip)
     // Diagnostic: names which link is missing when the line cannot be drawn.
     this.steeringStatus = new THREE.Mesh(
-      new THREE.PlaneGeometry(1.5, 0.19),
+      new THREE.PlaneGeometry(1.5, 0.34),
       new THREE.MeshBasicMaterial({transparent: true, depthTest: false, depthWrite: false}),
     )
     this.steeringStatus.position.set(0, 0.62, -2.5)
@@ -1080,7 +1080,9 @@ export class StereoSpaceView {
     if (!label.visible || status === this.steeringStatusText) return
     this.steeringStatusText = status
     label.material.map?.dispose()
-    label.material.map = cockpitLabel(["STICK LINE: " + status], {width: 1024, height: 130})
+    // First line: stick link state; optional second line: headset perf.
+    const [link, ...rest] = status.split("\n")
+    label.material.map = cockpitLabel(["STICK LINE: " + link, ...rest], {width: 1024, height: 232})
     label.material.needsUpdate = true
   }
 

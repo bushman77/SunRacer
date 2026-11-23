@@ -46,6 +46,13 @@
 
 #### Fixed
 
+- Headset view shimmered constantly, even with the head still: raw phone
+  orientation events (sub-degree sensor noise, out of step with the display)
+  were applied directly. `HelmetHeadTracking.rotation(time)` now runs a
+  One-Euro filter (`HeadPoseFilter`: 1.0 Hz min cutoff, beta 0.05, 1.0 Hz
+  derivative cutoff), reset on recenter. Simulated +/-0.5 deg noise:
+  frame-to-frame shimmer ~0.9 deg raw -> ~0.18 deg; a 90 deg/s head turn
+  lags ~2.6 deg. `rawRotation()` keeps the unfiltered pose.
 - A world update without a visual pose could replace a pending LAN frame and
   strip the cockpit pose; the publisher now carries the latest pose forward
   for up to 100 ms on the same map.
@@ -70,7 +77,12 @@
 - The user reported the joystick feels right on the laptop and asked for the
   headset jitter to be fixed next. The headset jitter fix has not been
   manually verified on the S21; nor has the headset line's visibility.
-- The `STICK LINE` headset label is a temporary diagnostic.
+- The `STICK LINE` headset label is a temporary diagnostic; its second line
+  shows headset FPS, the share of frames over 25 ms, and the head-sensor
+  event rate, to separate dropped frames from sensor noise.
+- The user reports the headset is still jittery "all the time, even fully
+  still" after the LAN pose prediction; the head filter targets that and has
+  not yet been verified on the S21.
 
 ### Gaze icon for the flight mode switch (2026-11-21, branch `story_line`)
 
