@@ -109,3 +109,52 @@ test("client-led desktop mode never changes Phoenix controls, SBS relay or autho
   assert.match(client,/this\.channel\.push\("flight_controls", input, 3000\)/)
   assert.match(client,/this\.sbsRelayWorld\.publish\(this\.worldStream\.map, false, visual\)/)
 })
+
+test("local camera drift from the server is bounded, and corrected invisibly", async () => {
+  const {LOCAL_CAMERA_CORRECTION_SECONDS} = await import("./client_led_mouse_camera.mjs")
+  assert.equal(LOCAL_CAMERA_CORRECTION_SECONDS, 1.5)
+  const angle = (a, b) => 2 * Math.acos(Math.min(1, Math.abs(
+    a.x*b.x + a.y*b.y + a.z*b.z + a.w*b.w))) * 180 / Math.PI
+  // Simulate a small, persistent integration mismatch: each frame the local
+  // camera gains 0.02 deg of yaw the server never makes (different timing).
+  const run = correct => {
+    const camera = new ClientLedMouseCamera()
+    camera.begin(identity)
+    let worstStep = 0
+    for (let frame = 0; frame < 60 * 30; frame++) {
+      const before = {...camera.orientation}
+      camera.orientation = normalizeQ(multiplyQ(camera.orientation, fromAngles(
+        {yaw: 0.02 * Math.PI / 180, pitch: 0, roll: 0})))
+      if (correct) camera.correctToward(identity, 1 / 60)
+      worstStep = Math.max(worstStep, angle(before, camera.orientation))
+    }
+    return {drift: angle(identity, camera.orientation), worstStep}
+  }
+  const without = run(false)
+  const withCorrection = run(true)
+  // Uncorrected drift keeps growing: 30 s -> ~36 degrees.
+  assert.ok(without.drift > 30, `uncorrected ${without.drift}`)
+  // Corrected drift settles near 0.02 * 60 * 1.5 = ~1.8 degrees and the
+  // correction never moves the view more than the mismatch itself per frame.
+  assert.ok(withCorrection.drift < 2, `corrected ${withCorrection.drift}`)
+  assert.ok(withCorrection.worstStep <= 0.021, `step ${withCorrection.worstStep}`)
+  // Inactive camera ignores corrections.
+  assert.equal(new ClientLedMouseCamera().correctToward(identity, 1 / 60), null)
+})
+
+test("client feeds the server-replayed reference into the local camera", () => {
+  const client = read("./client.js")
+  assert.match(client, /this\.clientLedCamera\.correctToward\(reference, deltaSeconds\)/)
+  assert.match(client, /const reference = predictOrientation\(own\.orientation, own\.angularVelocity,/)
+})
+
+const multiplyQ = (a, b) => ({
+  x: a.w*b.x + a.x*b.w + a.y*b.z - a.z*b.y,
+  y: a.w*b.y - a.x*b.z + a.y*b.w + a.z*b.x,
+  z: a.w*b.z + a.x*b.y - a.y*b.x + a.z*b.w,
+  w: a.w*b.w - a.x*b.x - a.y*b.y - a.z*b.z,
+})
+const normalizeQ = q => {
+  const n = Math.hypot(q.x, q.y, q.z, q.w)
+  return {x: q.x/n, y: q.y/n, z: q.z/n, w: q.w/n}
+}

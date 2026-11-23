@@ -23,12 +23,13 @@ test("visual pose is bounded to paired own ship and live map only", () => {
     position_3d: {x: Infinity, y: 0, z: 0}}}, "10", 1000), null)
   assert.equal(localVisualPose({...map, visual_pose: null}, "10", 1000), null)
   assert.equal(freshLocalVisualPose(pose, "sol:free_10", "10", 1000), pose)
-  assert.equal(freshLocalVisualPose(pose, "sol:free_10", "10", 1150), pose)
-  assert.equal(freshLocalVisualPose(pose, "sol:free_10", "10", 1151), null)
+  // Rides through Wi-Fi hiccups instead of snapping to the server pose.
+  assert.equal(freshLocalVisualPose(pose, "sol:free_10", "10", 1500), pose)
+  assert.equal(freshLocalVisualPose(pose, "sol:free_10", "10", 1501), null)
   assert.equal(freshLocalVisualPose(pose, "sol:free_11", "10", 1100), null)
   assert.equal(freshLocalVisualPose(pose, "sol:free_10", "11", 1100), null)
   assert.ok(VISUAL_POSE_SETTLE_SECONDS < 0.045)
-  assert.equal(VISUAL_POSE_MAX_AGE_MS, 150)
+  assert.equal(VISUAL_POSE_MAX_AGE_MS, 500)
 })
 
 test("laptop publishes current predicted view, even while WebGL draws are paused", () => {

@@ -2290,6 +2290,18 @@ class SpaceClient {
       }
       this.clientLedCamera.advance(this.flightControls.axes(), deltaSeconds,
         {mouseMode: this.flightControls.mouseMode})
+      // Keep the local camera from drifting away from Phoenix's orientation.
+      // Unbounded drift made the SBS headset jitter more and more the longer
+      // the mouse stayed captured (Esc + recapture reset it).
+      if (Number.isFinite(own.authoritativeAt)) {
+        const sinceTick = Math.max(0, (performance.now() - own.authoritativeAt) / 1000)
+        const reference = predictOrientation(own.orientation, own.angularVelocity,
+          this.flightInputHistory?.entries.length
+            ? this.flightInputHistory.since(own.authoritativeAt)
+            : this.flightControls.axes(),
+          {mouseMode: this.flightControls.mouseMode, seconds: sinceTick})
+        this.clientLedCamera.correctToward(reference, deltaSeconds)
+      }
     } else if (this.clientLedCamera.active) {
       this.clientLedCamera.reset()
     }

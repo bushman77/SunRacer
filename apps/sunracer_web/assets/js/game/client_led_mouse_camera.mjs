@@ -4,11 +4,17 @@
 // orientation, position, combat, collision and world state.
 import {advanceAngularRate, rotateLocal, MOUSE_TURN_LIMITS, TURN_LIMITS}
   from "./own_ship_prediction.mjs"
-import {normalizeOrientation} from "./orientation_interpolation.mjs"
+import {normalizeOrientation, smoothOrientation} from "./orientation_interpolation.mjs"
 
 export const LOCAL_CAMERA_MAX_STEP_SECONDS = 0.05
 export const LOCAL_CAMERA_INTEGRATION_STEP_SECONDS = 1/120
 export const LOCAL_CAMERA_SNAP_DEGREES = 65
+// The local camera and Phoenix integrate the same commands at different
+// times (120 Hz locally, 10 Hz ticks after network delay), so without a
+// correction they drift apart a little with every turn, unbounded. Pull the
+// camera toward the server-predicted orientation with this time constant:
+// slow enough to be invisible, fast enough that drift cannot build up.
+export const LOCAL_CAMERA_CORRECTION_SECONDS = 1.5
 
 // Native laptop pilots get the client-led visual camera by default. A pilot's
 // explicit choice to disable it is always respected; browser preview keeps
@@ -55,6 +61,18 @@ export class ClientLedMouseCamera {
     }
     return this.orientation
   }
+  // `reference`: the server orientation replayed forward to now with the
+  // pilot's recent input (predictOrientation). Presentation only.
+  correctToward(reference, elapsedSeconds,
+    seconds = LOCAL_CAMERA_CORRECTION_SECONDS) {
+    if (!this.active) return null
+    const q = normalizeOrientation(reference)
+    if (!q) return this.orientation
+    const dt = clamp(finite(elapsedSeconds), 0, LOCAL_CAMERA_MAX_STEP_SECONDS)
+    this.orientation = smoothOrientation(this.orientation, q, dt, seconds)
+    return this.orientation
+  }
+
   divergenceDegrees(authoritative) {
     if (!this.active || !authoritative) return null
     const q = normalizeOrientation(authoritative)

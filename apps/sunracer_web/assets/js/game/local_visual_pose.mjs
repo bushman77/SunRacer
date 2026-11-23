@@ -1,7 +1,10 @@
 import {relaySteering} from "./mouse_steering.mjs"
 // Only the current, authenticated LAN world's own-ship visual pose is used
 // for headset presentation. Phoenix continues to own all entity state.
-export const VISUAL_POSE_MAX_AGE_MS = 150
+// Long enough to ride through Wi-Fi hiccups: falling back to the server
+// orientation for a few frames and snapping back looked like jitter. The
+// headset still extrapolates at most HEADSET_PREDICTION_MAX_SECONDS.
+export const VISUAL_POSE_MAX_AGE_MS = 500
 export const VISUAL_POSE_SETTLE_SECONDS = 0.025
 // Bound for relayed cockpit body rates (rad/s); mouse turns peak ~2.6 rad/s.
 export const VISUAL_POSE_MAX_RATE = 10

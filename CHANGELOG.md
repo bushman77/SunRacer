@@ -63,6 +63,18 @@
   extrapolates from the true sample time. Simulated 60 deg/s turn with
   0-32 ms publisher + 0-30 ms Wi-Fi delay: worst per-frame step deviation
   ~0.30 deg (arrival-based) -> ~0.06 deg.
+- Headset jitter that grew the longer the mouse stayed captured (Esc and
+  recapture reset it): the laptop's client-led camera and Phoenix integrate
+  the same commands at different times and nothing pulled them back
+  together, so they drifted apart without bound. Whenever a LAN pose was
+  briefly late, the headset fell back to the (drifted-away) server
+  orientation and snapped back. Fixes: `ClientLedMouseCamera.correctToward`
+  pulls the local camera toward the server orientation replayed to now
+  (`predictOrientation`) with a 1.5 s time constant (simulated persistent
+  0.02 deg/frame mismatch: 36 deg drift after 30 s uncorrected, under 2 deg
+  corrected, no per-frame step larger than the mismatch itself); and the
+  headset keeps the last laptop pose for up to 500 ms
+  (`VISUAL_POSE_MAX_AGE_MS`, was 150) instead of snapping to the server.
 - A world update without a visual pose could replace a pending LAN frame and
   strip the cockpit pose; the publisher now carries the latest pose forward
   for up to 100 ms on the same map.
