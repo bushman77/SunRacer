@@ -36,7 +36,9 @@ export function localVisualPose(map, selfId, receivedAt) {
     // Laptop virtual-joystick deflection for the headset line (or null).
     steering: relaySteering(pose.steering),
     // Laptop camera body rates for headset prediction between poses.
-    rates: relayRates(pose.rates)}
+    rates: relayRates(pose.rates),
+    // Laptop-clock sample time (ms) for headset clock-offset estimation.
+    sampledAt: Number.isFinite(pose.t) && pose.t >= 0 && pose.t <= 1e12 ? pose.t : null}
 }
 
 export function freshLocalVisualPose(stored, mapId, selfId, now) {

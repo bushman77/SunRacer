@@ -2465,6 +2465,9 @@ class SpaceClient {
       id: own.id,
       orientation: own.renderOrientation || own.orientation,
       position_3d: own.render || own.target,
+      // Laptop-clock sample time: the LAN publisher may send this 0-30ms
+      // later; the headset uses it to cancel that and Wi-Fi jitter.
+      t: time,
     }
     // Body rates of the pose actually drawn, so the headset can keep turning
     // smoothly between LAN poses instead of stepping at the relay rate.

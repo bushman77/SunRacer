@@ -158,3 +158,11 @@ test("visual pose carries a bounded stick deflection for the headset line", () =
   assert.equal(projectSbsRelayWorld(map(), {...pose,
     steering: {x: NaN, y: 0, aspect: 1.6}}).visual_pose.steering, undefined)
 })
+
+test("visual pose carries the laptop sample time", () => {
+  const pose = {id: 12, position_3d: {x: 1, y: 1, z: 1},
+    orientation: {x: 0, y: 0, z: 0, w: 1}}
+  assert.equal(projectSbsRelayWorld(map(), {...pose, t: 4567.25}).visual_pose.t, 4567.25)
+  assert.equal(projectSbsRelayWorld(map(), {...pose, t: -1}).visual_pose.t, undefined)
+  assert.equal(projectSbsRelayWorld(map(), {...pose, t: Infinity}).visual_pose.t, undefined)
+})

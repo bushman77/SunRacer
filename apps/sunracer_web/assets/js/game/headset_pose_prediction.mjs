@@ -15,11 +15,35 @@ import {OwnShipCameraReconciler} from "./own_ship_camera_reconciler.mjs"
 
 // Never extrapolate further than the headset's own pose freshness window.
 export const HEADSET_PREDICTION_MAX_SECONDS = 0.15
+// Poses carry the laptop's sample time (`sampledAt`, laptop clock). The
+// laptop->phone clock offset is estimated as the MINIMUM of
+// (arrival - sampledAt) over recent poses: the fastest deliveries bound the
+// true offset, so the variable LAN-publisher delay and Wi-Fi jitter cancel
+// instead of turning into a wobble while turning.
+export const HEADSET_CLOCK_WINDOW = 90
+
+export class ClockOffsetEstimator {
+  constructor(size = HEADSET_CLOCK_WINDOW) {
+    this.size = size
+    this.samples = []
+  }
+  reset() { this.samples = [] }
+  add(receivedAt, sampledAt) {
+    if (!Number.isFinite(receivedAt) || !Number.isFinite(sampledAt)) return
+    this.samples.push(receivedAt - sampledAt)
+    if (this.samples.length > this.size) this.samples.shift()
+  }
+  get offset() {
+    return this.samples.length ? Math.min(...this.samples) : null
+  }
+}
 
 export function predictVisualPose(visual, velocity, now) {
   if (!visual?.orientation || !visual.target || !Number.isFinite(now)) return null
+  // `poseTime` (phone clock) when the laptop sampled it; else arrival time.
+  const at = Number.isFinite(visual.poseTime) ? visual.poseTime : visual.receivedAt
   const age = Math.max(0, Math.min(HEADSET_PREDICTION_MAX_SECONDS,
-    (now - visual.receivedAt) / 1000)) || 0
+    (now - at) / 1000)) || 0
   const rates = visual.rates
   const orientation = rates && age > 0
     ? rotateLocal(visual.orientation,
@@ -34,14 +58,28 @@ export class HeadsetPoseSmoother {
   reset() {
     this.reconciler = new OwnShipCameraReconciler()
     this.previous = null
+    this.clock = new ClockOffsetEstimator()
+  }
+
+  // Phone-clock time at which the laptop sampled this pose, if known.
+  timed(visual) {
+    const offset = this.clock.offset
+    if (!Number.isFinite(visual.sampledAt) || offset === null) return visual
+    const poseTime = visual.sampledAt + offset
+    // Never in the future (clock offset is a lower bound on arrival delay).
+    return {...visual, poseTime: Math.min(poseTime, visual.receivedAt)}
   }
 
   get lastReceivedAt() { return this.previous?.receivedAt ?? null }
 
-  step(visual, velocity, now) {
+  step(rawVisual, velocity, now) {
+    if (!rawVisual) return null
+    const fresh = rawVisual.receivedAt !== this.previous?.receivedAt
+    if (fresh) this.clock.add(rawVisual.receivedAt, rawVisual.sampledAt)
+    const visual = fresh || !this.previous ? this.timed(rawVisual) : this.previous
     const predicted = predictVisualPose(visual, velocity, now)
     if (!predicted) return null
-    if (this.previous && visual.receivedAt !== this.previous.receivedAt) {
+    if (this.previous && fresh) {
       // Hand off from where the OLD pose's prediction puts the view at this
       // same instant (with its remaining correction), not from last frame's
       // view, which would freeze one frame per pose. Large differences

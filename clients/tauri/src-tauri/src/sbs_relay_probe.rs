@@ -345,6 +345,10 @@ fn sanitized_visual_pose(input: &Value, entities: &[Value]) -> Option<Value> {
             pose["rates"] = serde_json::json!({"yaw":yaw,"pitch":pitch,"roll":roll});
         }
     }
+    // Optional laptop-clock sample time (ms) for headset jitter removal.
+    if let Some(t) = f(input, "t").filter(|t| *t >= 0.0) {
+        pose["t"] = serde_json::json!(t);
+    }
     Some(pose)
 }
 
@@ -692,6 +696,14 @@ mod tests {
         assert!(sanitized_visual_pose(&turning, &entities).unwrap().get("rates").is_none());
         turning["rates"] = serde_json::json!({"yaw":1.0,"pitch":0.0});
         assert!(sanitized_visual_pose(&turning, &entities).unwrap().get("rates").is_none());
+        // Optional sample time: finite, non-negative number only.
+        let mut stamped = valid.clone();
+        stamped["t"] = serde_json::json!(12345.5);
+        assert_eq!(sanitized_visual_pose(&stamped, &entities).unwrap()["t"], 12345.5);
+        stamped["t"] = serde_json::json!("soon");
+        assert!(sanitized_visual_pose(&stamped, &entities).unwrap().get("t").is_none());
+        stamped["t"] = serde_json::json!(-4.0);
+        assert!(sanitized_visual_pose(&stamped, &entities).unwrap().get("t").is_none());
     }
     #[test]
     fn listener_accepts_only_explicit_private_addresses() {

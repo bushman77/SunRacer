@@ -70,6 +70,8 @@ export function projectLocalVisualPose(map, pose) {
   // Optional camera body rates so the headset can rotate between poses.
   const rates = relayRates(pose.rates)
   if (rates) result.rates = rates
+  // Laptop-clock sample time (ms), so the headset can undo delivery jitter.
+  if (Number.isFinite(pose.t) && pose.t >= 0 && pose.t <= 1e12) result.t = pose.t
   return result
 }
 

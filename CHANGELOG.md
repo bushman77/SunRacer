@@ -53,6 +53,16 @@
   derivative cutoff), reset on recenter. Simulated +/-0.5 deg noise:
   frame-to-frame shimmer ~0.9 deg raw -> ~0.18 deg; a 90 deg/s head turn
   lags ~2.6 deg. `rawRotation()` keeps the unfiltered pose.
+- Headset jitter while mouse-steering (stopped by Esc): the headset
+  extrapolated each LAN pose from its ARRIVAL time, but poses are sent 0-30
+  ms after being sampled (publisher coalescing) plus Wi-Fi delay, so every
+  pose landed a different amount ahead or behind during a turn. The laptop
+  now stamps each pose with its sample time (`t`, laptop clock; passed by
+  the Rust allowlist); the headset estimates the laptop->phone clock offset
+  as the minimum observed delay over ~3 s (`ClockOffsetEstimator`) and
+  extrapolates from the true sample time. Simulated 60 deg/s turn with
+  0-32 ms publisher + 0-30 ms Wi-Fi delay: worst per-frame step deviation
+  ~0.30 deg (arrival-based) -> ~0.06 deg.
 - A world update without a visual pose could replace a pending LAN frame and
   strip the cockpit pose; the publisher now carries the latest pose forward
   for up to 100 ms on the same map.

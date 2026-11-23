@@ -69,3 +69,12 @@ test("headset receives the laptop stick deflection with the visual pose", () => 
   const helmet = read("./helmet_client.mjs")
   assert.match(helmet, /this\.steeringDeflection = visual\?\.steering \|\| null/)
 })
+
+test("headset keeps the laptop sample time for jitter removal", () => {
+  const stamped = {...map, visual_pose: {...map.visual_pose, t: 81234.5}}
+  assert.equal(localVisualPose(stamped, "10", 1000).sampledAt, 81234.5)
+  assert.equal(localVisualPose(map, "10", 1000).sampledAt, null)
+  const bad = {...map, visual_pose: {...map.visual_pose, t: "now"}}
+  assert.equal(localVisualPose(bad, "10", 1000).sampledAt, null)
+  assert.match(read("./client.js"), /\n\s+t: time,\n/)
+})

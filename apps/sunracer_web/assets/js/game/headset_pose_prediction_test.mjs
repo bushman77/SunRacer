@@ -95,3 +95,70 @@ test("laptop sends the drawn camera's rates; headset uses the smoother", () => {
   assert.match(helmet, /entity\.renderOrientation = pose\.orientation/)
   assert.match(read("./sbs_relay_world.mjs"), /result\.rates = rates/)
 })
+
+// Realistic delivery: the laptop samples its camera on 60 fps frames, the LAN
+// publisher sends a pose 0-32 ms after sampling it, and Wi-Fi adds 0-30 ms
+// (in order). The phone's clock is offset from the laptop's arbitrarily.
+function simulateDelivery(useTimestamps) {
+  const rate = 60 / deg
+  let seed = 11
+  const rand = () => (seed = (seed * 16807) % 2147483647) / 2147483647
+  const phoneOffset = 5321.7
+  const arrivals = []
+  let last = -Infinity
+  for (let sampled = 0; sampled < 8000; sampled += 32) {
+    const frame = Math.round(sampled / (1000 / 60)) * (1000 / 60)
+    last = Math.max(last, frame + phoneOffset + rand() * 32 + rand() * 30)
+    arrivals.push({at: last, sampled: frame})
+  }
+  const smoother = new HeadsetPoseSmoother()
+  let latest = null
+  let shown = null
+  let next = 0
+  const steps = []
+  // Render continuously; measure steady state once the clock offset settled.
+  for (let t = phoneOffset + 100; t < phoneOffset + 7800; t += 1000 / 60) {
+    while (next < arrivals.length && arrivals[next].at <= t) {
+      const a = arrivals[next++]
+      latest = {receivedAt: a.at, target: {x: 0, y: 0, z: 0},
+        sampledAt: useTimestamps ? a.sampled : null,
+        orientation: rotateLocal(identity, {yaw: rate * a.sampled / 1000, pitch: 0, roll: 0}),
+        rates: {yaw: rate, pitch: 0, roll: 0}}
+    }
+    if (!latest) continue
+    const out = smoother.step(latest, null, t).orientation
+    if (shown && t > phoneOffset + 4000) steps.push(angleBetween(shown, out))
+    shown = out
+  }
+  const mean = steps.reduce((a, b) => a + b, 0) / steps.length
+  return {mean, worst: Math.max(...steps.map(s => Math.abs(s - mean)))}
+}
+
+test("laptop sample timestamps cancel publisher delay and Wi-Fi jitter", () => {
+  const arrival = simulateDelivery(false)
+  const stamped = simulateDelivery(true)
+  assert.ok(Math.abs(stamped.mean - 1) < 0.05, `mean ${stamped.mean}`)
+  // Measured: arrival-based ~0.30 deg worst step deviation, stamped ~0.06.
+  assert.ok(stamped.worst < arrival.worst / 3,
+    `stamped ${stamped.worst} vs arrival ${arrival.worst}`)
+  assert.ok(stamped.worst < 0.1, `stamped worst ${stamped.worst}`)
+})
+
+test("clock offset is the minimum observed delay and never predicts the future", async () => {
+  const {ClockOffsetEstimator} = await import("./headset_pose_prediction.mjs")
+  const clock = new ClockOffsetEstimator(3)
+  assert.equal(clock.offset, null)
+  clock.add(1050, 1000)
+  clock.add(1080, 1040)
+  clock.add(1100, 1090)
+  assert.equal(clock.offset, 10)
+  clock.add(1200, 1100)
+  clock.add(1260, 1200)
+  clock.add(1330, 1300)
+  assert.equal(clock.offset, 30) // window slid past the old minimum
+  const smoother = new HeadsetPoseSmoother()
+  const pose = {receivedAt: 500, sampledAt: 100, target: {x: 0, y: 0, z: 0},
+    orientation: identity, rates: null}
+  smoother.step(pose, null, 500)
+  assert.equal(smoother.previous.poseTime, 500)
+})
