@@ -16,6 +16,21 @@
   </div>
 
   <canvas id="space-viewport-3d" class="pointer-events-none absolute inset-0 size-full" aria-hidden="true"></canvas>
+  <%!-- Virtual-joystick steering vector: a faint line from the crosshair to the
+       current stick deflection. Laptop presentation only. --%>
+  <svg id="mouse-steering-vector" hidden aria-hidden="true"
+       class="pointer-events-none absolute inset-0 size-full">
+    <defs>
+      <linearGradient id="mouse-steering-vector-gradient" gradientUnits="userSpaceOnUse"
+                      x1="0" y1="0" x2="0" y2="0">
+        <stop offset="0" stop-color="#36c4de" stop-opacity="0" />
+        <stop id="mouse-steering-vector-tip" offset="1" stop-color="#36c4de" stop-opacity="0.3" />
+      </linearGradient>
+    </defs>
+    <line id="mouse-steering-vector-line" x1="0" y1="0" x2="0" y2="0"
+          stroke="url(#mouse-steering-vector-gradient)" stroke-width="1.5"
+          stroke-linecap="round" />
+  </svg>
   <%!-- Do not hide the input hit surface or suspend the flight frame loop.
        This merely masks the stale WebGL framebuffer when SBS uses VR-only mode. --%>
   <div id="desktop-vr-only-overlay" hidden
@@ -601,8 +616,8 @@
           <label for="nav-mouse-sensitivity" class="flex items-center gap-2 text-xs text-slate-300">
             Sensitivity
             <input id="nav-mouse-sensitivity" type="range" min="40" max="1000"
-                   step="10" value="150" class="w-32 accent-cyan-400" />
-            <output id="nav-mouse-sensitivity-value" for="nav-mouse-sensitivity">1.5×</output>
+                   step="10" value="100" class="w-32 accent-cyan-400" />
+            <output id="nav-mouse-sensitivity-value" for="nav-mouse-sensitivity">1.0×</output>
           </label>
         </div>
         <p class="mt-2 text-xs text-slate-400">
@@ -864,12 +879,12 @@
           </label>
           <label for="cockpit-mouse-sensitivity" class="mt-4 flex items-center justify-between gap-2 text-xs">
             Sensitivity
-            <output id="cockpit-mouse-sensitivity-value" for="cockpit-mouse-sensitivity">1.5×</output>
+            <output id="cockpit-mouse-sensitivity-value" for="cockpit-mouse-sensitivity">1.0×</output>
           </label>
           <input id="cockpit-mouse-sensitivity" type="range" min="40" max="1000"
-                 step="10" value="150" class="mt-2 w-full accent-cyan-400" />
+                 step="10" value="100" class="mt-2 w-full accent-cyan-400" />
           <p class="mt-2 text-[0.65rem] text-slate-400">
-            0.4×–10× · Changes apply immediately. Click cockpit to capture; Esc releases.
+            Whole screen is the stick: move away from the crosshair to turn, back to centre to stop. F recentres. 0.4×–10× · Click cockpit to capture; Esc releases.
           </p>
           <label class="mt-3 flex cursor-pointer items-center gap-2 text-xs text-cyan-200">
             <input id="cockpit-client-led-mouse-camera" type="checkbox" class="size-4 accent-cyan-400" />

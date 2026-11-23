@@ -1,15 +1,17 @@
 import test from "node:test"
 import assert from "node:assert/strict"
+import {readFileSync} from "node:fs"
 import {
-  MouseSteering, mouseSteeringAxes, MOUSE_STEERING_IDLE_MS,
-  MOUSE_STEERING_FAST_STOP_MS, MOUSE_STEERING_MIN_STOP_MS,
-  MOUSE_STEERING_SAMPLE_MS, MOUSE_STEERING_INTENT_MS,
-  MOUSE_STEERING_DEFAULT_SENSITIVITY, MOUSE_STEERING_PIXELS_PER_AXIS,
-  validMouseSensitivity, enabledMouseSteering, calibratedMouseSensitivity,
-  MOUSE_STEERING_JITTER_BAND, MOUSE_STEERING_JITTER_FILTER,
-  MOUSE_STEERING_AXIS_GAP_MS,
+  MouseSteering, joystickAxis, mouseSteeringVector,
+  MOUSE_STEERING_DEAD_ZONE, MOUSE_STEERING_CURVE,
+  MOUSE_STEERING_DEFAULT_SENSITIVITY,
+  validMouseSensitivity, enabledMouseSteering,
 } from "./mouse_steering.mjs"
 import {FlightControls} from "./flight_controls.mjs"
+
+const read = path => readFileSync(new URL(path, import.meta.url), "utf8")
+const screen = (width = 1000, height = 600) => () => ({width, height})
+const near = (a, b, eps = 1e-9) => assert.ok(Math.abs(a - b) < eps, `${a} != ${b}`)
 
 test("native default and saved opt-out are preserved", () => {
   assert.equal(enabledMouseSteering(null, true), true)
@@ -18,269 +20,145 @@ test("native default and saved opt-out are preserved", () => {
   assert.equal(enabledMouseSteering("1", false), true)
 })
 
-test("mouse mapping remains proportional, bounded, and sensitivity-adjustable", () => {
-  assert.equal(MOUSE_STEERING_DEFAULT_SENSITIVITY, 1.5)
-  assert.equal(MOUSE_STEERING_PIXELS_PER_AXIS, 10)
-  assert.equal(mouseSteeringAxes(2,-2).yaw,0.2)
-  assert.deepEqual(mouseSteeringAxes(10,-10),{yaw:1,pitch:1})
-  assert.deepEqual(mouseSteeringAxes(-10,10),{yaw:-1,pitch:-1})
-  assert.deepEqual(mouseSteeringAxes(0,0),{yaw:0,pitch:0})
-  assert.deepEqual(mouseSteeringAxes(2000,-2000),{yaw:1,pitch:1})
-  assert.equal(mouseSteeringAxes(7,0,2).yaw,1)
-  assert.ok(Math.abs(mouseSteeringAxes(5.5,0,0.4).yaw-0.22)<1e-10)
-  assert.ok(mouseSteeringAxes(2,0,10).yaw>0.7)
-  assert.ok(mouseSteeringAxes(2,0,10).yaw<1)
-  assert.equal(mouseSteeringAxes(5.5,0,Infinity).yaw,0.55)
-  assert.equal(validMouseSensitivity(10),true)
-  assert.equal(validMouseSensitivity(10.1),false)
-  assert.equal(validMouseSensitivity(0.39),false)
-  assert.ok(calibratedMouseSensitivity(10)<4)
-  assert.equal(calibratedMouseSensitivity(1.5),1.5)
-  assert.ok(calibratedMouseSensitivity(10)>calibratedMouseSensitivity(5))
-  assert.equal(mouseSteeringAxes(1,0,0.4).yaw,0.04)
+test("sensitivity range and 1:1 default", () => {
+  assert.equal(MOUSE_STEERING_DEFAULT_SENSITIVITY, 1.0)
+  assert.equal(validMouseSensitivity(0.4), true)
+  assert.equal(validMouseSensitivity(10), true)
+  assert.equal(validMouseSensitivity(10.1), false)
+  assert.equal(validMouseSensitivity(0.39), false)
+  assert.equal(validMouseSensitivity(NaN), false)
 })
 
-test("held mouse intention is stable between input windows, like a held key", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time})
-  const start=mouse.move(4,0)
-  assert.equal(start.yaw,0.6)
-  assert.equal(MOUSE_STEERING_INTENT_MS,40)
-  for(const step of [8,16,24,32]) {
-    time=1000+step
-    assert.deepEqual(mouse.move(1,0),start,
-      "individual pointer packets must NOT change the commanded yaw")
-  }
-  time=1040
-  const sampled=mouse.move(1,0)
-  assert.ok(sampled.yaw>0)
-  assert.notEqual(sampled.yaw,start.yaw,
-    "a completed input window updates the held command")
-  time=1048
-  assert.deepEqual(mouse.move(1,0),sampled)
+test("stick curve has a centre dead zone, is odd, and reaches full at the edge", () => {
+  assert.equal(joystickAxis(0), 0)
+  assert.equal(joystickAxis(MOUSE_STEERING_DEAD_ZONE), 0)
+  assert.equal(joystickAxis(-MOUSE_STEERING_DEAD_ZONE), 0)
+  assert.equal(joystickAxis(1), 1)
+  assert.equal(joystickAxis(-1), -1)
+  assert.equal(joystickAxis(5), 1)
+  near(joystickAxis(-0.5), -joystickAxis(0.5))
+  const half = Math.pow((0.5 - MOUSE_STEERING_DEAD_ZONE) /
+    (1 - MOUSE_STEERING_DEAD_ZONE), MOUSE_STEERING_CURVE)
+  near(joystickAxis(0.5), half)
+  // Fine aim near centre: half deflection is well under half turn rate.
+  assert.ok(joystickAxis(0.5) < 0.5)
+  assert.ok(joystickAxis(0.9) > joystickAxis(0.5))
 })
 
-test("equal physical movement speed yields the same steady intent at 30/60/120Hz", () => {
-  assert.equal(MOUSE_STEERING_SAMPLE_MS,16)
-  for(const [interval,delta] of [[8,2],[16,4],[32,8]]) {
-    let time=1000
-    const mouse=new MouseSteering({now:()=>time,sensitivity:1.5})
-    mouse.move(delta,0)
-    for(let i=0;i<24;i++) {
-      time+=interval
-      mouse.move(delta,0)
-    }
-    assert.ok(Math.abs(mouse.axes().yaw-0.6)<0.09,
-      `rate ${interval}ms emitted ${mouse.axes().yaw}, expected about 0.6`)
-  }
+test("the whole screen is the stick: half-width of travel is full yaw", () => {
+  const stick = new MouseSteering({span: screen(1000, 600)})
+  stick.move(250, 0)
+  near(stick.deflection().x, 0.5)
+  stick.move(250, 0)
+  assert.deepEqual(stick.axes(), {yaw: 1, pitch: 0})
+  stick.move(5000, 0)
+  assert.equal(stick.deflection().x, 1)
+  stick.move(-1000, 0)
+  assert.equal(stick.deflection().x, -1)
+  assert.equal(stick.axes().yaw, -1)
 })
 
-test("alternating single-axis packets preserve continuous diagonal yaw and pitch", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time,sensitivity:1.5})
-  mouse.move(2,-2)
-  const yaw=[]
-  const pitch=[]
-  for(let n=0;n<50;n++) {
-    time+=8
-    const axes=mouse.move(n%2===0?0:2,n%2===0?-2:0)
-    yaw.push(axes.yaw)
-    pitch.push(axes.pitch)
-  }
-  assert.ok(yaw.every(v=>v>0),"diagonal yaw must never pulse to zero")
-  assert.ok(pitch.every(v=>v>0),"diagonal pitch must never pulse to zero")
-  assert.ok(Math.max(...yaw)-Math.min(...yaw)<0.16)
+test("mouse up pitches nose up and uses the vertical half-span", () => {
+  const stick = new MouseSteering({span: screen(1000, 600)})
+  stick.move(0, -300)
+  assert.equal(stick.deflection().y, -1)
+  assert.deepEqual(stick.axes(), {yaw: 0, pitch: 1})
+  stick.move(0, 600)
+  assert.deepEqual(stick.axes(), {yaw: 0, pitch: -1})
 })
 
-test("true pitch-only motion releases stale yaw after the bounded axis gap", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time,sensitivity:8})
-  const start=mouse.move(2,-2)
-  for(let i=0;i<5;i++) {
-    time+=8
-    mouse.move(0,-2)
-  }
-  assert.equal(MOUSE_STEERING_AXIS_GAP_MS,36)
-  assert.equal(mouse.axes().yaw,0)
-  assert.ok(mouse.axes().pitch>0)
-  assert.ok(start.yaw>0)
+test("deflection persists with no events: no idle timer can stop the turn", () => {
+  const stick = new MouseSteering({span: screen()})
+  const turning = stick.move(300, 0)
+  assert.ok(turning.yaw > 0)
+  // Nothing time-based exists any more; reading axes later is unchanged.
+  assert.equal(typeof stick.expire, "undefined")
+  assert.equal(typeof stick.stopDelayMs, "undefined")
+  assert.deepEqual(stick.axes(), turning)
+  // Zero and invalid packets do not move or stop the stick.
+  assert.deepEqual(stick.move(0, 0), turning)
+  assert.deepEqual(stick.move(NaN, 4), turning)
 })
 
-test("one-frame and one-packet jitter do not modify the latest steering command", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time,sensitivity:10})
-  mouse.move(2,0)
-  const held=mouse.axes()
-  for(const dx of [1,2,1,2]) {
-    time+=8
-    assert.deepEqual(mouse.move(dx,0),held)
-  }
-  assert.ok(MOUSE_STEERING_JITTER_BAND>=0.5)
-  assert.ok(MOUSE_STEERING_JITTER_FILTER<0.5)
-  time+=8
-  assert.ok(mouse.move(1,0).yaw>0)
-  const observations=[]
-  for(let i=0;i<40;i++) {
-    time+=16
-    observations.push(mouse.move(i%2?2:1,0).yaw)
-  }
-  const stable=observations.slice(10)
-  assert.ok(Math.max(...stable)-Math.min(...stable)<0.22,
-    "aggregation and cross-window filtering must bound 1px/2px sawtooth")
+test("irregular packet timing and splitting give the identical command", () => {
+  const a = new MouseSteering({span: screen()})
+  const b = new MouseSteering({span: screen()})
+  a.move(120, -45)
+  for (const [dx, dy] of [[1, 0], [0, -1], [40, -20], [0, 0], [79, -24]]) b.move(dx, dy)
+  assert.deepEqual(a.axes(), b.axes())
 })
 
-test("substantial mouse reversal immediately replaces old held intention", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time,sensitivity:1.5})
-  assert.ok(mouse.move(5,0).yaw>0)
-  time+=8
-  assert.ok(mouse.move(-5,0).yaw<0)
-  time+=8
-  assert.ok(mouse.move(5,0).yaw>0)
+test("single-axis packets during a diagonal do not release the other axis", () => {
+  const stick = new MouseSteering({span: screen()})
+  stick.move(200, -200)
+  const before = stick.axes()
+  stick.move(3, 0)
+  assert.ok(stick.axes().pitch === before.pitch && stick.axes().pitch > 0)
 })
 
-test("slowdown is sampled without a stale high rate persisting indefinitely", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time,sensitivity:1.5})
-  const fast=mouse.move(5,0).yaw
-  for(let n=0;n<3;n++) {
-    time+=16
-    mouse.move(1,0)
-  }
-  assert.ok(mouse.axes().yaw>0)
-  assert.ok(mouse.axes().yaw<fast/2,
-    "40ms sample should recognize a deliberate large slowdown")
+test("moving back to centre stops; release recentres", () => {
+  const stick = new MouseSteering({span: screen()})
+  stick.move(300, 120)
+  stick.move(-300, -120)
+  assert.deepEqual(stick.axes(), {yaw: 0, pitch: 0})
+  stick.move(400, 0)
+  assert.deepEqual(stick.release(), {yaw: 0, pitch: 0})
+  assert.deepEqual(stick.deflection(), {x: 0, y: 0})
 })
 
-test("gaps between 30Hz/20Hz packets preserve the latest turn intention", () => {
-  for(const gap of [33,50]) {
-    let time=1000
-    const mouse=new MouseSteering({now:()=>time})
-    mouse.move(3,0)
-    time+=gap
-    mouse.move(3,0)
-    for(let i=0;i<6;i++) {
-      time+=gap
-      assert.equal(mouse.expire(time),null)
-      assert.ok(mouse.move(3,0).yaw>0)
-      assert.ok(mouse.stopDelayMs()>gap)
-    }
-    time+=mouse.stopDelayMs()
-    assert.deepEqual(mouse.expire(time),{yaw:0,pitch:0})
-  }
+test("sensitivity scales travel; unmeasured surfaces use a fallback span", () => {
+  const fast = new MouseSteering({sensitivity: 2, span: screen(1000, 600)})
+  fast.move(125, 0)
+  near(fast.deflection().x, 0.5)
+  const unsized = new MouseSteering({span: () => ({width: 0, height: undefined})})
+  unsized.move(320, 0)
+  near(unsized.deflection().x, 0.5)
+  assert.equal(new MouseSteering({sensitivity: 99}).sensitivity, 1)
 })
 
-test("short lost-packet gaps do not invent a neutral command", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time})
-  mouse.move(4,0)
-  time+=16
-  mouse.move(4,0)
-  time+=48
-  assert.equal(mouse.expire(time),null)
-  assert.ok(mouse.axes().yaw>0)
-  mouse.move(12,0)
-  assert.ok(mouse.axes().yaw>0)
+test("steering vector starts at the crosshair and ends at the deflection", () => {
+  const v = mouseSteeringVector({x: 0.5, y: -1}, 800, 400)
+  assert.equal(v.visible, true)
+  assert.equal(v.x1, 400)
+  assert.equal(v.y1, 200)
+  assert.equal(v.x2, 600)
+  assert.equal(v.y2, 0)
+  near(v.opacity, 0.15 + 0.35)
+  assert.equal(mouseSteeringVector({x: 0.01, y: 0}, 800, 400).visible, false)
+  assert.equal(mouseSteeringVector({x: 0.5, y: 0}, 0, 400).visible, false)
+  assert.ok(mouseSteeringVector({x: 0.2, y: 0}, 800, 400).opacity <
+    mouseSteeringVector({x: 0.8, y: 0}, 800, 400).opacity)
 })
 
-test("real mouse silence stops exactly once, including pending incomplete samples", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time})
-  mouse.move(4,0)
-  time+=16
-  mouse.move(4,0)
-  assert.ok(mouse.pendingDx!==0)
-  assert.ok(mouse.stopDelayMs()>=MOUSE_STEERING_MIN_STOP_MS)
-  assert.ok(mouse.stopDelayMs()<=MOUSE_STEERING_IDLE_MS)
-  time+=mouse.stopDelayMs()-1
-  assert.equal(mouse.expire(time),null)
-  time+=1
-  assert.deepEqual(mouse.expire(time),{yaw:0,pitch:0})
-  assert.equal(mouse.pendingDx,0)
-  assert.equal(mouse.expire(time+150),null)
-  time+=151
-  assert.ok(mouse.move(2,0).yaw>0)
-  assert.equal(mouse.pendingDx,0)
-})
-
-test("zero delta events cannot extend a turn or change its command", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time})
-  const start=mouse.move(5,0)
-  time+=MOUSE_STEERING_FAST_STOP_MS-1
-  assert.deepEqual(mouse.move(0,0),start)
-  assert.equal(mouse.expire(time),null)
-  time+=1
-  assert.deepEqual(mouse.expire(time),{yaw:0,pitch:0})
-})
-
-test("explicit pointer release clears the command and cadence immediately", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time,sensitivity:1.5})
-  mouse.move(5,0)
-  time+=8
-  mouse.move(5,0)
-  assert.ok(mouse.pendingDx>0)
-  assert.ok(mouse.packetGapMs!==null)
-  assert.deepEqual(mouse.release(),{yaw:0,pitch:0})
-  assert.equal(mouse.packetGapMs,null)
-  assert.equal(mouse.pendingDx,0)
-  assert.equal(mouse.expire(time+200),null)
-  time+=8
-  assert.equal(mouse.move(0,-2).yaw,0)
-  assert.ok(mouse.axes().pitch>0)
-})
-
-test("long event gap starts a fresh intent rather than replaying stale pixels", () => {
-  let time=1000
-  const mouse=new MouseSteering({now:()=>time,sensitivity:1.5})
-  mouse.move(5,0)
-  time+=8
-  mouse.move(5,0)
-  time+=MOUSE_STEERING_IDLE_MS+1
-  assert.deepEqual(mouse.move(2,0),{yaw:0.3,pitch:0})
-  assert.equal(mouse.pendingDx,0)
-})
-
-test("stable mouse intent goes through keyboard's existing FlightControls channel", () => {
-  let time=1000
-  const sent=[]
-  const mouse=new MouseSteering({now:()=>time,sensitivity:1.5})
-  const flight=new FlightControls({send:command=>sent.push(command),now:()=>time})
+test("a held deflection reaches Phoenix as a steady FlightControls command", () => {
+  let now = 1000
+  const sent = []
+  const flight = new FlightControls({send: x => sent.push(x), now: () => now})
   flight.setMouseMode(true)
-  for(let n=0;n<30;n++) {
-    const axes=mouse.move(2,0)
-    flight.setMouseSteering(axes)
-    time+=8
-    flight.heartbeat(time)
+  const stick = new MouseSteering({span: screen()})
+  flight.setMouseSteering(stick.move(400, -150))
+  const command = sent.at(-1)
+  assert.equal(command.mouse_steering, true)
+  assert.ok(command.yaw > 0 && command.pitch > 0)
+  // Hand still for a second: only keep-alive heartbeats, never a neutral.
+  for (let i = 0; i < 60; i++) { now += 16; flight.heartbeat(now) }
+  assert.ok(sent.length > 1)
+  for (const payload of sent.slice(1)) {
+    assert.equal(payload.yaw, command.yaw)
+    assert.equal(payload.pitch, command.pitch)
   }
-  const active=sent.filter(p=>p.yaw!==0)
-  assert.ok(active.length>=2)
-  assert.ok(active.length<12,"input packet count must not equal network send count")
-  assert.ok(active.every(p=>p.yaw>0 && p.pitch===0))
-  assert.equal(flight.payload().mouse_steering,true)
-  assert.ok(flight.axes().yaw>0)
-  time+=mouse.stopDelayMs()
-  const stopped=mouse.expire(time)
-  flight.setMouseSteering(stopped)
-  assert.equal(sent.at(-1).yaw,0,"real idle sends exactly one neutral")
-  assert.equal(flight.axes().yaw,0)
 })
 
-test("keyboard held yaw remains unchanged by the mouse intent sampler", () => {
-  let time=1000
-  const sent=[]
-  const mouse=new MouseSteering({now:()=>time})
-  const flight=new FlightControls({send:p=>sent.push(p),now:()=>time})
-  const key=code=>({code,defaultPrevented:false,preventDefault(){}})
-  flight.keyDown(key("KeyD"))
-  for(let n=0;n<20;n++) {
-    time+=16
-    flight.setMouseSteering(mouse.move(n%2?2:0,n%2?0:-2))
-    flight.heartbeat(time)
-    assert.equal(flight.axes().yaw,1)
-  }
-  flight.keyUp(key("KeyD"))
-  assert.ok(flight.axes().yaw>=0)
-  assert.equal(sent[0].yaw,1)
+test("client wiring: no idle stop, F recentres, line is presentation-only", () => {
+  const client = read("./client.js")
+  const markup = read("../../../lib/sunracer_web/controllers/game_html/show.html.heex")
+  assert.doesNotMatch(client, /scheduleMouseStop|mouseIdleTimer|mouseSteering\.expire/)
+  assert.match(client, /event\.code === "KeyF"\) \{\n\s+this\.mouseSteering\.release\(\)/)
+  assert.match(client, /span: \(\) => \(\{width: this\.canvas\?\.clientWidth/)
+  assert.match(client, /"sunracer:mouse-stick-sensitivity:"/)
+  assert.match(client, /this\.drawMouseSteeringVector\(\)/)
+  assert.match(markup, /<svg id="mouse-steering-vector" hidden/)
+  assert.match(markup, /id="mouse-steering-vector-line"/)
+  // Never part of the SBS relay projection.
+  assert.doesNotMatch(read("./sbs_relay_world.mjs"), /steering/i)
 })

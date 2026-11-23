@@ -32,7 +32,7 @@ import {attachBandwidthPanel} from "./bandwidth_panel.mjs"
 import {gameSocketEndpoint} from "./socket_endpoint.mjs"
 import {
   MouseSteering, validMouseSensitivity, enabledMouseSteering,
-  MOUSE_STEERING_DEFAULT_SENSITIVITY,
+  MOUSE_STEERING_DEFAULT_SENSITIVITY, mouseSteeringVector,
 } from "./mouse_steering.mjs"
 import {smoothAttitude} from "./attitude_interpolation.mjs"
 import {smoothOrientation, orientationTelemetry} from "./orientation_interpolation.mjs"
@@ -85,7 +85,9 @@ class SpaceClient {
     this.token = root.dataset.socketToken
     // Per-pilot browser preference, not an authority-bearing network setting.
     this.mouseSteeringKey = "sunracer:mouse-steering:" + root.dataset.layoutPlayerId
-    this.mouseSensitivityKey = "sunracer:mouse-sensitivity:" + root.dataset.layoutPlayerId
+    // Virtual-joystick sensitivity (1.0 = steering line tracks the mouse 1:1).
+    // A new key: the old per-packet rate sensitivity has a different meaning.
+    this.mouseSensitivityKey = "sunracer:mouse-stick-sensitivity:" + root.dataset.layoutPlayerId
     this.mouseSteeringEnabled = enabledMouseSteering(
       localStorage.getItem(this.mouseSteeringKey),
       root.dataset.nativeClient === "true",
@@ -93,7 +95,11 @@ class SpaceClient {
     const savedSensitivity = Number(localStorage.getItem(this.mouseSensitivityKey))
     this.mouseSteeringSensitivity = validMouseSensitivity(savedSensitivity)
       ? savedSensitivity : MOUSE_STEERING_DEFAULT_SENSITIVITY
-    this.mouseSteering = new MouseSteering({sensitivity: this.mouseSteeringSensitivity})
+    this.mouseSteering = new MouseSteering({
+      sensitivity: this.mouseSteeringSensitivity,
+      span: () => ({width: this.canvas?.clientWidth, height: this.canvas?.clientHeight}),
+    })
+    this.mouseSteeringVector = root.querySelector("#mouse-steering-vector")
     this.mouseFrameSamplingKey = "sunracer:mouse-frame-sampling:" + root.dataset.layoutPlayerId
     this.mouseFrameSamplingEnabled = localStorage.getItem(this.mouseFrameSamplingKey) === "1"
     this.mouseFrameSampler = new DesktopMouseFrameSampler()
@@ -106,7 +112,6 @@ class SpaceClient {
     this.clientLedCameraServerAlert = false
     this.mouseTimingProbe = new DesktopMouseTimingProbe()
     this.lastMouseTimingReport = -Infinity
-    this.mouseIdleTimer = null
     this.mouseCaptureLost = false
     this.mouseFallback = false
     this.mouseFallbackPoint = null
@@ -235,7 +240,13 @@ class SpaceClient {
         else this.showError("Manual helm unavailable: " + (reason || "unknown error"))
       })
     })
-    window.addEventListener("keydown", event => this.flightControls.keyDown(event))
+    window.addEventListener("keydown", event => {
+      // F (full stop) also recentres the virtual joystick; otherwise the
+      // next mouse packet would resume the old deflection.
+      if (this.flightControls.keyDown(event) && event.code === "KeyF") {
+        this.mouseSteering.release()
+      }
+    })
     window.addEventListener("keyup", event => {
       this.flightControls.keyUp(event)
       this.helmetAlignmentKeys.keyUp(event)
@@ -2235,16 +2246,9 @@ class SpaceClient {
         }
       }
     }
-    // Expire mouse commands before advancing the visible cockpit. The
-    // independent idle timer can stop them between rendered frames as well.
-    if (this.mouseSteeringEnabled &&
-        (document.pointerLockElement === this.canvas || this.mouseFallback)) {
-      const expired = this.mouseSteering.expire(time)
-      if (expired) {
-        this.flightControls?.setMouseSteering(expired)
-        this.flightInputHistory?.record(time, this.flightControls.axes())
-      }
-    }
+    // Virtual joystick: the deflection persists until the pilot moves back
+    // to centre, so there is no idle-timer stop to expire here.
+    this.drawMouseSteeringVector()
     // Suppress only laptop WebGL draws. Input, world prediction, physics
     // commands, LAN relay and the RAF simulation heartbeat keep running.
     this.syncDesktopVrOnly()
@@ -2684,21 +2688,30 @@ class SpaceClient {
     if (takeHelm) takeHelm.hidden = state !== "cruise"
   }
 
-  scheduleMouseStop() {
-    window.clearTimeout(this.mouseIdleTimer)
-    // Mouse movement cannot emit its own "stopped" event. An independent
-    // timer sends neutral without waiting for the next animation frame.
-    this.mouseIdleTimer = window.setTimeout(() => {
-      this.mouseIdleTimer = null
-      if (!this.mouseSteeringEnabled ||
-          (document.pointerLockElement !== this.canvas && !this.mouseFallback) ||
-          !this.flightControls?.active()) return
-      const expired = this.mouseSteering.expire(performance.now())
-      if (expired) {
-        this.flightControls.setMouseSteering(expired)
-        this.flightInputHistory?.record(performance.now(), this.flightControls.axes())
-      }
-    }, Math.ceil(this.mouseSteering.stopDelayMs()) + 1)
+  // Faint line from the crosshair to the virtual-joystick deflection.
+  // Laptop presentation only; it is never sent to Phoenix or the SBS relay.
+  drawMouseSteeringVector() {
+    const svg = this.mouseSteeringVector
+    if (!svg) return
+    const captured = this.mouseSteeringEnabled &&
+      (document.pointerLockElement === this.canvas || this.mouseFallback) &&
+      Boolean(this.flightControls?.active()) && !this.navComputer?.isOpen
+    const vector = mouseSteeringVector(this.mouseSteering.deflection(),
+      this.canvas?.clientWidth, this.canvas?.clientHeight)
+    const show = captured && vector.visible
+    // SVG elements have no .hidden property; toggle the attribute itself.
+    if (svg.hasAttribute("hidden") === show) svg.toggleAttribute("hidden", !show)
+    if (!show) return
+    const line = svg.querySelector("#mouse-steering-vector-line")
+    const gradient = svg.querySelector("#mouse-steering-vector-gradient")
+    const stop = svg.querySelector("#mouse-steering-vector-tip")
+    for (const node of [line, gradient]) {
+      node?.setAttribute("x1", vector.x1)
+      node?.setAttribute("y1", vector.y1)
+      node?.setAttribute("x2", vector.x2)
+      node?.setAttribute("y2", vector.y2)
+    }
+    stop?.setAttribute("stop-opacity", vector.opacity.toFixed(3))
   }
 
   enableNativeMouseFallback() {
@@ -2843,8 +2856,6 @@ class SpaceClient {
       this.exitMouseSteering()
     })
     document.addEventListener("pointerlockchange", () => {
-      window.clearTimeout(this.mouseIdleTimer)
-      this.mouseIdleTimer = null
       const pointerLocked = this.mouseSteeringEnabled &&
         document.pointerLockElement === this.canvas
       if (pointerLocked) {
@@ -2895,7 +2906,6 @@ class SpaceClient {
     const axes = this.mouseSteering.move(dx, dy)
     this.flightControls.setMouseSteering(axes)
     this.flightInputHistory?.record(time, this.flightControls.axes())
-    this.scheduleMouseStop()
   }
 
   updateDesktopMouseTiming(time) {
@@ -2946,8 +2956,6 @@ class SpaceClient {
     this.mouseFrameSampler.clear()
     this.mouseFallback = false
     this.mouseFallbackPoint = null
-    window.clearTimeout(this.mouseIdleTimer)
-    this.mouseIdleTimer = null
     this.mouseSteering.release()
     this.flightControls?.clearMouseSteering({silent: true})
     this.flightControls?.setMouseMode(false, {silent})
