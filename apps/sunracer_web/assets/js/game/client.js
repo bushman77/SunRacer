@@ -2382,6 +2382,11 @@ class SpaceClient {
         !entity.orientation || !Number.isFinite(entity.authoritativeAt) ||
         !this.flightControls?.active()) return null
     const seconds = Math.max(0, (now - entity.authoritativeAt) / 1000)
+    // Body rates of the prediction at this instant (keyboard/uncaptured
+    // path). Relayed to the SBS headset instead of the server's last-tick
+    // rate, which is stale while a key turn is still ramping up or down.
+    const predictedRates = uncorrected ? null : (entity.predictedRates ||= {})
+    if (predictedRates) entity.predictedRatesAt = now
     const predictedOrientation = this.clientLedCameraActiveForTick()
       ? this.clientLedCamera.orientation
       : predictOrientation(entity.orientation,
@@ -2389,7 +2394,7 @@ class SpaceClient {
       this.flightInputHistory?.entries.length
         ? this.flightInputHistory.since(entity.authoritativeAt)
         : this.flightControls.axes(),
-      {mouseMode: this.flightControls.mouseMode, seconds})
+      {mouseMode: this.flightControls.mouseMode, seconds, ratesOut: predictedRates})
     return {
       orientation: uncorrected || this.clientLedCameraActiveForTick()
         ? predictedOrientation :
@@ -2484,7 +2489,10 @@ class SpaceClient {
     // Body rates of the pose actually drawn, so the headset can keep turning
     // smoothly between LAN poses instead of stepping at the relay rate.
     const rates = this.clientLedCameraActiveForTick()
-      ? this.clientLedCamera.rates : own.angularVelocity
+      ? this.clientLedCamera.rates
+      : this.flightControls?.active() && own.predictedRates?.yaw !== undefined &&
+          time - (own.predictedRatesAt ?? -Infinity) < 100
+        ? own.predictedRates : own.angularVelocity
     if (rates) visual.rates = {yaw: rates.yaw, pitch: rates.pitch, roll: rates.roll}
     const steering = this.mouseSteeringRelay()
     if (steering) {

@@ -135,3 +135,26 @@ test("neutral followed by resumed input inside one server tick keeps yaw rate", 
   assert.ok(nose.x>Math.sin(rad(10)),
     "short neutral cannot restart the quaternion prediction from zero")
 })
+
+test("prediction reports the body rate it is turning at (for the SBS relay)", () => {
+  const identity = {x: 0, y: 0, z: 0, w: 1}
+  const ratesOut = {}
+  // Keyboard yaw held from rest: 0.15 s into a 95 deg/s^2 ramp.
+  predictOrientation(identity, {yaw: 0, pitch: 0, roll: 0}, {yaw: 1, pitch: 0, roll: 0},
+    {seconds: 0.15, ratesOut})
+  const degPerSecond = ratesOut.yaw * 180 / Math.PI
+  assert.ok(Math.abs(degPerSecond - 95 * 0.15) < 0.5, `rate ${degPerSecond}`)
+  assert.equal(ratesOut.pitch, 0)
+  // The server's last-tick rate (0 here) would be stale by ~14 deg/s.
+  // Without ratesOut nothing is written and the call is unchanged.
+  const plain = predictOrientation(identity, {yaw: 0, pitch: 0, roll: 0},
+    {yaw: 1, pitch: 0, roll: 0}, {seconds: 0.15})
+  assert.ok(plain.y !== 0)
+})
+
+test("laptop relays predicted rates on the keyboard path, only while fresh", () => {
+  const client = readFileSync(new URL("./client.js", import.meta.url), "utf8")
+  assert.match(client, /ratesOut: predictedRates\}/)
+  assert.match(client, /time - \(own\.predictedRatesAt \?\? -Infinity\) < 100/)
+  assert.match(client, /\? own\.predictedRates : own\.angularVelocity/)
+})

@@ -86,8 +86,10 @@ export function rotateLocal(orientation, angles) {
 // then (see InputHistory). Replaying the real history matters when you stop:
 // the ship keeps the turn it made before the stop instead of snapping back
 // to the last snapshot and jumping forward again.
+// Pass `ratesOut` (an object) to receive the predicted body rates at the end
+// of the replay: the rate the drawn orientation is actually turning at.
 export function predictOrientation(orientation, angularVelocity, input,
-  {mouseMode = false, seconds = 0} = {}) {
+  {mouseMode = false, seconds = 0, ratesOut = null} = {}) {
   if (!orientation) return orientation
   const inputAt = typeof input === "function" ? input : () => input
   const rates = {}
@@ -108,6 +110,7 @@ export function predictOrientation(orientation, angularVelocity, input,
     }
     elapsed += dt
   }
+  if (ratesOut) Object.assign(ratesOut, rates)
   if (!angles.yaw && !angles.pitch && !angles.roll) return orientation
   return rotateLocal(normalize(orientation), angles)
 }

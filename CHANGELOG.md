@@ -75,6 +75,12 @@
   corrected, no per-frame step larger than the mismatch itself); and the
   headset keeps the last laptop pose for up to 500 ms
   (`VISUAL_POSE_MAX_AGE_MS`, was 150) instead of snapping to the server.
+- Slight headset jitter on keyboard (WASD) turns: outside the client-led
+  mouse camera the laptop relayed the server's last-tick angular velocity,
+  which is stale while a key turn ramps up or down (95 deg/s^2), so the
+  headset extrapolated at the wrong rate and was corrected every pose.
+  `predictOrientation` can now report its final body rates (`ratesOut`);
+  the laptop relays those predicted rates (used only while fresh, <100 ms).
 - A world update without a visual pose could replace a pending LAN frame and
   strip the cockpit pose; the publisher now carries the latest pose forward
   for up to 100 ms on the same map.

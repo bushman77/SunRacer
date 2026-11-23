@@ -88,7 +88,7 @@ test("rates are bounded on the LAN boundary", () => {
 
 test("laptop sends the drawn camera's rates; headset uses the smoother", () => {
   const client = read("./client.js")
-  assert.match(client, /this\.clientLedCamera\.rates : own\.angularVelocity/)
+  assert.match(client, /\? this\.clientLedCamera\.rates\n/)
   assert.match(client, /visual\.rates = \{yaw: rates\.yaw/)
   const helmet = read("./helmet_client.mjs")
   assert.match(helmet, /this\.headsetPose\.step\(visual, entity\.velocity, time\)/)
