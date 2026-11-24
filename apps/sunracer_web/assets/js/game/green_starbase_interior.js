@@ -18,7 +18,7 @@ export class GreenStarbaseInterior {
     // Optional, injected only by the live renderer. A missing GLB or loader
     // must never stop the station from displaying its procedural attendants.
     this.loadGltf = loadGltf
-    this.modelAttempted = false
+    this.modelAttempted = new Set()
     this.importedCharacters = []
     this.characterAnimators = []
     this.disposed = false
@@ -356,17 +356,23 @@ export class GreenStarbaseInterior {
     }
   }
 
-  // Replace only Mara's procedural figure, after receiving the authoritative
-  // repair-attendant roster. Missing/broken assets leave the fallback intact.
+  // Replace an attendant's procedural figure with their imported model, for
+  // every attendant listed in STATION_CHARACTER_ASSETS, after receiving the
+  // authoritative roster. Missing/broken assets leave the fallback intact.
+  // One request per attendant per station scene; never retried per frame.
   requestCharacterModel(attendants) {
-    if (this.modelAttempted || this.disposed ||
-        typeof this.loadGltf !== "function") return
-    const npc = attendants.find(person => person?.id === "repair" &&
-      Number.isFinite(person.x) && Number.isFinite(person.z))
-    if (!npc) return
-    const url = STATION_CHARACTER_ASSETS[npc.id]
-    if (!url) return
-    this.modelAttempted = true
+    if (this.disposed || typeof this.loadGltf !== "function") return
+    for (const npc of attendants) {
+      if (!npc || this.modelAttempted.has(npc.id) ||
+          !Number.isFinite(npc.x) || !Number.isFinite(npc.z)) continue
+      const url = STATION_CHARACTER_ASSETS[npc.id]
+      if (!url) continue
+      this.modelAttempted.add(npc.id)
+      this.loadCharacterModel(npc, url)
+    }
+  }
+
+  loadCharacterModel(npc, url) {
     Promise.resolve().then(() => this.loadGltf(url)).then(gltf => {
       if (this.disposed) {
         disposeStationCharacter(gltf?.scene)
@@ -385,13 +391,12 @@ export class GreenStarbaseInterior {
       if (animator) this.characterAnimators.push(animator)
       // Keep the server-authorized E-to-talk interaction unchanged.
       for (const mesh of this.node.children) {
-        if (mesh.name?.startsWith("attendant:repair:") ||
-            mesh.name?.startsWith("uniform:repair:")) mesh.visible = false
+        if (mesh.name?.startsWith(`attendant:${npc.id}:`) ||
+            mesh.name?.startsWith(`uniform:${npc.id}:`)) mesh.visible = false
       }
     }).catch(error => {
-      // Asset is optional while Mara is still being exported in Blender.
-      // Only one request is made per station scene; no retry per frame.
-      console.info("SunRacer: using repair attendant fallback", error?.message)
+      // Assets are optional until each character is exported with ai3d.
+      console.info(`SunRacer: using ${npc.id} attendant fallback`, error?.message)
     })
   }
 

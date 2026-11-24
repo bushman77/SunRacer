@@ -158,3 +158,31 @@ test("Green Starbase plays Mara's idle every frame and stops it on dispose", asy
   room.dispose()
   assert.equal(room.characterAnimators.length, 0)
 })
+
+test("every listed attendant gets its own model; others keep their figures", async () => {
+  const scene = new THREE.Scene()
+  const requested = []
+  const room = new GreenStarbaseInterior(THREE, scene, {
+    lowPower: true,
+    loadGltf(url) {
+      requested.push(url)
+      return Promise.resolve(meshGltf())
+    },
+  })
+  const ilya = {...mara, id: "outfitting", x: -49, z: -181, name: "Ilya Quill"}
+  const tarek = {...mara, id: "trade", x: 49, name: "Tarek Sol"}
+  room.update({x: 0, z: 43}, 100, [mara, ilya, tarek])
+  await new Promise(resolve => setImmediate(resolve))
+  assert.deepEqual(requested.sort(), [STATION_CHARACTER_ASSETS.outfitting,
+    STATION_CHARACTER_ASSETS.repair].sort())
+  for (const id of ["repair", "outfitting"]) {
+    assert.ok(room.node.children.some(o => o.name === `station-character:${id}`))
+    assert.ok(room.node.children.filter(o => o.name?.startsWith(`attendant:${id}:`))
+      .every(o => o.visible === false))
+  }
+  assert.ok(room.node.children.filter(o => o.name?.startsWith("attendant:trade:"))
+    .every(o => o.visible !== false), "Tarek has no model yet and keeps his figure")
+  room.update({x: 0, z: 43}, 200, [mara, ilya, tarek])
+  assert.equal(requested.length, 2, "no repeated requests")
+  room.dispose()
+})

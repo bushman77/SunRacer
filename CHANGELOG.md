@@ -8,6 +8,25 @@
 
 ## Unreleased
 
+### Imported models for every station attendant; Ilya Quill slot (2026-11-23, branch `story_line`)
+
+#### Changed
+
+- `GreenStarbaseInterior` loads an imported GLB for **every** attendant listed
+  in `STATION_CHARACTER_ASSETS` (keyed by `Core.World.StationAttendants`
+  id), not only Mara. Each gets the same placement, idle animation and
+  fallback; one request per attendant per station scene.
+- Added `outfitting: /images/game/station/ilya_quill.glb` (Ilya Quill). Until
+  that file exists Ilya keeps his procedural figure (one console info line).
+
+#### Tests
+
+- `station_character_models_test.mjs`: two attendants with assets load their
+  models, one without keeps its figure, no repeated requests.
+  `npm test` in `apps/sunracer_web/assets`: 528 passed, 0 failed.
+- **Not run:** `mix precommit` (JavaScript-only). **Manual verification not
+  performed** (Ilya's model has not been generated yet).
+
 ### Mara Venn's 3D model plays an idle animation (2026-11-23, branch `story_line`)
 
 #### Added

@@ -1,6 +1,10 @@
 # SunRacer station character assets
 
-Mara Venn's model lives here as **mara_venn.glb**.
+Station attendant models live here, one GLB per attendant listed in
+`assets/js/game/station_character_models.mjs` (`STATION_CHARACTER_ASSETS`,
+keyed by attendant id): **mara_venn.glb** (repair), **ilya_quill.glb**
+(outfitting). To add another attendant, make the GLB with ai3d
+(`--install-as FILE`) and add one line to that table.
 
 - Browser/static URL: `/images/game/station/mara_venn.glb`
 - Tauri: `clients/tauri/scripts/stage-client.mjs` copies this directory into

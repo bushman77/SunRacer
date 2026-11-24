@@ -1,7 +1,10 @@
 // Visual-only character assets. Identity, proximity, dialogue and location
 // always come from Core.World.StationAttendants via MapServer snapshots.
+// Keys are Core.World.StationAttendants ids. Make a model with ai3d:
+//   bash make_character.sh --name NAME --image|--prompt-file ... --install-as FILE
 export const STATION_CHARACTER_ASSETS = Object.freeze({
-  repair: "/images/game/station/mara_venn.glb",
+  repair: "/images/game/station/mara_venn.glb",       // Mara Venn
+  outfitting: "/images/game/station/ilya_quill.glb",  // Ilya Quill
 })
 
 // Blender exports metres; the station's procedural characters are ~9 local
