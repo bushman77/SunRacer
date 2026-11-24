@@ -50,38 +50,14 @@ Pair tokens must be random, short-lived, single-use and separate from the pilot'
 
 Do not move this milestone to EC2 production until the local secure relay and network acceptance tests pass. Keep the old direct helmet path as an explicit development fallback only during migration.
 
-## Read the stage-0 estimates without developer tools
+## Reading the stage-0 estimates
 
-- **Laptop / Tauri:** In the game window, open the small **NET** disclosure at the bottom-right. It updates once per second while expanded.
-- **Galaxy S21:** Leave fullscreen VR and open **NET · BANDWIDTH** on the headset setup screen to review the counters accumulated during play.
-- Watch `Server -> device` (incoming) and `Device -> server` (outgoing), plus the largest event totals. The readout is diagnostic JSON payload only; it is not an EC2 transfer-rate or billing meter.
-- The original `window.sunRacerBandwidth.snapshot()` remains available for optional browser debugging, but neither game UI requires a console.
+On the laptop, open **NET** at the bottom-right of the Tauri game window.
+On the headset, use `window.sunRacerBandwidth.snapshot()` in the browser console
+to inspect the JSON payload estimates collected during play. The SBS cockpit
+has no per-eye RX/TX readout.
 
-## Live headset SBS bandwidth display
-
-The **top-right of each SBS eye** now contains a small, stereo-correct
-head-locked overlay showing **RX** (incoming) and **TX** (outgoing) bandwidth,
-with a five-second rolling average refreshed **every second**. The readout
-is sourced solely from the headset's existing `BandwidthProbe`, and
-introduces **no extra Phoenix/WebSocket connection or telemetry traffic**.
-The display is also present while docked; it is hidden in the desktop view
-and does not intercept or modify gaze targeting.
-
-The overlay is explicitly labeled `NET / JSON EST.` and
-`EXCL. ASSETS + TLS`: these are JSON-payload estimates, **not total
-network-interface throughput or actual EC2 billable traffic**. The existing
-NET details panel on the phone's setup screen remains available for
-event-by-event and cumulative statistics.
-
-## S21 headset layout correction
-
-The first, camera-parented Three.js bandwidth texture did not appear in
-on-device screenshots despite passing static tests. The revised headset UI
-uses **two small HTML labels**, one at the top-right of each eye viewport,
-above the stereo canvas. They draw the already-collected RX/TX probe values
-every second using `textContent`, and are displayed independently of motion
-sensor availability or camera projection. The overlay never captures pointer
-events or triggers another connection. It is hidden whenever SBS is stopped.
+## S21 headset layout
 
 SBS cockpit telemetry now uses at most 55% of the per-eye width (desktop
 retains 75%). NAV and the FLIGHT / CONTACTS / SPACE gaze panel, CLOSE,

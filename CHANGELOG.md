@@ -1,3 +1,7 @@
+## 2026-11-24 — SBS cockpit
+
+Removed the top-right RX/TX bandwidth card from both headset eyes and its once-per-second refresh. The headset still collects network estimates for console inspection.
+
 ## 2026-11-21 — SunRacer namespace migration
 
 - Renamed application/module references, directories, CI paths, and configuration.

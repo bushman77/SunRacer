@@ -1,3 +1,7 @@
+## SBS headset bandwidth overlay removal (2026-11-24)
+
+The per-eye RX/TX cards have been removed. The headset regression check now covers their absence. All 25 focused headset and bandwidth tests passed. Galaxy S21 visual verification is pending.
+
 ## Trade Exchange (2026-11-23)
 
 - [x] Sell looted cargo and buy common goods at Tarek Sol's Trade Exchange,

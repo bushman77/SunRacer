@@ -133,20 +133,6 @@ test("HUD gaze inspects read-only flight, contacts and space pages", () => {
   assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"|"station_talk"/)
 })
 
-test("the phone SBS meter lives above WebGL in both eyes, independent of gyro", () => {
-  assert.match(phone, /id="helmet-bandwidth-sbs"/)
-  assert.equal((phone.match(/data-helmet-bandwidth-eye/g) || []).length, 2)
-  assert.match(helmet, /renderHelmetBandwidth\(this\.root,/)
-  assert.match(helmet, /bandwidthOverlay\.hidden = false/)
-  assert.match(helmet, /bandwidthOverlay\.hidden = true/)
-  assert.match(helmet, /this\.updateSbsBandwidth\(time\)/)
-  assert.match(helmet, /snapshot\(HELMET_BANDWIDTH_HUD\.windowMs\)/)
-  assert.doesNotMatch(view, /this\.camera\.add\(this\.helmetBandwidthHud\)/)
-  assert.doesNotMatch(view, /updateHelmetBandwidth\(client\.bandwidth, time\)/)
-  // The overlay measures an EXISTING channel; no additional connection.
-  assert.doesNotMatch(helmet, /new WebSocket\(/)
-})
-
 test("compact SBS geometry reduces telemetry and never blocks the NAV hitbox", () => {
   assert.match(view, /this\.mode === "sbs" \? 0\.55 : 0\.75/)
   assert.match(view, /new THREE\.PlaneGeometry\(0\.50, 0\.25\)/)
