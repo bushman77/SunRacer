@@ -2,6 +2,7 @@ import * as THREE from "three"
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js"
 import {pointerNdc, toScene, toWorld} from "./stereo_math.mjs"
 import {visualLaserStart} from "./laser_burst.mjs"
+import {createLaserCrosshairGeometry, placeGazeCursor} from "./cockpit_reticles.mjs"
 import {stereoViewports, applyTransientStereoOffset, inwardStereoProjectionOffset} from "./stereo_viewport.mjs"
 import {LensDistortionPass, lensCenterU} from "./lens_distortion.mjs"
 import {cockpitHudFit, HUD_GEOMETRY} from "./stereo_layout.mjs"
@@ -110,8 +111,8 @@ function disposeMesh(root) {
   })
 }
 
-// Ring geometry is sized for 5 units; scaling by distance/5 keeps the same
-// angular size at any depth.
+// Weapon crosshair geometry is sized for 5 units; scaling by distance/5
+// preserves its angular size at the forward sight plane.
 const SIGHT_BASE_DISTANCE = 5
 export const SIGHT_FAR_DISTANCE = 60
 export const STEERING_LINE_DISTANCE = SIGHT_FAR_DISTANCE
@@ -277,20 +278,17 @@ export class StereoSpaceView {
     framing.add(this.dockingCountdownMesh)
     this.lastCountdownNumber = null
 
-    // The sight is drawn at the depth of what it points at (see
-    // placeSight): far ahead in space so both eyes converge on it like on a
-    // distant target, or on the cockpit control under the head-gaze. A ring
-    // fixed at 5 units was seen doubled whenever you focused past it.
+    // The weapon sight belongs to the ship, not the pilot's moving head.
+    // Four separated bars leave an open center for the circular gaze cursor.
     const sight = new THREE.Mesh(
-      new THREE.RingGeometry(0.025, 0.035, 40),
-      new THREE.MeshBasicMaterial({color: 0x78e6fc, transparent: true, opacity: 0.8, depthTest: false}),
+      createLaserCrosshairGeometry(THREE),
+      new THREE.MeshBasicMaterial({color: 0x78e6fc, transparent: true, opacity: 0.8,
+        depthTest: false, depthWrite: false}),
     )
     sight.position.z = -SIGHT_FAR_DISTANCE
     sight.scale.setScalar(SIGHT_FAR_DISTANCE / SIGHT_BASE_DISTANCE)
     sight.renderOrder = 50
-    // A center-screen sight belongs to the headset camera. The cockpit
-    // itself must NOT follow head rotation; it remains ship-fixed below.
-    this.camera.add(sight)
+    framing.add(sight)
     this.sight = sight
 
     this.cockpitFraming = framing
@@ -691,12 +689,10 @@ export class StereoSpaceView {
     old?.dispose()
   }
 
-  // Same angular size at any depth; converges where the pilot is looking.
-  placeSight(distance) {
-    if (!this.sight) return
-    const d = Number.isFinite(distance) && distance > 0.5 ? distance : SIGHT_FAR_DISTANCE
-    this.sight.position.z = -d
-    this.sight.scale.setScalar(d / SIGHT_BASE_DISTANCE)
+  // The gaze ring and dwell arc share the depth of the control being looked
+  // at. In empty space they converge at the distant sight plane instead.
+  placeGazeReticle(distance) {
+    placeGazeCursor(this.gazeReticle, this.gazeArc, distance, SIGHT_FAR_DISTANCE)
   }
 
   gazeTarget() {
@@ -1176,7 +1172,8 @@ export class StereoSpaceView {
       // invisible cockpit NAV meshes to trigger head-gaze actions.
       this.onHelmetGaze(docked ? null : this.gazeTarget(), time)
     }
-    this.placeSight(this.gazeHitDistance)
+    this.placeGazeReticle(this.gazeHitDistance)
+    if (this.sight) this.sight.visible = Boolean(ownShip && !docked)
     if (!docked) {
       // Real outer-space rendering is retained unchanged after launch.
       this.stars?.position.copy(this.camera.position)
