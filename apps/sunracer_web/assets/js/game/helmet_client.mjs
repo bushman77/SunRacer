@@ -128,6 +128,7 @@ export class HelmetClient {
       window.history.replaceState({}, "", window.location.pathname + window.location.search)
     }
     this.setupImmersiveControls()
+    this.message("Connecting headset to SunRacer…")
     this.localLink = attachHelmetRelayTest(this.root, {
       onWorld: frame => this.acceptLocalWorld(frame),
       onHeartbeat: () => {this.localRelayLastSeen = performance.now()},
@@ -272,6 +273,9 @@ export class HelmetClient {
       .receive("error", ({reason}) => {
         this.message("Helmet viewer connection refused: " + (reason || "unknown"))
         this.channel.leave()
+      })
+      .receive("timeout", () => {
+        this.message("Headset connection timed out. Check the desktop connection and retry.")
       })
     window.addEventListener("resize", () => {
       this.resize()
@@ -422,13 +426,19 @@ export class HelmetClient {
     this.root.addEventListener("pointerdown", recenterFromScreenTap, true)
     this.root.addEventListener("click", recenterFromScreenTap, true)
 
+    const enterWindowed = () => {
+      void this.headTracking.startFromGesture()
+      this.screenWake.enable()
+      this.windowed = true
+      this.immersiveReady = true
+      if (setup) setup.hidden = true
+      if (this.mode === "combat") this.startRendering()
+      else this.showWaitingForCockpit()
+    }
+
     fullscreen?.addEventListener("click", async () => {
-      if (!this.root.requestFullscreen) {
-        if (hint) {
-          hint.textContent = "Fullscreen unavailable. Try Chrome or Samsung Internet."
-          hint.hidden = false
-        }
-        if (windowed) windowed.hidden = false
+      if (!this.root.requestFullscreen || document.fullscreenEnabled === false) {
+        enterWindowed()
         return
       }
       try {
@@ -445,30 +455,25 @@ export class HelmetClient {
         try { await screen.orientation?.lock?.("landscape") } catch (_error) { /* rotate manually */ }
         this.resize()
         if (this.mode === "combat") this.startRendering()
+        else this.showWaitingForCockpit()
       } catch (_error) {
         this.screenWake.disable()
         if (hint) {
-          hint.textContent = "Fullscreen blocked. Try Chrome or Samsung Internet."
+          hint.textContent = "Fullscreen unavailable. Continue without fullscreen and rotate to landscape."
           hint.hidden = false
         }
         if (windowed) windowed.hidden = false
       }
     })
-    windowed?.addEventListener("click", () => {
-      // The fallback also starts sensors from the same physical tap.
-      void this.headTracking.startFromGesture()
-      this.screenWake.enable()
-      this.windowed = true
-      this.immersiveReady = true
-      if (setup) setup.hidden = true
-      if (this.mode === "combat") this.startRendering()
-    })
+    // The fallback also starts sensors from the same physical tap.
+    windowed?.addEventListener("click", enterWindowed)
     document.addEventListener("fullscreenchange", () => {
       this.resize()
       if (document.fullscreenElement === this.root) {
         this.immersiveReady = true
         if (setup) setup.hidden = true
         if (this.mode === "combat") this.startRendering()
+        else this.showWaitingForCockpit()
       } else if (!this.windowed && this.immersiveReady) {
         this.screenWake.disable()
         this.immersiveReady = false
@@ -611,11 +616,18 @@ export class HelmetClient {
         this.applyLocalMap(this.latestRelayMap)
       }
       if (this.immersiveReady) this.startRendering()
+      else this.message("Headset connected. Tap ENTER VR and rotate to landscape.")
     } else {
       this.disableLocalRelay()
       this.stop()
-      this.message("")
+      this.showWaitingForCockpit()
     }
+  }
+
+  showWaitingForCockpit() {
+    this.message(this.channel?.state === "joined"
+      ? "Headset connected. Waiting for cockpit mode on the desktop."
+      : "Waiting for the headset connection to SunRacer…")
   }
 
   // Local map frames originate ONLY from the one-time authenticated,
@@ -1163,5 +1175,20 @@ syncHudState(map) {
 
 export function startHelmetClient() {
   const root = document.getElementById("helmet-client")
-  if (root) new HelmetClient(root).start()
+  if (!root) return
+  const showStartupError = error => {
+    console.error("SunRacer headset initialization failed", error)
+    const setup = root.querySelector("#helmet-setup")
+    const hint = root.querySelector("#helmet-fullscreen-hint")
+    if (setup) setup.hidden = false
+    if (hint) {
+      hint.textContent = "Headset initialization failed. Check that browser site storage is enabled, then reload this page."
+      hint.hidden = false
+    }
+  }
+  try {
+    new HelmetClient(root).start().catch(showStartupError)
+  } catch (error) {
+    showStartupError(error)
+  }
 }

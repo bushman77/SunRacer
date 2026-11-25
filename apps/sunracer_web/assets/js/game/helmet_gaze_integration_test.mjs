@@ -253,3 +253,15 @@ test("the flight mode icon is an intent relayed to the laptop, not a command", (
   assert.match(flight, /toggleMode\(\) \{/)
   assert.match(flight, /if \(!event\.repeat\) this\.toggleMode\(\)/)
 })
+
+test("headset standby and startup cannot silently clear the only visible status", () => {
+  assert.match(phone, /Loading headset controls/)
+  assert.match(phone, /<noscript>/)
+  assert.match(helmet, /showWaitingForCockpit\(\)/)
+  assert.match(helmet, /Waiting for cockpit mode on the desktop/)
+  assert.match(helmet, /new HelmetClient\(root\)\.start\(\)\.catch\(showStartupError\)/)
+  assert.match(helmet, /Headset connection timed out/)
+  assert.match(helmet, /!this\.root\.requestFullscreen \|\| document\.fullscreenEnabled === false/)
+  assert.match(helmet, /enterWindowed\(\)\s*\n\s*return/)
+  assert.doesNotMatch(helmet, /Fullscreen unavailable\. Try Chrome or Samsung Internet/)
+})
