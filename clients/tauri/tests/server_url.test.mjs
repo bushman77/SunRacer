@@ -2,7 +2,7 @@ import test from "node:test"
 import assert from "node:assert/strict"
 import {
   DEFAULT_SERVER_URL, LOCAL_SERVER_URL, serverOrigin,
-  gameUrl, registrationUrl, homeUrl, destinationUrl, initialServerOrigin
+  gameUrl, registrationUrl, passwordResetUrl, homeUrl, destinationUrl, initialServerOrigin
 } from "../ui/server_url.mjs"
 
 test("default launches the live SunRacer server", () => {
@@ -59,4 +59,13 @@ test("permits Caddy HTTPS on 443 and direct TLS on 4000", () => {
 
 test("canonicalizes whitespace and hostname", () => {
   assert.equal(serverOrigin("  HTTPS://GAME.EXAMPLE.ORG:4000/  "), "https://game.example.org:4000")
+})
+
+test("password recovery uses selected server and existing origin validation", () => {
+  assert.equal(passwordResetUrl(DEFAULT_SERVER_URL), "https://sunracer.ddns.net/forgot-password")
+  assert.equal(passwordResetUrl(LOCAL_SERVER_URL), "http://127.0.0.1:4000/forgot-password")
+  assert.equal(passwordResetUrl("https://game.example.org:4000"), "https://game.example.org:4000/forgot-password")
+  assert.throws(() => passwordResetUrl("http://game.example.org:4000"), /HTTPS/)
+  assert.throws(() => passwordResetUrl("https://user:pass@game.example.org"), /credentials/)
+  assert.throws(() => destinationUrl(DEFAULT_SERVER_URL, "/reset-password?token=x"), /Unsupported/)
 })

@@ -63,5 +63,5 @@ test("native markup generation is identical with Windows CRLF and Unix LF", () =
 test("native login offers hosted account recovery on selected server", () => {
   assert.match(document, /id="native-password-reset"/)
   const js = readFileSync(new URL("../ui/native_bootstrap.mjs", import.meta.url), "utf8")
-  assert.match(js, /new URL\("\/forgot-password", origin\)/)
+  assert.match(js, /passwordResetUrl\(origin\)/)
 })

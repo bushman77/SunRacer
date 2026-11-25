@@ -2,7 +2,7 @@ export const DEFAULT_SERVER_URL = "https://sunracer.ddns.net"
 export const LOCAL_SERVER_URL = "http://127.0.0.1:4000"
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"])
-const LAUNCH_ROUTES = new Set(["/", "/play", "/register"])
+const LAUNCH_ROUTES = new Set(["/", "/play", "/register", "/forgot-password"])
 
 // Migrate the old direct-4000 origin to Caddy's public HTTPS:443 origin.
 export function initialServerOrigin(saved) {
@@ -65,4 +65,8 @@ export function registrationUrl(raw) {
 
 export function homeUrl(raw) {
   return destinationUrl(raw, "/")
+}
+
+export function passwordResetUrl(raw) {
+  return destinationUrl(raw, "/forgot-password")
 }

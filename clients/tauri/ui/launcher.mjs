@@ -1,5 +1,5 @@
 import {
-  DEFAULT_SERVER_URL, LOCAL_SERVER_URL, registrationUrl, homeUrl, serverOrigin,
+  DEFAULT_SERVER_URL, LOCAL_SERVER_URL, registrationUrl, passwordResetUrl, homeUrl, serverOrigin,
   initialServerOrigin
 } from "./server_url.mjs"
 import {probeNativeServer} from "./server_probe.mjs"
@@ -13,6 +13,7 @@ const form = document.querySelector("#connect-form")
 const error = document.querySelector("#error")
 const local = document.querySelector("#use-local")
 const register = document.querySelector("#register-pilot")
+const resetPassword = document.querySelector("#reset-password")
 const homepage = document.querySelector("#visit-home")
 const preview = document.querySelector("#preview-local")
 const probe = document.querySelector("#probe-native-server")
@@ -67,6 +68,7 @@ form.addEventListener("submit", event => {
   }
 })
 register.addEventListener("click", () => navigateTo(registrationUrl))
+resetPassword.addEventListener("click", () => navigateTo(passwordResetUrl))
 homepage.addEventListener("click", () => navigateTo(homeUrl))
 
 // Explicit offline smoke check; no remote navigation or pilot credentials.

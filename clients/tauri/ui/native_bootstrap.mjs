@@ -1,6 +1,6 @@
 // The game runs from packaged local assets. Only signed credentials,
 // world-state and pilot commands cross the network; no remote HTML is loaded.
-import {DEFAULT_SERVER_URL, serverOrigin} from "./server_url.mjs"
+import {DEFAULT_SERVER_URL, serverOrigin, passwordResetUrl} from "./server_url.mjs"
 import {nativePostJson, nativeErrorMessage} from "./native_transport.mjs"
 
 const login = document.querySelector("#native-login")
@@ -25,7 +25,7 @@ try {
 server.textContent = origin
 // Recovery stays on the selected server's CSRF-protected hosted form.
 // The remote page does not receive the native Tauri command capability.
-document.querySelector("#native-password-reset").href = new URL("/forgot-password", origin).href
+document.querySelector("#native-password-reset").href = passwordResetUrl(origin)
 
 async function postJson(route, payload, bearer = null) {
   const response = await nativePostJson(origin, route, payload, bearer)

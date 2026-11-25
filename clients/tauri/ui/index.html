@@ -66,6 +66,7 @@
             <div class="actions">
               <button type="submit" class="primary">Launch standalone game <span aria-hidden="true">→</span></button>
               <button type="button" id="register-pilot" class="secondary">Create pilot account</button>
+              <button type="button" id="reset-password" class="secondary">Reset password</button>
               <button type="button" id="visit-home" class="secondary">Visit homepage</button>
               <button type="button" id="check-client-update" class="secondary">Check for client updates</button>
             </div>
@@ -78,7 +79,7 @@
             <p id="probe-result" role="status" aria-live="polite" class="hint" hidden></p>
             <p role="alert" id="error" class="error" hidden></p>
           </form>
-          <footer>Your pilot signs in through an authenticated HTTPS API; Phoenix Channels carry real-time gameplay. Registration and email verification still use the hosted website.</footer>
+          <footer>Your pilot signs in through an authenticated HTTPS API; Phoenix Channels carry real-time gameplay. Registration, email verification and password recovery use the selected server's hosted website.</footer>
         </section>
       </main>
 
