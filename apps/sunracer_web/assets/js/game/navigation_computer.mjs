@@ -77,6 +77,38 @@ export class NavigationComputer {
       grip:this.root.querySelector("#nav-hud-drag"),
       reset:this.root.querySelector("#nav-hud-reset"),
     })
+    // Presentation only: all actions use the existing authenticated controls.
+    const settings = this.root.querySelector("#atlas-settings")
+    const profile = this.root.querySelector("#atlas-profile")
+    const missions = this.root.querySelector("#atlas-missions")
+    const disclosures = [settings, profile, missions].filter(Boolean)
+    this.atlasDisclosures = disclosures
+    for (const item of disclosures) {
+      item.addEventListener("toggle", () => {
+        if (item.open) for (const other of disclosures) if (other !== item) other.open = false
+      })
+    }
+    this.root.addEventListener("pointerdown", event => {
+      for (const item of disclosures) if (!item.contains(event.target)) item.open = false
+    })
+    const contacts = this.root.querySelector("#atlas-sensor-contacts")
+    const contactsButton = this.root.querySelector("#atlas-contacts-open")
+    contactsButton?.addEventListener("click", () => {
+      if (!contacts) return
+      this.setView("system")
+      contacts.open = !contacts.open
+      if (contacts.open) contacts.scrollIntoView?.({block: "nearest"})
+    })
+    contacts?.addEventListener("toggle", () =>
+      contactsButton?.setAttribute("aria-expanded", String(contacts.open)))
+    this.root.querySelector("#nav-helmet-open")?.addEventListener("click", () => {
+      if (settings) settings.open = false
+    })
+    this.root.querySelector("#atlas-diagnostics-open")?.addEventListener("click", () => {
+      const panel = this.root.closest("#game-client")?.querySelector("[data-bandwidth-panel]")
+      if (panel) panel.open = !panel.open
+      if (settings) settings.open = false
+    })
     this.solarMenu = this.root.querySelector("#nav-solar-context-menu")
     this.solarContextBodyId = null
     this.solarSvg?.addEventListener("contextmenu", event => {
@@ -585,6 +617,7 @@ export class NavigationComputer {
   closeNow() {
     if (!this.isOpen) return
     this.closeSolarContextMenu()
+    for (const item of this.atlasDisclosures || []) item.open = false
     this.isOpen = false
     this.root.hidden = true
     this.onClose?.()
@@ -595,7 +628,13 @@ export class NavigationComputer {
     if (this.isOpen && event.code === "Escape") {
       event.preventDefault()
       if(this.solarMenu && !this.solarMenu.hidden)this.closeSolarContextMenu()
-      else this.close()
+      else {
+        const disclosure = this.atlasDisclosures?.find(item => item.open)
+        if (disclosure) {
+          disclosure.open = false
+          disclosure.querySelector("summary")?.focus()
+        } else this.close()
+      }
       return true
     }
     // Tab and Shift+Tab remain inside the modal navigation computer.

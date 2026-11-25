@@ -376,3 +376,7 @@ The installed Tauri launcher now exposes its original native proxy controls thro
 The native launcher shares the Phoenix title screen stylesheet and approved artwork at build time via `stage-client.mjs`. The local launcher HTML preserves the native game launch path and account actions, while server selection, proxy preferences and client tools reside in its top-left menu. The installed app does not load the remote homepage to display its title screen. Native package identity and IPC security remain unchanged.
 
 The generated native game document uses the staged SpaceNova title stylesheet for its initial authentication overlay. Native-only card rules reside in native_shell.css; the overlay is hidden after authentication, so game UI and transport remain unchanged. The window title is SpaceNova, but package name, updater identity and IPC capabilities are unchanged.
+
+### SpaceNova Atlas command layout
+
+The shared HEEx Atlas now organizes native and browser controls into the top bar, a left command toolbar and an existing movable right instrument stack. The settings disclosure hosts the existing mouse controls and headset/reset/sign-out actions; diagnostics toggles the existing bandwidth panel. Connection, pilot and mission readouts reflect existing client/server state rather than inventing data. `native-game-markup.mjs` converts the additional icons and retains the same logout and gameplay IDs. Cockpit/SBS and authoritative navigation are unchanged. Full tests and visual verification pending.

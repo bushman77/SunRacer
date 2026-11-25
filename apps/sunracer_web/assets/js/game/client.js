@@ -2604,6 +2604,9 @@ class SpaceClient {
     this.text("#hud-pilot", pilot.pilot_name)
     this.text("#hud-ship", `${ship.name} · Pilot #${pilot.id}`)
     this.text("#hud-config", `C-${configuration.number}`)
+    this.text("#atlas-pilot-name", pilot.pilot_name)
+    this.text("#atlas-pilot-ship", ship.name)
+    this.text("#atlas-pilot-config", `C-${configuration.number}`)
     this.text("#hud-hp", `${number(stats.hit_points)} / ${number(stats.hit_points)}`)
     this.text("#hud-shields", `${number(stats.shields)} / ${number(stats.shields)}`)
     this.text("#hud-compact-hp", number(stats.hit_points))
@@ -3123,6 +3126,9 @@ class SpaceClient {
 
   setConnection(label, state) {
     this.text("#connection-status", label)
+    this.text("#atlas-connection-status", label)
+    const atlas = this.root.querySelector("#atlas-connection-status")
+    if (atlas) atlas.dataset.state = state
     const indicator = this.root.querySelector("#connection-indicator")
     indicator.className = state === "online"
       ? "size-1.5 rounded-full bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,0.8)]"

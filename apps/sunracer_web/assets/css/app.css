@@ -1951,3 +1951,84 @@ body:has(#helmet-client) {
   display:grid; place-items:center; width:29px; padding:.25rem;
   font-size:1.1rem;
 }
+
+/* SpaceNova Atlas command organization. The full-size map remains the input surface. */
+.navigation-computer .atlas-hud-top {
+  background:rgb(3 9 20 / 80%);border-color:rgb(103 232 249 / 35%);
+  overflow:visible;
+}
+.navigation-computer .nova-hud-wordmark {
+  display:inline-flex;gap:0;font-size:clamp(.85rem,1.4vw,1.1rem);font-style:italic;
+  font-weight:900;letter-spacing:-.035em;color:#edf7ff;
+}
+.navigation-computer .nova-hud-wordmark>span {color:#67e8f9;}
+.nova-hud-icon {
+  display:grid;place-items:center;width:2.45rem;height:2.45rem;flex:none;
+  border:1px solid rgb(103 232 249 / 30%);border-radius:.3rem;
+  background:rgb(3 9 20 / 80%);color:#a5e7f5;cursor:pointer;text-decoration:none;
+}
+.nova-hud-icon:hover,.nova-hud-icon:focus-visible,.atlas-tool[open]>summary,
+.atlas-settings[open]>summary {background:#12364b;color:#fff;border-color:#67e8f9;}
+.nova-hud-icon:focus-visible,.atlas-menu-action:focus-visible {outline:2px solid #67e8f9;outline-offset:2px;}
+.atlas-settings,.atlas-tool {position:relative;}
+.atlas-settings>summary,.atlas-tool>summary {list-style:none;}
+.atlas-settings>summary::-webkit-details-marker,.atlas-tool>summary::-webkit-details-marker {display:none;}
+.atlas-settings-panel,.atlas-tool-panel {
+  position:absolute;z-index:80;width:max-content;max-width:min(23rem,calc(100vw - 5rem));
+  max-height:calc(100dvh - 8rem);overflow:auto;padding:.35rem;
+  border:1px solid rgb(103 232 249 / 30%);border-radius:.35rem;
+  background:rgb(3 9 20 / 85%);color:#e6f4ff;backdrop-filter:blur(5px);
+  box-shadow:0 10px 35px #0009;
+}
+.atlas-settings-panel {top:calc(100% + .5rem);left:0;}
+.atlas-menu-action {
+  display:flex;align-items:center;gap:.55rem;width:100%;padding:.6rem .7rem;
+  border:0;background:transparent;color:#ccebf7;text-align:left;font-size:.75rem;cursor:pointer;
+}
+.atlas-menu-action:hover {background:rgb(103 232 249 / 10%);color:#fff;}
+.atlas-menu-action small {margin-left:auto;color:#a4bdcc;font-size:.6rem;}
+.atlas-menu-action.atlas-signout {border-top:1px solid rgb(103 232 249 / 15%);color:#ffc2b6;}
+.navigation-computer .atlas-settings .hud-control-drawer {
+  position:static;width:auto;max-width:21rem;box-shadow:none;border:0;border-radius:0;
+  background:transparent;backdrop-filter:none;
+}
+.navigation-computer .atlas-settings .hud-control-drawer>summary {
+  padding:.6rem .7rem;font:inherit;font-size:.75rem;color:#ccebf7;
+}
+.navigation-computer .atlas-settings .hud-control-drawer .hud-preferences {background:transparent;}
+.atlas-connection {display:flex;align-items:center;gap:.4rem;white-space:nowrap;color:#c0d7e4;font-size:.66rem;}
+.atlas-connection::before {content:"";width:.4rem;height:.4rem;border-radius:50%;background:#fbbf24;}
+.atlas-connection[data-state="online"]::before {background:#6ee7b7;box-shadow:0 0 8px #6ee7b7;}
+.atlas-connection[data-state="error"]::before {background:#fb7185;}
+.atlas-command-toolbar {
+  position:absolute;z-index:45;left:12px;top:112px;display:flex;flex-direction:column;
+  align-items:center;gap:.4rem;padding:.3rem;border:1px solid rgb(103 232 249 / 20%);
+  border-radius:.35rem;background:rgb(3 9 20 / 65%);backdrop-filter:blur(5px);
+}
+.navigation-computer .atlas-command-toolbar .atlas-loadout-link {display:grid;padding:0;}
+.atlas-tool-panel {top:0;left:calc(100% + .6rem);padding:.85rem;min-width:12rem;font-size:.75rem;}
+.atlas-tool-panel h3 {color:#a5f3fc;font-size:.68rem;letter-spacing:.12em;margin:0 0 .7rem;}
+.atlas-tool-panel dl {display:grid;grid-template-columns:auto minmax(0,1fr);gap:.45rem .75rem;}
+.atlas-tool-panel dt,.atlas-tool-note {color:#a4bdcc;}
+.atlas-tool-panel dd,.atlas-tool-panel p {overflow-wrap:anywhere;max-width:29ch;}
+.atlas-tool-panel p+p {margin-top:.5rem;}
+.atlas-tool-note {font-size:.65rem;line-height:1.5;}
+.navigation-computer .hud-flight-widget,
+.navigation-computer .hud-target-widget,
+.navigation-computer .atlas-hud-right>.solar-contacts-drawer,
+.navigation-computer #nav-sector-view .nav-console {
+  background:rgb(3 9 20 / 80%);border-color:rgb(103 232 249 / 30%);
+}
+.navigation-computer .hud-keybar {background:rgb(3 9 20 / 80%);border-color:rgb(103 232 249 / 30%);}
+@media(max-width:790px) {
+  .navigation-computer .atlas-hud-top .nova-hud-wordmark {display:inline-flex;}
+  .navigation-computer .atlas-hud-top #nav-title {display:none;}
+  .navigation-computer .atlas-settings #nav-helmet-open {display:flex;}
+  .atlas-connection {max-width:8rem;overflow:hidden;text-overflow:ellipsis;}
+}
+@media(max-width:570px) {
+  .navigation-computer .atlas-hud-top .nova-hud-wordmark {display:none;}
+  .atlas-connection {font-size:0;flex-shrink:0;}
+  .atlas-command-toolbar {left:8px;top:108px;gap:.25rem;padding:.2rem;}
+  .atlas-command-toolbar .nova-hud-icon {width:2rem;height:2rem;}
+}

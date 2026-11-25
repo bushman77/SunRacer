@@ -1,6 +1,8 @@
 // Compile the server-owned HEEx game layout into static native markup.
 // Client UI and server UI share one source of truth for cockpit structure.
 const icons = {
+  "hero-bars-3": "☰", "hero-user": "♙", "hero-archive-box": "▣",
+  "hero-signal": "◉", "hero-clipboard-document-list": "▤",
   "hero-rocket-launch": "✦", "hero-map": "◎", "hero-wrench-screwdriver": "⚙",
   "hero-power": "⏻", "hero-globe-alt": "◉", "hero-eye-slash": "◌",
   "hero-chevron-up": "⌃", "hero-chevron-down": "⌄",

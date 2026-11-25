@@ -35,10 +35,9 @@ test("critical game, navigation and HUD controls remain unique",()=>{
 import {readFileSync as readBrandingFileSync} from "node:fs"
 import {test as brandingTest} from "node:test"
 import {strict as brandingAssert} from "node:assert"
-brandingTest("Atlas HUD shows SunRacer branding", () => {
+brandingTest("Atlas HUD shows SpaceNova branding", () => {
   const view = readBrandingFileSync(new URL("../../../lib/sunracer_web/controllers/game_html/show.html.heex", import.meta.url), "utf8")
-  brandingAssert.match(view, /SUNRACER/)
-  brandingAssert.doesNotMatch(view, /SPACE ?NOVA/i)
+  brandingAssert.match(view, /SPACE<span>NOVA<\/span>/)
 })
 
 test("desktop cockpit exposes only one flight mode toggle and one visible SVG", () => {
@@ -49,4 +48,23 @@ test("desktop cockpit exposes only one flight mode toggle and one visible SVG", 
   assert.doesNotMatch(markup, /id="flight-mode-cruise"|id="flight-mode-newtonian"/)
   assert.match(client, /icon\.hidden = icon\.dataset\.modeIcon !==/)
   assert.match(client, /this\.flightControls\.setMode\(mode === "cruise" \? "newtonian" : "cruise"\)/)
+})
+
+test("Atlas reorganizes existing controls into settings and command toolbar", () => {
+  assert.match(markup, /id="atlas-settings" class="atlas-settings"/)
+  assert.match(markup, /class="atlas-command-toolbar"/)
+  assert.match(markup, /id="atlas-connection-status"/)
+  assert.match(markup, /form="pilot-logout-form"/)
+  for (const id of ["nav-control-drawer","nav-inventory-open","nav-helmet-open","nav-hud-reset",
+    "atlas-profile","atlas-missions","atlas-contacts-open","atlas-sensor-contacts","atlas-diagnostics-open"]) {
+    assert.equal((markup.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
+  }
+  assert.match(css,/\.atlas-settings-panel,\.atlas-tool-panel/)
+  assert.match(css,/background:rgb\(3 9 20 \/ 85%\)/)
+  const nav=readFileSync(new URL("./navigation_computer.mjs",import.meta.url),"utf8")
+  assert.match(nav,/contacts\.open = !contacts\.open/)
+  assert.match(nav,/panel\.open = !panel\.open/)
+  const client=readFileSync(new URL("./client.js",import.meta.url),"utf8")
+  assert.match(client,/this\.text\("#atlas-connection-status", label\)/)
+  assert.match(client,/this\.text\("#atlas-pilot-name", pilot\.pilot_name\)/)
 })

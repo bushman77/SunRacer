@@ -68,7 +68,7 @@
     <%!-- Keep the 3D hangar visible. This compact station console receives
          mouse input, while the parked ship's controls remain server-locked. --%>
     <div class="pointer-events-auto w-full max-w-sm rounded-2xl border border-emerald-500/55 bg-slate-950/90 p-5 font-mono shadow-2xl backdrop-blur-xl">
-      <div class="mb-4 text-xs font-semibold tracking-[0.25em] text-emerald-400">SUNRACER / STATION INTERIOR</div>
+      <div class="mb-4 text-xs font-semibold tracking-[0.25em] text-emerald-400">SPACENOVA / STATION INTERIOR</div>
       <h2 id="starbase-docked-title" class="text-2xl font-bold tracking-wide text-emerald-200">GREEN STARBASE</h2>
       <p class="mt-2 text-sm text-slate-300">Your ship is secure. Walk to the small illuminated door at the back of the hangar to enter the station.</p>
       <p class="mt-2 text-xs text-emerald-300">W/S walk · A/D strafe · arrows turn · click hangar for mouse-look · Esc releases mouse</p>
@@ -507,7 +507,7 @@
                 aria-label="Select a celestial body"></div>
             </details>
           </section>
-          <details class="solar-aux-details solar-contacts-drawer">
+          <details id="atlas-sensor-contacts" class="solar-aux-details solar-contacts-drawer">
             <summary>Sensor contacts</summary>
             <section class="hud-traffic-panel solar-contacts-content"
                    aria-label="Strategic traffic contacts">
@@ -568,8 +568,51 @@
       </div>
       </section>
 
-      <header class="atlas-hud-top" aria-label="SunRacer navigation controls">
-        <span class="hud-brand"><.icon name="hero-rocket-launch" class="size-5" /> SUNRACER</span>
+      <header class="atlas-hud-top" aria-label="SpaceNova navigation controls">
+        <details id="atlas-settings" class="atlas-settings">
+          <summary class="nova-hud-icon" title="Settings" aria-label="Settings">
+            <.icon name="hero-bars-3" class="size-5" />
+          </summary>
+          <div class="atlas-settings-panel">
+            <details id="nav-control-drawer" class="hud-control-drawer">
+              <summary>Flight controls <span aria-hidden="true">⚙</span></summary>
+            <section aria-label="Cockpit control preferences"
+                     class="hud-preferences mx-4 mb-4 rounded-xl border border-cyan-400/25 bg-slate-950/80 p-3 text-slate-200">
+              <div class="flex flex-wrap items-center gap-4">
+                <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-cyan-100">
+                  <input id="nav-mouse-steering" type="checkbox"
+                         class="size-4 accent-cyan-400" />
+                  Enable mouse-look steering
+                </label>
+                <label for="nav-mouse-sensitivity" class="flex items-center gap-2 text-xs text-slate-300">
+                  Sensitivity
+                  <input id="nav-mouse-sensitivity" type="range" min="40" max="1000"
+                         step="10" value="100" class="w-32 accent-cyan-400" />
+                  <output id="nav-mouse-sensitivity-value" for="nav-mouse-sensitivity">1.0×</output>
+                </label>
+              </div>
+              <p class="mt-2 text-xs text-slate-400">
+                When enabled, return to the cockpit and click its background once to capture the mouse.
+                Move the mouse to pitch and yaw. Esc releases the cursor; M opens Atlas.
+                Keyboard steering, wheel throttle, Ctrl+wheel roll and right-click lasers remain available.
+              </p>
+            </section>
+      
+            </details>
+            <button id="nav-helmet-open" class="atlas-menu-action" type="button" aria-controls="helmet-panel">
+              <.icon name="hero-adjustments-horizontal" class="size-4" />
+              <span>SBS / Headset</span><small id="nav-helmet-status">NOT PAIRED</small>
+            </button>
+            <button id="nav-hud-reset" class="atlas-menu-action" type="button" title="Reset HUD positions">↺ Reset HUD positions</button>
+            <button id="atlas-diagnostics-open" class="atlas-menu-action" type="button">
+              <.icon name="hero-signal" class="size-4" /> Network diagnostics
+            </button>
+            <button type="submit" form="pilot-logout-form" class="atlas-menu-action atlas-signout">
+              <.icon name="hero-power" class="size-4" /> Sign out
+            </button>
+          </div>
+        </details>
+        <span class="hud-brand nova-hud-wordmark">SPACE<span>NOVA</span></span>
         <h2 id="nav-title">Solar System Atlas</h2>
         <p id="nav-subtitle" class="sr-only">One star system · choose a planet or chart waypoint; cockpit and propulsion are independent.</p>
         <div class="atlas-view-tabs" role="tablist" aria-label="Atlas navigation level">
@@ -582,22 +625,45 @@
             <.icon name="hero-map" class="inline size-4" /> Sector 1-1
           </button>
         </div>
-        <button id="nav-inventory-open" class="nav-button hud-mini-button"
-          type="button" aria-controls="pilot-inventory-panel"
-          aria-label="View ship inventory, shortcut I" title="View ship inventory [I]">
-          <.icon name="hero-archive-box" class="size-4" />
-          <span class="hidden xl:inline">Inventory [I]</span>
-        </button>
-        <a class="hud-nav-link atlas-loadout-link" href={~p"/equipment"}>
-          <.icon name="hero-wrench-screwdriver" class="size-4" /> Loadout
-        </a>
-        <button id="nav-hud-reset" class="nav-button hud-mini-button hud-reset-button"
-          type="button" aria-label="Reset instrument positions" title="Reset HUD positions">↺</button>
-        <button id="nav-helmet-open" class="nav-button hud-mini-button" type="button"
-          aria-controls="helmet-panel">HMD: <span id="nav-helmet-status">NOT PAIRED</span></button>
+        <span id="atlas-connection-status" class="atlas-connection" data-state="connecting" role="status">Connecting</span>
         <button id="nav-close" class="nav-button nav-close hud-mini-button" type="button"
           aria-label="Enter cockpit">Cockpit <span class="text-cyan-300">[M]</span></button>
       </header>
+      <nav class="atlas-command-toolbar" aria-label="Pilot command toolbar">
+        <details id="atlas-profile" class="atlas-tool">
+          <summary class="nova-hud-icon" aria-label="Pilot profile" title="Pilot profile">
+            <.icon name="hero-user" class="size-5" />
+          </summary>
+          <section class="atlas-tool-panel" aria-label="Pilot profile">
+            <h3>PILOT PROFILE</h3>
+            <dl><dt>Pilot</dt><dd id="atlas-pilot-name">Synchronizing…</dd>
+              <dt>Ship</dt><dd id="atlas-pilot-ship">—</dd>
+              <dt>Configuration</dt><dd id="atlas-pilot-config">—</dd></dl>
+          </section>
+        </details>
+        <button id="nav-inventory-open" class="nova-hud-icon" type="button"
+          aria-controls="pilot-inventory-panel" aria-label="Inventory [I]" title="Inventory [I]">
+          <.icon name="hero-archive-box" class="size-5" />
+        </button>
+        <a class="nova-hud-icon atlas-loadout-link" href={~p"/equipment"} aria-label="Equipment and loadout" title="Equipment and loadout">
+          <.icon name="hero-wrench-screwdriver" class="size-5" />
+        </a>
+        <button id="atlas-contacts-open" class="nova-hud-icon" type="button"
+          aria-controls="atlas-sensor-contacts" aria-expanded="false" aria-label="Communications and sensor contacts" title="Communications and sensor contacts">
+          <.icon name="hero-signal" class="size-5" />
+        </button>
+        <details id="atlas-missions" class="atlas-tool">
+          <summary class="nova-hud-icon" aria-label="Missions" title="Missions">
+            <.icon name="hero-clipboard-document-list" class="size-5" />
+          </summary>
+          <section class="atlas-tool-panel" aria-label="Current story objective">
+            <h3>MISSIONS / STORY</h3>
+            <p id="atlas-mission-step">Awaiting mission data</p>
+            <p id="atlas-mission-objective">—</p>
+            <p class="atlas-tool-note">Story dialogue and mission decisions remain in the cockpit.</p>
+          </section>
+        </details>
+      </nav>
       <section id="helmet-panel" hidden aria-label="Pilot HMD management"
                class="mx-4 mb-4 rounded-xl border border-cyan-400/30 bg-slate-950 p-4 text-slate-100">
         <div class="flex flex-wrap items-center justify-between gap-3">
@@ -644,31 +710,6 @@
       </section>
 
       <%!-- Control preferences are available on demand instead of reserving a footer. --%>
-      <details id="nav-control-drawer" class="hud-control-drawer">
-        <summary>Flight controls <span aria-hidden="true">⚙</span></summary>
-      <section aria-label="Cockpit control preferences"
-               class="hud-preferences mx-4 mb-4 rounded-xl border border-cyan-400/25 bg-slate-950/80 p-3 text-slate-200">
-        <div class="flex flex-wrap items-center gap-4">
-          <label class="flex cursor-pointer items-center gap-2 text-sm font-semibold text-cyan-100">
-            <input id="nav-mouse-steering" type="checkbox"
-                   class="size-4 accent-cyan-400" />
-            Enable mouse-look steering
-          </label>
-          <label for="nav-mouse-sensitivity" class="flex items-center gap-2 text-xs text-slate-300">
-            Sensitivity
-            <input id="nav-mouse-sensitivity" type="range" min="40" max="1000"
-                   step="10" value="100" class="w-32 accent-cyan-400" />
-            <output id="nav-mouse-sensitivity-value" for="nav-mouse-sensitivity">1.0×</output>
-          </label>
-        </div>
-        <p class="mt-2 text-xs text-slate-400">
-          When enabled, return to the cockpit and click its background once to capture the mouse.
-          Move the mouse to pitch and yaw. Esc releases the cursor; M opens Atlas.
-          Keyboard steering, wheel throttle, Ctrl+wheel roll and right-click lasers remain available.
-        </p>
-      </section>
-
-      </details>
       <div class="hud-keybar" aria-label="Navigation keyboard commands">
         <span class="hud-keybar-title">SOL / NAV</span>
         <span><kbd>M</kbd> COCKPIT</span>

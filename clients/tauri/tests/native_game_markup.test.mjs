@@ -85,3 +85,14 @@ test("native sign-in shares the SpaceNova title screen and retains its auth cont
   assert.match(css, /background:rgb\(3 9 20 \/ 80%\)/)
   assert.match(css, /\.native-login\[hidden\],#game-client\[hidden\],#native-login-error\[hidden\] \{display:none!important\}/)
 })
+
+test("packaged Atlas retains organized command controls and native logout", () => {
+  for (const id of ["atlas-settings","atlas-profile","atlas-missions","atlas-contacts-open",
+    "atlas-connection-status","atlas-diagnostics-open","nav-helmet-open","nav-inventory-open"]) {
+    assert.equal((document.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
+  }
+  assert.match(document, /SPACE<span>NOVA<\/span>/)
+  assert.match(document, /type="submit" form="pilot-logout-form"/)
+  assert.match(document, /<form id="pilot-logout-form"/)
+  assert.match(document, /data-native-equipment/)
+})

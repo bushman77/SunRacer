@@ -112,6 +112,10 @@ export class StoryHud {
     const card = this.node("#story-comms")
     const resume = this.node("#story-comms-resume")
     const model = this.model
+    const atlasStep = this.node("#atlas-mission-step")
+    const atlasObjective = this.node("#atlas-mission-objective")
+    if (atlasStep) atlasStep.textContent = model.stepLabel || (model.resumeVisible ? "Story paused" : "No active story objective")
+    if (atlasObjective) atlasObjective.textContent = model.objective || "—"
     if (resume) resume.hidden = !model.resumeVisible
     if (!card) return
     card.hidden = !model.visible

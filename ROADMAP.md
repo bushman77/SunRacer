@@ -1,3 +1,10 @@
+## 2026-11-25 — SpaceNova Atlas command layout
+
+- Organized the shared Atlas into a compact SpaceNova header, live connection state, left pilot command toolbar and top-left settings disclosure. Existing inventory, loadout, sensor contacts, mouse preferences, headset, HUD reset, diagnostics and logout controls retain their original handlers. Pilot and mission readouts use existing authoritative player/story data.
+- Restyled the right instrument stack with translucent midnight-blue surfaces; existing target selection, transit and draggable instruments remain intact. Native markup conversion recognizes the new icons. No changes to simulation, gameplay transport, SBS overlays or cockpit flight controls.
+- This is the Atlas organization milestone, not a full cockpit redesign. Native equipment editing remains at its existing limitation; mission toolbar is read-only while existing story decisions remain in the cockpit. Graphics/audio settings and expanded context panels are not yet implemented.
+- Added shared markup and native packaging regression checks; static control-ID checks passed. Node/ExUnit suites and visual verification pending. No release or deployment.
+
 ## 2026-11-25 — SpaceNova native pilot authentication
 
 - Native Play/sign-in now uses the same staged artwork, logo, title stylesheet and angular action button as the launcher, with a translucent right-side login card and responsive sizing.
