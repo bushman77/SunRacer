@@ -17,7 +17,7 @@ class PublishTest(unittest.TestCase):
         (self.root / "scripts").mkdir()
         for name in ("sunracer", "sunracer-version.py"):
             shutil.copy(SCRIPTS / name, self.root / "scripts" / name)
-        (self.root / "mix.exs").write_text('def project do\n  [version: "0.3.3",\n  ]\nend\n')
+        (self.root / "mix.exs").write_text('def project do\n  [apps_path: "apps",\n    version: "0.3.3",\n  ]\nend\n')
         self.git("init", "-b", "story_line")
         self.git("config", "user.name", "Release Test")
         self.git("config", "user.email", "test@example.test")
