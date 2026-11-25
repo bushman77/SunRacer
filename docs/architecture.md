@@ -364,3 +364,7 @@ The `scripts/sunracer server` diagnostic builds `git archive HEAD` in a temporar
 ### Production network topology reconciliation (2026-11-06)
 
 EC2's current public endpoint is Caddy TLS on 443 forwarding to the private Phoenix HTTP socket at 127.0.0.1:4000. `SUNRACER_PROXY_MODE=true` selects this mode at runtime while preserving direct TLS on port 4000 as an explicitly configured alternative. Phoenix's production SSL plug rewrites Caddy's trusted forwarded scheme to prevent proxy redirect loops and retain HSTS. The launcher defaults to the correct public origin without `:4000`, while preserving local development on loopback port 4000. See `docs/sunracer-port-4000.md`.
+
+### Public SpaceNova title screen
+
+`PageController.home/2` renders a public HEEx title screen with scoped CSS in `assets/css/spacenova-home.css`. It uses existing browser authentication routes and does not alter the authoritative game or native transport. The approved static WebP belongs at `priv/static/images/landing/spacenova-space.webp`; the existing SVG is a fallback until the artwork is installed. Asset deployment and browser checks are pending.

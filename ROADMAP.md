@@ -1,3 +1,9 @@
+## 2026-11-25 — SpaceNova public title screen
+
+- Replaced the public homepage with a responsive cinematic title screen and styled SpaceNova wordmark. Guest actions use existing login, registration and recovery routes; authenticated actions use play, equipment and logout.
+- Install the approved `spacenova-space.webp` at `apps/sunracer_web/priv/static/images/landing/` before deploying. The original `sol-approach.svg` remains a CSS fallback while the binary artwork is pending. No runtime names, native clients or game protocol changed.
+- Updated guest homepage DOM regression test. ExUnit, asset build and live visual verification are pending; no Mix formatting performed.
+
 ## SBS headset bandwidth overlay removal (2026-11-24)
 
 The per-eye RX/TX cards have been removed. The headset regression check now covers their absence. All 25 focused headset and bandwidth tests passed. Galaxy S21 visual verification is pending.

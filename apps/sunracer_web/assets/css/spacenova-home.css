@@ -1,0 +1,88 @@
+/* SpaceNova public title screen. No changes to cockpit or launcher styles.
+   The original concept SVG remains available until the approved WebP is installed. */
+.nova-title-screen {
+  position: relative;
+  isolation: isolate;
+  min-height: 100vh;
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
+  color: #f4f8ff;
+  background: #030914;
+  overflow: hidden;
+}
+.nova-title-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  background-image: url("/images/landing/spacenova-space.webp"), url("/images/landing/sol-approach.svg");
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.nova-title-screen::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(0deg,#020611e8,transparent 24%), linear-gradient(90deg,transparent 50%,#03091416 70%,#03091455);
+}
+.nova-main { display: flex; flex: 1; flex-direction: column; min-height: 35rem; position: relative; }
+.nova-brand { text-align: center; width: min(78%, 77rem); margin: clamp(2rem, 9vh, 6rem) auto 0; }
+.nova-wordmark {
+  position: relative;
+  isolation: isolate;
+  display: inline-block;
+  margin: 0;
+  padding: .06em .18em .13em 0;
+  font-family: Inter, "Arial Black", system-ui, sans-serif;
+  font-size: clamp(3.3rem, 8vw, 9.5rem);
+  font-weight: 900;
+  font-style: italic;
+  line-height: .95;
+  letter-spacing: -.075em;
+  text-transform: uppercase;
+  background: linear-gradient(180deg,#fff 4%,#d9e5f2 40%,#74899e 53%,#f7fbff 76%,#a8bbd1);
+  color: #e6f4ff;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 3px 1px #020914) drop-shadow(0 0 12px #2679ae80);
+}
+.nova-wordmark span { background: linear-gradient(180deg,#e5ffff,#49e7ff 43%,#087bbd 55%,#c8fbff 90%); background-clip: text; -webkit-text-fill-color: transparent; }
+.nova-tagline { margin: 1.15rem 0 0; font-size: clamp(.58rem, 1.05vw, .95rem); line-height: 1.8; letter-spacing: .26em; font-weight: 650; text-transform: uppercase; text-shadow: 0 2px 6px #000,0 0 12px #000; }
+.nova-tagline span { color: #a5f3fc; margin-inline: .25em; }
+.nova-menu { display: flex; flex-direction: column; gap: .85rem; width: clamp(17rem, 25vw, 29rem); margin: auto 7% auto auto; padding: 2.5rem 0; }
+.nova-button { position: relative; isolation: isolate; min-height: clamp(3rem, 6.2vh, 4rem); display: flex; align-items: center; justify-content: center; gap: .85rem; padding: .7rem 1.4rem; color: #e6f4ff; text-decoration: none; font-size: clamp(.85rem, 1.15vw, 1.15rem); font-weight: 800; font-style: italic; text-transform: uppercase; letter-spacing: .055em; transition: filter 160ms ease,transform 160ms ease; filter: drop-shadow(0 0 5px #2078bc66); }
+.nova-button::before, .nova-button::after { content: ""; position: absolute; clip-path: polygon(5% 0,95% 0,100% 50%,95% 100%,5% 100%,0 50%); pointer-events: none; }
+.nova-button::before { inset: 0; z-index: -2; background: linear-gradient(180deg,#75caffbb,#1e609c88 46%,#4cb9ffbc); }
+.nova-button::after { inset: 2px; z-index: -1; background: linear-gradient(180deg,#153f6cec,#06152bef 46%,#0d2544f5); }
+.nova-button span { text-shadow: 0 1px 4px #000; }
+.nova-button-primary { min-height: clamp(3.5rem, 7.5vh, 4.8rem); font-size: clamp(1.2rem,1.8vw,1.85rem); color: white; filter: drop-shadow(0 0 9px #0be3ffb5); }
+.nova-button-primary::before { background: linear-gradient(180deg,#d9fdff,#23dfff 50%,#b5faff); }
+.nova-button-primary::after { background: linear-gradient(180deg,#146d9b,#093150 45%,#0c4f7d 82%,#0baad4); }
+.nova-button:hover,.nova-button:focus-visible { filter: drop-shadow(0 0 12px #56eaff); transform: translateY(-2px); }
+.nova-title-screen a:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }
+.nova-button:active { transform: translateY(1px); }
+.nova-account-links { display: flex; flex-wrap: wrap; justify-content: center; gap: .6rem 1rem; font-size: .75rem; color: #cceaff; text-shadow: 0 1px 5px #000; }
+.nova-account-links a { text-decoration: underline; text-underline-offset: .25em; }
+.nova-description { width: min(32rem, 84%); margin: 0 0 1.6rem 4%; text-shadow: 0 2px 6px #000; }
+.nova-description p:first-child { font-size: .65rem; letter-spacing: .16em; font-weight: 800; color: #a5f3fc; }
+.nova-description p:last-child { margin-top: .5rem; font-size: .85rem; line-height: 1.55; color: #f1f5f9; }
+.nova-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: .65rem 1rem; padding: .8rem 4% 1rem; font-size: .65rem; text-transform: uppercase; letter-spacing: .1em; color: #c7d8e8; text-shadow: 0 1px 5px #000; }
+@media (max-width: 760px) {
+  .nova-main { min-height: 39rem; }
+  .nova-title-screen::before { background-position: 33% center; }
+  .nova-title-screen::after { background: linear-gradient(180deg,#03091466,transparent 28%,#03091433 43%,#030914cc 65%,#030914f5); }
+  .nova-brand { width: 96%; margin-top: 2.2rem; }
+  .nova-wordmark { font-size: clamp(2.5rem, 10vw, 5.5rem); }
+  .nova-tagline { letter-spacing: .1em; }
+  .nova-menu { width: min(84%, 25rem); margin: auto auto 1.5rem; padding: 10rem 0 0; }
+  .nova-description { margin: 0 auto 1rem; text-align: center; }
+  .nova-footer { justify-content: center; text-align: center; font-size: .55rem; letter-spacing: .05em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nova-button { transition: none; }
+  .nova-button:hover,.nova-button:focus-visible,.nova-button:active { transform: none; }
+}

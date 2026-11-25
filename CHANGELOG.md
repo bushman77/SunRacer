@@ -1,3 +1,9 @@
+## 2026-11-25 — SpaceNova public title screen
+
+- Replaced the public homepage with a responsive cinematic title screen and styled SpaceNova wordmark. Guest actions use existing login, registration and recovery routes; authenticated actions use play, equipment and logout.
+- Install the approved `spacenova-space.webp` at `apps/sunracer_web/priv/static/images/landing/` before deploying. The original `sol-approach.svg` remains a CSS fallback while the binary artwork is pending. No runtime names, native clients or game protocol changed.
+- Updated guest homepage DOM regression test. ExUnit, asset build and live visual verification are pending; no Mix formatting performed.
+
 ## 2026-11-24 — SBS cockpit
 
 Removed the top-right RX/TX bandwidth card from both headset eyes and its once-per-second refresh. The headset still collects network estimates for console inspection.
