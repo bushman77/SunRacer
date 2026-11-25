@@ -1,6 +1,7 @@
 import * as THREE from "three"
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js"
 import {pointerNdc, toScene, toWorld} from "./stereo_math.mjs"
+import {visualLaserStart} from "./laser_burst.mjs"
 import {stereoViewports, applyTransientStereoOffset, inwardStereoProjectionOffset} from "./stereo_viewport.mjs"
 import {LensDistortionPass, lensCenterU} from "./lens_distortion.mjs"
 import {cockpitHudFit, HUD_GEOMETRY} from "./stereo_layout.mjs"
@@ -224,6 +225,7 @@ export class StereoSpaceView {
     // Core.Combat.LineOfFire's server-owned muzzle positions: ship-local
     // (+/-1.75, +1.3, -3.2), relative to the cockpit eye at Y=+2.75.
     const emitterMetal = material(0x42576b)
+    this.cockpitEmitters = {}
     for (const side of [-1, 1]) {
       const x = side * 1.75
       framing.add(beam([x, -1.45, -2.60], [x, -1.45, -3.20],
@@ -234,6 +236,7 @@ export class StereoSpaceView {
       )
       tip.position.set(x, -1.45, -3.20)
       framing.add(tip)
+      this.cockpitEmitters[side < 0 ? "left" : "right"] = tip
     }
     const dash = new THREE.Mesh(new THREE.BoxGeometry(2.38, 0.72, 0.25), material(0x0d2238))
     dash.position.set(0, -0.72, -2.65)
@@ -939,15 +942,15 @@ export class StereoSpaceView {
     let used = 0
     for (const beamData of client.beams) {
       if (beamData.expiresAt <= time) continue
-      const from = toScene(beamData.from)
       const to = toScene(beamData.to)
       const fraction = clamp((beamData.expiresAt - time) /
         Math.max(1, beamData.expiresAt - beamData.startedAt), 0, 1)
       const laserColor = beamData.hostile ? 0xffa35c : 0xff243d
 
-      // Never invent local muzzle offsets here. These endpoints come from
-      // the authoritative world event, including real hit/miss geometry.
-      start.set(from.x, from.y, from.z)
+      // Use the current ship-fixed mesh for the local visual origin only.
+      // All remote rays and every shot endpoint stay in world space.
+      visualLaserStart(beamData, client.selfId,
+        client.entities.has(client.selfId) ? this.cockpitEmitters : null, start)
       line.set(to.x, to.y, to.z).sub(start)
       const length = line.length()
       if (!(length > 1e-6)) continue

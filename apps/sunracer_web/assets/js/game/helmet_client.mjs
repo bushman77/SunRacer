@@ -1031,7 +1031,7 @@ syncHudState(map) {
     const at = performance.now()
     for (const ray of visualLaserRays(shot, attacker, target)) {
       this.beams.push({...ray, hostile: attacker?.kind === "npc",
-        startedAt: at, expiresAt: at + 550})
+        shooterId: key(shot.attacker_id), startedAt: at, expiresAt: at + 550})
     }
     if (key(shot.attacker_id) === this.selfId) {
       this.lastLaserFeedback = laserFeedback(shot, this.entities, at)

@@ -1,6 +1,9 @@
 import assert from "node:assert/strict"
 import test from "node:test"
-import {applyLaserBurstDamage, visualLaserRays} from "./laser_burst.mjs"
+import {applyLaserBurstDamage, visualLaserRays, visualLaserStart} from "./laser_burst.mjs"
+import {readFileSync} from "node:fs"
+import {rotateVector, normalizeOrientation} from "./orientation_interpolation.mjs"
+import {toScene} from "./stereo_math.mjs"
 
 const enemy = id => ({
   id, kind: "npc", hull: 800, maxHull: 800, shields: 400,
@@ -73,4 +76,59 @@ test("legacy non-burst NPC and player damage events are still supported", () => 
   assert.equal(targets.get("npc1").hull,790)
   assert.equal(visualLaserRays({...attack}, {render:{x:0,y:0,z:0}},
     targets.get("npc1")).length,1)
+})
+
+const outVector = () => ({
+  x: 0, y: 0, z: 0,
+  set(x,y,z) { this.x=x; this.y=y; this.z=z; return this },
+})
+const coords = ({x,y,z}) => ({x,y,z})
+
+test("local wing visuals stay attached to their current tips after ship motion and rotation", () => {
+  const ray = Object.freeze({shooterId: "pilot", side: "left",
+    from: Object.freeze({x: 100, y: 200, z: 300}),
+    to: Object.freeze({x: 500, y: 700, z: 900}), hit: true})
+  const out = outVector()
+  const eye = {x: 20,y: 30,z: 40}
+  let q = normalizeOrientation({x:0,y:0,z:0,w:1})
+  const tips = Object.fromEntries([["left",-1],["right",1]].map(([side,sign]) =>
+    [side,{getWorldPosition(out) {
+      const p = rotateVector(q,{x: sign*1.75, y:-1.45,z:-3.2})
+      return out.set(eye.x+p.x,eye.y+p.y,eye.z+p.z)
+    }}]))
+  const before = coords(visualLaserStart(ray,"pilot",tips,out))
+  assert.deepEqual(before,{x:18.25,y:28.55,z:36.8})
+  eye.x += 12
+  q = normalizeOrientation({x:0.2,y:0.3,z:0.4,w:0.5})
+  for (const side of ["left","right"]) {
+    const shot = {...ray,side}
+    const actual = coords(visualLaserStart(shot,"pilot",tips,out))
+    assert.deepEqual(actual,coords(tips[side].getWorldPosition(outVector())))
+    assert.notDeepEqual(actual,before)
+    assert.equal(shot.to,ray.to)
+    assert.equal(shot.hit,true)
+  }
+  assert.deepEqual(ray.from,{x:100,y:200,z:300})
+})
+
+test("remote, legacy and missing-mesh rays retain original world-space geometry", () => {
+  const from = {x:100,y:200,z:300}
+  const emitters = {left:{getWorldPosition(){throw Error("must not anchor")}}}
+  for (const [ray,selfId,tips] of [
+    [{from,shooterId:"other",side:"left"},"pilot",emitters],
+    [{from,shooterId:"pilot",side:null},"pilot",emitters],
+    [{from,shooterId:"pilot",side:"left"},"pilot",null],
+    [{from,side:"left"},undefined,emitters],
+  ]) {
+    assert.deepEqual(coords(visualLaserStart(ray,selfId,tips,outVector())),toScene(from))
+  }
+})
+
+test("shared renderer anchors to actual cockpit tips and helmet tags the shot owner", () => {
+  const read = path => readFileSync(new URL(path,import.meta.url),"utf8")
+  const stereo = read("./stereo_view.js")
+  assert.match(stereo,/this\.cockpitEmitters\[side < 0 \? "left" : "right"\] = tip/)
+  assert.match(stereo,/visualLaserStart\(beamData, client\.selfId,/)
+  assert.match(stereo,/const to = toScene\(beamData\.to\)/)
+  assert.match(read("./helmet_client.mjs"),/shooterId: key\(shot\.attacker_id\)/)
 })

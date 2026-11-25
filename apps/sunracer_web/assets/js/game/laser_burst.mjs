@@ -1,4 +1,5 @@
 import {applyAuthoritativeDamage, entityKey} from "./combat_client.mjs"
+import {toScene} from "./stereo_math.mjs"
 
 // Two wing rays may hit two different NPCs. Apply only the final entity
 // states sent by the server, never infer or simulate damage in the browser.
@@ -30,4 +31,17 @@ export function visualLaserRays(attack, attacker, target) {
     side: ray.side || null,
     hit: Boolean(ray.hit),
   }))
+}
+
+// Rendering only. A pilot sees the cockpit at its latest interpolated pose,
+// not the pose used when the shot was emitted. Anchor only the local pilot's
+// named wing rays to the actual visible muzzle meshes. Keep the shot's world
+// endpoint (and hit information) unchanged; never use this for collision.
+export function visualLaserStart(ray, selfId, emitters, out) {
+  const local = selfId != null && ray.shooterId === selfId
+  const emitter = local && (ray.side === "left" || ray.side === "right")
+    ? emitters?.[ray.side] : null
+  if (emitter) return emitter.getWorldPosition(out)
+  const from = toScene(ray.from)
+  return out.set(from.x, from.y, from.z)
 }
