@@ -11,7 +11,13 @@ defmodule SunracerWeb.PageControllerTest do
     assert Enum.count(LazyHTML.query(document, "#landing-page.nova-title-screen")) == 1
     assert Enum.count(LazyHTML.query(document, "#nova-title")) == 1
     assert Enum.count(LazyHTML.query(document, "#primary-launch-link[href='/login']")) == 1
-    assert Enum.count(LazyHTML.query(document, "#launch-client-link[href='/login']")) == 1
+    assert Enum.count(LazyHTML.query(document, "#launch-client-link")) == 0
+    assert Enum.count(LazyHTML.query(document, "a[href='/login']")) == 1
+    assert Enum.count(LazyHTML.query(document, "#nova-settings-toggle[popovertarget='nova-settings-panel']")) == 1
+    assert Enum.count(LazyHTML.query(document, "#nova-settings-panel[popover='auto']")) == 1
+    assert Enum.count(LazyHTML.query(document, "#nova-network-settings summary")) == 1
+    assert Enum.count(LazyHTML.query(document, "#nova-network-test")) == 1
+    assert Enum.count(LazyHTML.query(document, "#nova-network-status[role='status']")) == 1
     assert Enum.count(LazyHTML.query(document, "#hero-register-link[href='/register']")) == 1
     assert Enum.count(LazyHTML.query(document, "a[href='/forgot-password']")) == 1
     assert Enum.count(LazyHTML.query(document, "a[href='/register/resend']")) == 1

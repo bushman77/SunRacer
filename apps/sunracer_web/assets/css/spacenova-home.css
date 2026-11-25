@@ -86,3 +86,88 @@
   .nova-button { transition: none; }
   .nova-button:hover,.nova-button:focus-visible,.nova-button:active { transform: none; }
 }
+
+/* Compact title-screen settings: popover handles Escape and outside clicks. */
+.nova-settings {
+  position: absolute;
+  z-index: 10;
+  top: 1rem;
+  left: 1rem;
+}
+.nova-settings-toggle {
+  display: grid;
+  place-items: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  color: #b9efff;
+  background: rgb(3 9 20 / 80%);
+  border: 1px solid rgb(103 232 249 / 40%);
+  border-radius: .4rem;
+  cursor: pointer;
+}
+.nova-settings-toggle:hover, .nova-settings-toggle:focus-visible {
+  color: #fff;
+  border-color: #67e8f9;
+  box-shadow: 0 0 12px rgb(34 211 238 / 24%);
+}
+.nova-settings-panel {
+  position: fixed;
+  inset: 4.25rem auto auto 1rem;
+  margin: 0;
+  padding: .25rem;
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  max-height: calc(100vh - 5.25rem);
+  max-height: calc(100dvh - 5.25rem);
+  overflow: auto;
+  box-sizing: border-box;
+  border: 1px solid rgb(103 232 249 / 30%);
+  border-radius: .4rem;
+  background: rgb(3 9 20 / 80%);
+  color: #e6f4ff;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 8px 22px rgb(0 0 0 / 35%);
+  font-size: .85rem;
+}
+.nova-settings-section summary {
+  display: flex;
+  align-items: center;
+  gap: .65rem;
+  padding: .65rem .75rem;
+  cursor: pointer;
+  list-style: none;
+  border-radius: .25rem;
+  font-weight: 650;
+}
+.nova-settings-section summary::-webkit-details-marker { display: none; }
+.nova-settings-section summary:hover { background: rgb(103 232 249 / 10%); }
+.nova-settings-section summary .hero-signal { color: #67e8f9; }
+.nova-settings-chevron { margin-left: auto; color: #83b9d3; }
+.nova-settings-section[open] .nova-settings-chevron { transform: rotate(180deg); }
+.nova-network-content { padding: .65rem .75rem .75rem; border-top: 1px solid rgb(103 232 249 / 15%); }
+.nova-network-content dl { display: grid; grid-template-columns: auto minmax(0,1fr); gap: .5rem 1rem; font-size: .75rem; }
+.nova-network-content dt { color: #a4bdcc; }
+.nova-network-content dd { margin: 0; overflow-wrap: anywhere; }
+.nova-network-test {
+  margin-top: .85rem;
+  border: 1px solid rgb(103 232 249 / 40%);
+  border-radius: .25rem;
+  padding: .4rem .7rem;
+  background: rgb(14 116 144 / 20%);
+  color: #b9efff;
+  cursor: pointer;
+}
+.nova-network-test:hover:not(:disabled) { background: rgb(14 116 144 / 40%); }
+.nova-network-test:disabled { opacity: .6; cursor: wait; }
+.nova-network-status { font-size: .75rem; color: #b9efff; overflow-wrap: anywhere; }
+.nova-network-status:not(:empty) { margin-top: .55rem; }
+.nova-network-note { max-width: 29ch; margin-top: .75rem; font-size: .7rem; color: #a4bdcc; line-height: 1.5; }
+.nova-settings button:focus-visible, .nova-settings-panel button:focus-visible, .nova-settings-panel summary:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 2px;
+}
+@media (max-width: 760px) {
+  .nova-settings { top: .75rem; left: .75rem; }
+  .nova-settings-panel { inset: 4rem auto auto .75rem; max-width: calc(100vw - 1.5rem); }
+  .nova-brand { margin-top: 4rem; }
+}

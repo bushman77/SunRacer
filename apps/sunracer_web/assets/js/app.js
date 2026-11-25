@@ -26,6 +26,7 @@ import {hooks as colocatedHooks} from "phoenix-colocated/sunracer_web"
 import topbar from "../vendor/topbar"
 import {startGameClient} from "./game/client"
 import {startHelmetClient} from "./game/helmet_client.mjs"
+import {startTitleSettings} from "./title_settings.mjs"
 
 const setTheme = theme => {
   if (theme === "system") {
@@ -66,6 +67,7 @@ window.liveSocket = liveSocket
 
 startGameClient()
 startHelmetClient()
+startTitleSettings()
 
 // The lines below enable quality of life phoenix_live_reload
 // development features:

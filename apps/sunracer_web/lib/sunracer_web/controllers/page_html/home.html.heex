@@ -1,4 +1,5 @@
 <div id="landing-page" class="nova-title-screen">
+  <SunracerWeb.TitleSettings.menu />
   <main class="nova-main">
     <header class="nova-brand">
       <h1 id="nova-title" class="nova-wordmark">Space<span>Nova</span></h1>
@@ -8,10 +9,6 @@
       <.link href={if(@current_player, do: ~p"/play", else: ~p"/login")} id="primary-launch-link" class="nova-button nova-button-primary">
         <.icon name="hero-play" class="size-6" />
         <span>Play</span>
-      </.link>
-      <.link :if={!@current_player} href={~p"/login"} id="launch-client-link" class="nova-button">
-        <.icon name="hero-user" class="size-5" />
-        <span>Pilot sign in</span>
       </.link>
       <.link :if={!@current_player} href={~p"/register"} id="hero-register-link" class="nova-button">
         <.icon name="hero-user-plus" class="size-5" />

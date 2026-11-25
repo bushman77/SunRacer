@@ -1,3 +1,9 @@
+## 2026-11-25 — SpaceNova title settings menu
+
+- Removed duplicate Pilot Sign In; Play still routes guests to login and authenticated pilots to the cockpit.
+- Added a reusable top-left settings popover, intrinsic-width translucent midnight-blue panel, and a browser network section with current origin and on-demand same-origin HTTP connection check. Native proxy controls remain in the Tauri launcher; browsers manage their own proxy settings.
+- Added homepage DOM and Node network-check regression coverage. Full local test/build and visual verification pending; no Mix formatting or deployment performed.
+
 ## 2026-11-25 — SpaceNova public title screen
 
 - Replaced the public homepage with a responsive cinematic title screen and styled SpaceNova wordmark. Guest actions use existing login, registration and recovery routes; authenticated actions use play, equipment and logout.
