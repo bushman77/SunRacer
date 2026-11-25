@@ -37,7 +37,7 @@ export class NavigationComputer {
     solarHail = (_id, done) => done(false, null, "unavailable"),
     solarEnterFreeFlight = done => done(false, null, "unavailable"),
     solarResumeCruise = done => done(false, null, "unavailable"),
-    onOpen, onClose}) {
+    onOpen, onClose, createOrrery}) {
     this.root = root
     this.getEntities = getEntities
     this.getSelfId = getSelfId
@@ -52,6 +52,8 @@ export class NavigationComputer {
     this.solarResumeCruise = solarResumeCruise
     this.onOpen = onOpen
     this.onClose = onClose
+    this.createOrrery = createOrrery
+    this.solarPresentation = "flat"
     this.draft = []
     this.isOpen = false
     this.pending = false
@@ -71,6 +73,12 @@ export class NavigationComputer {
 
   start() {
     this.solarSvg = this.root.querySelector("#nav-solar-chart")
+    this.orreryHost = this.root.querySelector("#nav-orrery")
+    this.root.querySelector("#nav-orrery-mode")?.addEventListener("click",()=>this.setSolarPresentation("orrery"))
+    this.root.querySelector("#nav-flat-mode")?.addEventListener("click",()=>this.setSolarPresentation("flat"))
+    this.root.querySelector("#nav-orrery-reset")?.addEventListener("click",()=>this.orrery?.reset())
+    // Initialize lazily on the first visible SOL frame; flat remains the fallback.
+    this.preferOrrery=Boolean(this.createOrrery&&this.orreryHost)
     setupAtlasHudDrag({
       root:this.root,
       panel:this.root.querySelector(".atlas-hud-right"),
@@ -149,7 +157,7 @@ export class NavigationComputer {
       }
     })
     this.root.addEventListener?.("pointerdown",event=>{
-      if(!event.target?.closest?.("#nav-solar-context-menu,#nav-solar-chart")){
+      if(!event.target?.closest?.("#nav-solar-context-menu,#nav-solar-chart,#nav-orrery")){
         this.closeSolarContextMenu()
       }
     })
@@ -277,6 +285,7 @@ export class NavigationComputer {
     const system=view==="system"
     this.root.querySelector("#nav-solar-view").hidden=!system
     this.root.querySelector("#nav-sector-view").hidden=system
+    this.orrery?.setActive(system&&this.isOpen&&this.solarPresentation==="orrery")
     this.root.querySelector("#nav-view-system").setAttribute("aria-selected",String(system))
     this.root.querySelector("#nav-view-sector").setAttribute("aria-selected",String(!system))
     this.root.querySelector("#nav-view-system").classList.toggle("is-active",system)
@@ -286,7 +295,55 @@ export class NavigationComputer {
     this.root.querySelector("#nav-subtitle").textContent=system?
       "Select planets or a free SOL waypoint; cockpit view does not change propulsion" :
       "Local XY tactical chart · plot waypoints with independent Z altitude"
+    if(this.isOpen&&system&&this.preferOrrery){this.preferOrrery=false;this.setSolarPresentation("orrery")}
     if(this.isOpen)this.draw(0,true)
+  }
+
+  setSolarPresentation(mode) {
+    if(!["flat","orrery"].includes(mode)||!this.orreryHost)return
+    this.closeSolarContextMenu()
+    if(mode==="orrery"&&!this.orrery){
+      try {
+        this.orrery=this.createOrrery?.(this.orreryHost,{
+          select:hit=>this.selectOrreryHit(hit),
+          context:(hit,x,y)=>this.contextOrreryHit(hit,x,y),
+          unavailable:()=>this.setSolarPresentation("flat"),
+        })
+      }catch(error){console.warn("Orrery unavailable; retaining overhead map",error)}
+      if(!this.orrery)mode="flat"
+    }
+    this.solarPresentation=mode
+    const active=mode==="orrery"
+    this.orreryHost.hidden=!active
+    if(this.solarSvg)this.solarSvg.hidden=active
+    for(const [id,enabled] of [["#nav-orrery-mode",active],["#nav-flat-mode",!active]]){
+      const button=this.root.querySelector(id)
+      button?.setAttribute("aria-pressed",String(enabled))
+      button?.classList.toggle("is-active",enabled)
+    }
+    for(const id of ["#nav-orrery-reset","#nav-orrery-hint"]){const node=this.root.querySelector(id);if(node)node.hidden=!active}
+    this.orrery?.setActive(active&&this.isOpen&&this.view==="system")
+    if(this.isOpen&&this.view==="system")this.renderSolarView()
+  }
+
+  selectOrreryHit(hit){
+    this.closeSolarContextMenu()
+    if(hit.kind==="body")this.selectSolarBody(hit.id)
+    else if(hit.kind==="starbase")this.selectSolarStarbase(hit.id)
+    else if(hit.kind==="waypoint")this.selectSolarWaypoint(hit.position)
+    else if(hit.kind==="contact"){
+      const contacts=this.root.querySelector("#atlas-sensor-contacts")
+      if(contacts)contacts.open=true
+      const hail=[...(this.root.querySelectorAll("[data-traffic-hail]")||[])].find(b=>b.dataset.trafficHail===hit.id)
+      hail?.focus({preventScroll:true})
+      hail?.scrollIntoView({block:"nearest"})
+    }
+  }
+
+  contextOrreryHit(hit,x,y){
+    if(hit.kind==="contact"){this.selectOrreryHit(hit);return}
+    const point=hit.kind==="starbase"?this.solarNavigation?.starbases?.find(s=>s.id===hit.id)?.position_km:hit.position
+    if(hit.kind==="body"||point)this.openSolarContextMenu(hit.kind==="body"?hit.id:null,x,y,point)
   }
 
   setSolarFocus(focus) {
@@ -566,15 +623,21 @@ export class NavigationComputer {
     const resume=this.root.querySelector("#nav-solar-resume")
     if(resume)resume.disabled=this.solarPending||!connected||!traveling||
       !nav?.free_flight||Boolean(nav?.tactical_encounter)
+    // Hide actions irrelevant to the authoritative transit state, not merely disabled.
+    if(button)button.hidden=traveling
+    if(abort)abort.hidden=!traveling||Boolean(nav?.free_flight)||Boolean(nav?.pending_encounter)
+    if(manual)manual.hidden=!traveling||Boolean(nav?.free_flight)||Boolean(nav?.pending_encounter)||Boolean(nav?.tactical_encounter)
+    if(resume)resume.hidden=!traveling||!nav?.free_flight||Boolean(nav?.tactical_encounter)
+    if(progress)progress.hidden=!traveling
     this.renderTrafficContacts()
   }
 
   renderSolarView() {
-    drawSolarAtlas(this.solarSvg,{
-      focus:this.solarFocus,selectedId:this.solarSelection,
+    const state={focus:this.solarFocus,selectedId:this.solarSelection,
       navigation:this.solarNavigation,waypoint:this.solarWaypoint,
-      selectedStarbaseId:this.solarStarbaseSelected,
-    })
+      selectedStarbaseId:this.solarStarbaseSelected}
+    if(this.solarPresentation==="orrery"&&this.orrery)this.orrery.update(state)
+    else drawSolarAtlas(this.solarSvg,state)
     renderSolarDetails(this.root,this.solarSelection)
     if(this.solarWaypoint){
       const set=(id,text)=>{const node=this.root.querySelector(id);if(node)node.textContent=text}
@@ -619,6 +682,7 @@ export class NavigationComputer {
     this.closeSolarContextMenu()
     for (const item of this.atlasDisclosures || []) item.open = false
     this.isOpen = false
+    this.orrery?.setActive(false)
     this.root.hidden = true
     this.onClose?.()
   }

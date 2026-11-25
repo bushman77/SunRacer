@@ -380,3 +380,7 @@ The generated native game document uses the staged SpaceNova title stylesheet fo
 ### SpaceNova Atlas command layout
 
 The shared HEEx Atlas now organizes native and browser controls into the top bar, a left command toolbar and an existing movable right instrument stack. The settings disclosure hosts the existing mouse controls and headset/reset/sign-out actions; diagnostics toggles the existing bandwidth panel. Connection, pilot and mission readouts reflect existing client/server state rather than inventing data. `native-game-markup.mjs` converts the additional icons and retains the same logout and gameplay IDs. Cockpit/SBS and authoritative navigation are unchanged. Full tests and visual verification pending.
+
+### SpaceNova strategic orrery
+
+The optional local Three.js `SolarOrrery` is injected into NavigationComputer by the shared SpaceClient, alongside the original SVG overhead renderer. Both use the existing reversible SOL chart projection; ray-plane picks are converted back through solarChartToPosition before the unchanged navigation validation and server callbacks. The orrery renders on camera, selection, resize, or navigation updates, not its own frame loop. It does not alter server state or transmit visual assets. Native client builds bundle the same module via the existing asset pipeline. Planet textures are schematic procedural markings, not ephemerides. The fallback is the overhead chart. Full build, GPU and input verification pending.

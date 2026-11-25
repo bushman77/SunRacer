@@ -2032,3 +2032,59 @@ body:has(#helmet-client) {
   .atlas-command-toolbar {left:8px;top:108px;gap:.25rem;padding:.2rem;}
   .atlas-command-toolbar .nova-hud-icon {width:2rem;height:2rem;}
 }
+/* SpaceNova orrery: same shared palette as title and authentication screens. */
+.navigation-computer .solar-orrery {
+  position:absolute;inset:0;overflow:hidden;
+  background:
+    radial-gradient(ellipse at 28% 65%,#7928ca24,transparent 42%),
+    radial-gradient(ellipse at 70% 32%,#075db52b,transparent 48%),
+    radial-gradient(circle at 22% 36%,#d9e5f28c .55px,transparent 1px),
+    radial-gradient(circle at 72% 66%,#d9e5f266 .6px,transparent 1px),
+    var(--nova-space);
+  background-size:auto,auto,97px 113px,157px 139px,auto;
+}
+.navigation-computer #nav-orrery[hidden],
+.navigation-computer #nav-solar-chart[hidden],
+.navigation-computer #nav-orrery-reset[hidden],
+.navigation-computer #nav-orrery-hint[hidden],
+.navigation-computer .solar-navigation-console>[hidden],
+.orrery-label[hidden] {display:none!important;}
+.orrery-canvas {position:absolute;inset:0;width:100%;height:100%;display:block;cursor:crosshair;touch-action:none;}
+.orrery-labels {position:absolute;inset:0;pointer-events:none;}
+.orrery-label {
+  position:absolute;white-space:nowrap;padding:.16rem .28rem;
+  font:600 .68rem/1.25 ui-monospace,monospace;letter-spacing:.04em;
+  color:var(--nova-silver);background:#0309149c;border:0;border-left:1px solid #648ba2;
+  text-shadow:0 1px 3px #000;
+}
+button.orrery-label {pointer-events:auto;cursor:pointer;}
+.orrery-label[data-selected="true"],button.orrery-label:hover,button.orrery-label:focus-visible {
+  color:var(--nova-cyan);border-color:var(--nova-cyan);background:#0c2544d9;
+}
+.orrery-label[data-kind="starbase"] {color:var(--nova-friendly);}
+.orrery-label[data-kind="ship"],.orrery-label[data-kind="waypoint"] {color:var(--nova-cyan);}
+.orrery-label[data-kind="environment"] {color:#e99bf3;}
+.orrery-hint {font:600 .57rem/1.4 ui-monospace,monospace;color:#a4bdcc;max-width:20ch;}
+.navigation-computer .solar-chart-controls {flex-wrap:wrap;max-width:calc(100% - 24px);}
+.navigation-computer .solar-zoom-group {flex-wrap:wrap;}
+.navigation-computer .nova-hud-wordmark {
+  font-size:clamp(1rem,1.55vw,1.3rem);letter-spacing:-.065em;
+  background:linear-gradient(180deg,#fff,var(--nova-silver) 45%,#8a9eb4 55%,#f6fbff);
+  background-clip:text;-webkit-text-fill-color:transparent;
+}
+.navigation-computer .nova-hud-wordmark>span {
+  background:linear-gradient(180deg,#d5fcff,var(--nova-cyan) 45%,#087bbd 60%,#c8fbff);
+  background-clip:text;-webkit-text-fill-color:transparent;
+}
+.navigation-computer .atlas-command-toolbar .nova-hud-icon {width:2.75rem;height:2.75rem;}
+.navigation-computer .nova-hud-icon svg {width:1.35rem;height:1.35rem;}
+.navigation-computer .hud-flight-widget .nav-primary {
+  background:linear-gradient(180deg,#146d9b,#093150 45%,#0c4f7d);
+  border-color:var(--nova-cyan);color:#eefaff;box-shadow:0 0 10px #23dfff30;
+}
+#game-client:has(#navigation-computer:not([hidden]))>[data-bandwidth-panel]:not([open]) {display:none;}
+#game-client:has(#navigation-computer:not([hidden]))>[data-bandwidth-panel][open] {bottom:3rem;}
+@media(max-width:570px) {
+  .navigation-computer .atlas-command-toolbar .nova-hud-icon {width:2rem;height:2rem;}
+  .orrery-hint {display:none;}
+}

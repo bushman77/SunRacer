@@ -407,6 +407,7 @@
       <section id="nav-solar-view" class="solar-atlas-layout" role="tabpanel"
         aria-labelledby="nav-view-system">
         <div class="solar-atlas-frame">
+          <div id="nav-orrery" class="solar-orrery" hidden aria-label="3D Solar System Atlas"></div>
           <svg id="nav-solar-chart" viewBox="0 0 1000 600"
             aria-label="SOL system chart. Select a planet, or click empty space to plot a free coordinate."
             role="group">
@@ -423,12 +424,16 @@
           </div>
           <div class="solar-chart-controls">
             <div class="solar-zoom-group" aria-label="Solar map view">
+              <button id="nav-orrery-mode" class="solar-zoom-button" type="button" aria-pressed="false">3D Orrery</button>
+              <button id="nav-flat-mode" class="solar-zoom-button is-active" type="button" aria-pressed="true">Overhead</button>
+              <button id="nav-orrery-reset" class="solar-zoom-button" type="button" hidden>Reset view</button>
               <button class="solar-zoom-button is-active" data-solar-focus="system"
                 aria-pressed="true" type="button">Full system</button>
               <button class="solar-zoom-button" data-solar-focus="inner"
                 aria-pressed="false" type="button">Inner planets</button>
             </div>
             <p>CLICK EMPTY SPACE TO PLOT A WAYPOINT · RIGHT-CLICK FOR ACTIONS</p>
+            <span id="nav-orrery-hint" class="orrery-hint" hidden>Middle drag · wheel zoom · double-click focus</span>
           </div>
         </div>
         <aside class="atlas-hud-right" aria-label="Navigation instrument overlays">

@@ -96,3 +96,11 @@ test("packaged Atlas retains organized command controls and native logout", () =
   assert.match(document, /<form id="pilot-logout-form"/)
   assert.match(document, /data-native-equipment/)
 })
+
+test("native package contains both strategic map renderers and real toolbar SVGs",()=>{
+  for(const id of ["nav-orrery","nav-orrery-mode","nav-flat-mode","nav-orrery-reset","nav-solar-chart"]){
+    assert.equal((document.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
+  }
+  assert.match(document, /id="nav-orrery"[^>]*hidden/)
+  assert.match(document, /<svg class="size-5" viewBox="0 0 24 24"/)
+})

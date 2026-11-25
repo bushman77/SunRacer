@@ -10,6 +10,15 @@ const icons = {
   "hero-adjustments-horizontal": "☷", "hero-arrow-path": "↻", "hero-bolt": "ϟ",
 }
 
+const atlasSvgIcons = {
+  "hero-bars-3": "<path d='M4 6h16M4 12h16M4 18h16'/>",
+  "hero-user": "<circle cx='12' cy='7' r='4'/><path d='M4 21v-2a8 8 0 0 1 16 0v2z'/>",
+  "hero-archive-box": "<path d='M3 7 12 3l9 4v13H3zM3 7l9 4 9-4M12 11v9'/>",
+  "hero-wrench-screwdriver": "<path d='m4 20 9-9a6 6 0 0 1 7-7l-4 4 3 3 4-4a6 6 0 0 1-7 7l-9 9z'/>",
+  "hero-signal": "<circle cx='12' cy='12' r='2'/><path d='M7 7a7 7 0 0 0 0 10M17 7a7 7 0 0 1 0 10M4 4a11 11 0 0 0 0 16M20 4a11 11 0 0 1 0 16'/>",
+  "hero-clipboard-document-list": "<rect x='5' y='4' width='14' height='18' rx='2'/><rect x='9' y='2' width='6' height='4' rx='1'/><path d='M9 10h6M9 14h6M9 18h6'/>"
+}
+
 function nativeHotbar() {
   return Array.from({length: 10}, (_, i) => {
     const slot = i + 1
@@ -59,6 +68,7 @@ export function convertGameMarkup(template) {
     .replace(/<\.icon\b[^>]*\/>/g, tag => {
       const name = tag.match(/name="([^"]+)"/)?.[1] || ""
       const klass = tag.match(/class="([^"]+)"/)?.[1] || ""
+      if (atlasSvgIcons[name]) return '<svg class="' + klass + '" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + atlasSvgIcons[name] + "</svg>"
       return '<span class="' + klass + '" aria-hidden="true">' +
         (icons[name] || "•") + "</span>"
     })

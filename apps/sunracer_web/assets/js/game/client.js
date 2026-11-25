@@ -1,4 +1,6 @@
 import {Socket} from "phoenix"
+import * as THREE from "three"
+import {SolarOrrery} from "./solar_orrery.mjs"
 import {
   applyAuthoritativeDamage,
   entityKey,
@@ -392,6 +394,7 @@ class SpaceClient {
     }, true)
 
     this.navComputer = new NavigationComputer({
+      createOrrery: (host, actions) => new SolarOrrery(THREE, host, actions),
       root: this.root.querySelector("#navigation-computer"),
       getEntities: () => this.entities,
       getSelfId: () => this.selfId,

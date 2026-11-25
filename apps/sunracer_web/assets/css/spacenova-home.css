@@ -1,3 +1,14 @@
+:root {
+  --nova-space:#030914;
+  --nova-deep-blue:#0c2544;
+  --nova-cyan:#23dfff;
+  --nova-silver:#d9e5f2;
+  --nova-violet:#7928ca;
+  --nova-magenta:#e82ac6;
+  --nova-amber:#ffad45;
+  --nova-friendly:#6ef5a4;
+  --nova-hostile:#fb7185;
+}
 /* SpaceNova public title screen. No changes to cockpit or launcher styles.
    The original concept SVG remains available until the approved WebP is installed. */
 .nova-title-screen {
@@ -8,7 +19,7 @@
   display: flex;
   flex-direction: column;
   color: #f4f8ff;
-  background: #030914;
+  background: var(--nova-space);
   overflow: hidden;
 }
 .nova-title-screen::before {
@@ -60,7 +71,7 @@
 .nova-button::after { inset: 2px; z-index: -1; background: linear-gradient(180deg,#153f6cec,#06152bef 46%,#0d2544f5); }
 .nova-button span { text-shadow: 0 1px 4px #000; }
 .nova-button-primary { min-height: clamp(3.5rem, 7.5vh, 4.8rem); font-size: clamp(1.2rem,1.8vw,1.85rem); color: white; filter: drop-shadow(0 0 9px #0be3ffb5); }
-.nova-button-primary::before { background: linear-gradient(180deg,#d9fdff,#23dfff 50%,#b5faff); }
+.nova-button-primary::before { background: linear-gradient(180deg,#d9fdff,var(--nova-cyan) 50%,#b5faff); }
 .nova-button-primary::after { background: linear-gradient(180deg,#146d9b,#093150 45%,#0c4f7d 82%,#0baad4); }
 .nova-button:hover,.nova-button:focus-visible { filter: drop-shadow(0 0 12px #56eaff); transform: translateY(-2px); }
 .nova-title-screen a:focus-visible { outline: 2px solid #fff; outline-offset: 4px; }

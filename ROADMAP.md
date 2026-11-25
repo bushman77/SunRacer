@@ -1,3 +1,10 @@
+## 2026-11-25 — SpaceNova 3D Solar Orrery
+
+- Added a locally rendered Three.js orrery with a tilted camera, shaded schematic planets, Saturn rings, thin cyan-blue orbit paths, midnight/nebula backdrop, labels, player and server-positioned station/contact markers and schematic route indicators. Left click selects, right click opens existing route actions, middle drag rotates, wheel zooms and double-click focuses; reset and keyboard camera controls are available. The overhead chart remains available and is the fallback if WebGL initialization fails.
+- Reuses the existing reversible SOL chart projection and authenticated navigation callbacks. No protocol, physics, ephemeris, or SBS changes. Sensor contacts without a supplied position remain in the existing contacts panel; no invented locations. Routes are diagram indicators, not predicted obstacle-avoidance trajectories. Planet markings and distances remain schematic.
+- Added shared landing-page color tokens, actual SVG icons for the native toolbar, context-sensitive flight actions and suppressed the redundant closed NET tab in Atlas. Preserved existing flight handlers and settings.
+- Added projection/camera and native markup regression tests. Source integration checks passed; automated suite, asset build and GPU/browser/manual verification pending. No version bump, deployment or Mix formatting.
+
 ## 2026-11-25 — SpaceNova Atlas command layout
 
 - Organized the shared Atlas into a compact SpaceNova header, live connection state, left pilot command toolbar and top-left settings disclosure. Existing inventory, loadout, sensor contacts, mouse preferences, headset, HUD reset, diagnostics and logout controls retain their original handlers. Pilot and mission readouts use existing authoritative player/story data.
