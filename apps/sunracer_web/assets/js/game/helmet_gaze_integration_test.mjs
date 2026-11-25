@@ -67,7 +67,7 @@ test("desktop and SBS render the same server-owned walking pose", () => {
   assert.match(view, /this\.camera\.rotation\.set\(0, -this\.stationViewPose\.yaw, 0, "YXZ"\)/)
   assert.match(view, /this\.stationViewPose\.x \+= \(targetX - this\.stationViewPose\.x\) \* blend/)
   assert.match(view, /this\.camera\.quaternion\.multiply\(this\.helmetHeadRotation\)/)
-  assert.match(helmet, /this\.stationPosition = this\.docked \?/)
+  assert.match(helmet, /this\.stationPosition = this\.docked\s*\?\s*map\.station_avatars\?\.find\(avatar => key\(avatar\.player_id\) === this\.selfId\) \|\| null\s*:\s*null/)
   assert.doesNotMatch(helmet, /channel\.push\("station_walk"|"station_look"/)
 })
 
@@ -99,8 +99,8 @@ test("native desktop starts with ALL headset-only meshes hidden", () => {
   assert.match(view, /this\.setHelmetHeadRotation\(null\)/)
 })
 
-test("the phone renders an accessible NAV target and explains missing gyro", () => {
-  assert.match(view, /this\.navSwitch\.position\.set\(1\.24, -0\.68, -2\.46\)/)
+test("the phone hides the NAV switch and explains missing gyro", () => {
+  assert.doesNotMatch(view, /^\s*framing\.add\(this\.navSwitch\)/m)
   assert.match(view, /new THREE\.PlaneGeometry\(1\.52, 0\.55\)/)
   assert.match(view, /HEAD TRACKING UNAVAILABLE/)
   // Driven by sensor status, not by a momentarily missing pose.
@@ -109,31 +109,19 @@ test("the phone renders an accessible NAV target and explains missing gyro", () 
   assert.match(helmet, /setHelmetTrackingUnavailable\(headTrackingUnavailable\(status\)\)/)
 })
 
-test("HUD gaze inspects read-only flight, contacts and space pages", () => {
-  // The resting gaze set is still the nav switch and the HUD panel. The
-  // surrender buttons are spread in only while a captain is actually
-  // yielding, and helmetSurrenderArmed is false at every other moment.
-  // The resting gaze set is the nav switch and the HUD panel. Anything else
-  // is spread in conditionally and is absent whenever its own armed flag is
-  // false, so assert the base pair and the guards rather than the exact
-  // literal -- every new conditional target would otherwise break this.
-  assert.match(view, /\[this\.navSwitch, this\.hudPanel(, \.\.\.\w+)*\]/)
-  assert.match(view, /const surrender = this\.helmetSurrenderArmed \?/)
-  assert.match(view, /const mode = this\.helmetModeCurrent/)
-  assert.match(view, /return target === this\.hudPanel \? "hud_inspect"/)
-  for (const key of ["hud_inspect", "hud_flight", "hud_contacts", "hud_space"]) {
-    assert.ok(helmet.includes('"' + key + '"'))
-  }
-  for (const key of ["helmetNavFlight", "helmetNavContacts", "helmetNavSpace"]) {
-    assert.match(view, new RegExp(key))
-  }
-  assert.match(view, /updateHelmetHudPanel\(client, time\)/)
-  assert.match(view, /this\.helmetNavClose\.position\.set\(0\.58, 0\.66/)
-  assert.match(view, /this\.helmetNavRecenter\.position\.set\(-0\.58, 0\.66/)
+test("SBS resting gaze exposes only armed surrender and flight mode targets", () => {
+  const target = view.slice(view.indexOf("  gazeTarget() {"), view.indexOf("  updateGazeFeedback("))
+  assert.match(target, /const surrender = this\.helmetSurrenderArmed \?/)
+  assert.match(target, /const mode = this\.helmetModeCurrent \? \[this\.helmetModeHitbox\] : \[\]/)
+  assert.match(target, /:\s*\[\.\.\.surrender, \.\.\.mode\]\s*this\.camera\.updateMatrixWorld/)
+  assert.doesNotMatch(target, /this\.navSwitch|this\.hudPanel|"hud_inspect"|"nav_open"/)
+  assert.doesNotMatch(view, /^\s*framing\.add\(this\.navSwitch\)/m)
+  assert.match(target, /candidates\.filter\(candidate => candidate\?\.visible\)/)
+  assert.match(target, /return null\s*}/)
   assert.doesNotMatch(helmet, /channel\.push\("flight_controls"|"laser_attack"|"station_talk"/)
 })
 
-test("compact SBS geometry reduces telemetry and never blocks the NAV hitbox", () => {
+test("compact SBS geometry reduces telemetry and preserves gaze hit testing", () => {
   assert.match(view, /this\.mode === "sbs" \? 0\.55 : 0\.75/)
   assert.match(view, /new THREE\.PlaneGeometry\(0\.50, 0\.25\)/)
   assert.match(view, /new THREE\.PlaneGeometry\(1\.52, 0\.55\)/)
@@ -200,7 +188,7 @@ test("a destroyed pilot can recover by gaze alone", () => {
     /channel\.push\("move"|"plot_course"|"fire"|"set_target"|"station_dock"/)
 })
 
-test("a surrendered captain can be released, robbed or ignored by gaze", () => {
+test("a surrendered captain can be released or robbed by gaze", () => {
   const channel = readFileSync(new URL(
     "../../../lib/sunracer_web/channels/helmet_channel.ex", import.meta.url), "utf8")
   const world = readFileSync(new URL(
@@ -209,16 +197,19 @@ test("a surrendered captain can be released, robbed or ignored by gaze", () => {
   // Mid-fight prompt: additive, never exclusive, and below the sight line so
   // a pilot tracking a target cannot dwell on it by accident.
   assert.match(view, /this\.helmetSurrenderPanel\.position\.set\(0, -0\.44, -2\.44\)/)
-  assert.match(view, /\[this\.navSwitch, this\.hudPanel(, \.\.\.\w+)*\]/)
+  assert.match(view, /\[\.\.\.surrender, \.\.\.mode\]/)
+  assert.match(view, /for \(const \[name, x\] of \[\["accept", -0\.58\], \["seize", 0\.0\]\]\)/)
   assert.match(view, /\.\.\.surrender\b/)
   assert.match(view, /if \(target === this\.helmetSurrenderButtons\?\.accept\) return "surrender_accept"/)
+  assert.match(view, /if \(target === this\.helmetSurrenderButtons\?\.seize\) return "surrender_seize"/)
+  assert.doesNotMatch(view, /return "surrender_dismiss"/)
 
   // A wreck outranks a surrender prompt: dying closes it.
   assert.match(view, /this\.setHelmetSurrenderChoice\(\{open: false\}\)/)
 
-  // Keep firing is local only; the other two are the server's to settle.
-  assert.match(helmet, /update\.activated === "surrender_dismiss"/)
-  assert.match(helmet, /this\.surrenderDismissed = true/)
+  // The dismiss gaze action is removed; both remaining choices are server-owned.
+  assert.doesNotMatch(helmet, /update\.activated === "surrender_dismiss"/)
+  assert.doesNotMatch(helmet, /this\.surrenderDismissed = true/)
   assert.match(helmet, /requestSurrenderOutcome\("solar_accept_surrender"\)/)
   assert.match(helmet, /requestSurrenderOutcome\("solar_seize_cargo"\)/)
   assert.match(helmet, /old\.push\(event, \{\}, 5_000\)/)
