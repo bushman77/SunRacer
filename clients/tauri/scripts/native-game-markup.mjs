@@ -41,7 +41,11 @@ export function convertGameMarkup(template) {
   }
   game = game.slice(0, first) + nativeHotbar() + "\n" +
     game.slice(last + "      <% end %>".length)
+  // Native CSP rejects inline HTML style attributes. Put initially closed
+  // overlays under an external CSS default instead. Existing CSSOM writes
+  // to element.style.display override that default when a panel opens/closes.
   game = game
+    .replace(/\bstyle="display:\s*none\s*;?"/g, 'data-native-initially-hidden')
     .replace('id="game-client"', 'id="game-client" hidden')
     .replace("data-socket-token={@socket_token}",
       'data-socket-token="" data-server-origin="" data-native-client="true"')
