@@ -40,6 +40,8 @@ export async function stageClient({
   const uiSource = path.join(client, "ui")
   const gameSource = path.join(sourceRoot, "apps/sunracer_web/assets/js/game")
   const gameImages = path.join(sourceRoot, "apps/sunracer_web/priv/static/images/game")
+  const landingImages = path.join(sourceRoot, "apps/sunracer_web/priv/static/images/landing")
+  const titleCss = path.join(sourceRoot, "apps/sunracer_web/assets/css/spacenova-home.css")
   const threeSource = path.join(sourceRoot, "apps/sunracer_web/assets/node_modules/three")
   const vendor = path.join(destination, "game", "vendor")
 
@@ -83,6 +85,13 @@ export async function stageClient({
   }
   await mkdir(path.join(destination, "images"), {recursive: true})
   await cp(gameImages, path.join(destination, "images", "game"), {recursive: true})
+
+  // The launcher must use the approved shared title artwork and stylesheet offline.
+  await cp(titleCss, path.join(destination, "spacenova-home.css"))
+  await mkdir(path.join(destination, "images", "landing"), {recursive: true})
+  for (const name of ["spacenova-space.webp", "sol-approach.svg"]) {
+    await cp(path.join(landingImages, name), path.join(destination, "images", "landing", name))
+  }
 
   if (includeNativeGame) {
     const publicAssets = path.join(sourceRoot, "apps/sunracer_web/priv/static/assets")

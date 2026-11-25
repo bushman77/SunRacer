@@ -5,13 +5,15 @@ import {readFileSync} from "node:fs"
 const html = readFileSync(new URL("../ui/index.html", import.meta.url), "utf8")
 const css = readFileSync(new URL("../ui/launcher.css", import.meta.url), "utf8")
 
-test("the desktop launcher uses the shared HUD layout", () => {
-  assert.match(html, /class="launcher-stage"/)
-  assert.match(html, /class="launcher-rail"/)
-  assert.match(html, /class="launcher-briefing"/)
-  assert.match(html, /class="launcher-console"/)
+test("the desktop launcher uses the approved SpaceNova title screen", () => {
+  assert.match(html, /class="launcher-stage nova-title-screen"/)
+  assert.match(html, /class="nova-wordmark">Space<span>Nova<\/span>/)
+  assert.match(html, /href="\.\/spacenova-home\.css"/)
+  assert.match(html, /class="nova-menu"/)
+  assert.match(html, /<span>Play<\/span>/)
+  assert.doesNotMatch(html, /launcher-briefing|launcher-console|Pilot sign in/)
   assert.match(css, /\.launcher-stage/)
-  assert.match(css, /\.launcher-commandbar/)
+  assert.match(html, /id="server-url" form="connect-form"/)
 })
 
 test("all connection controls are preserved for the launcher controller", () => {

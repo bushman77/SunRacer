@@ -3,20 +3,16 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#020914">
-    <meta name="description" content="Connect to SunRacer, a server-authoritative multiplayer space adventure.">
-    <title>SunRacer — Desktop Client</title>
+    <meta name="theme-color" content="#030914">
+    <meta name="description" content="SpaceNova — explore, trade and fight in a living Solar System.">
+    <title>SpaceNova — Desktop Client</title>
+    <link rel="stylesheet" href="./spacenova-home.css">
     <link rel="stylesheet" href="./launcher.css">
     <script type="module" src="./launcher.mjs"></script>
     <script type="module" src="./networking.mjs"></script>
   </head>
   <body>
-    <div class="launcher-stage">
-      <header class="launcher-rail">
-        <span class="launcher-brand"><span aria-hidden="true">✦</span> SUNRACER</span>
-        <span class="launcher-rail-status">FLIGHT SYSTEMS // DESKTOP CLIENT</span>
-      </header>
-
+    <div class="launcher-stage nova-title-screen">
       <div class="launcher-settings">
         <button type="button" id="networking-open" class="networking-open" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="networking-panel">
           <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
@@ -44,57 +40,56 @@
         <p class="networking-note">These settings affect the native client only. They do not start an SSH tunnel or change GNOME's system proxy.</p>
             </div>
           </details>
-        </section>
-      </div>
-
-      <main class="shell">
-        <section class="launcher-briefing" aria-label="SunRacer flight briefing">
-          <p class="eyebrow">NAVIGATION DECK / SOL SYSTEM</p>
-          <div class="launcher-orbit" aria-hidden="true"><span></span></div>
-          <h1>Your ship.<br>Your choices.<br><strong>An entire system.</strong></h1>
-          <p class="intro">Chart a course through Sol, take the helm in 3D or stereo SBS, and meet other pilots in a living Solar System.</p>
-          <div class="launcher-readouts">
-            <div><small>THEATRE</small><strong>SOLAR SYSTEM / SOL</strong></div>
-            <div><small>CONTROL</small><strong>3D / STEREO SBS</strong></div>
-            <div><small>AUTHORITY</small><strong>ELIXIR / PHOENIX</strong></div>
-          </div>
-        </section>
-
-        <section class="launcher-console" aria-label="Server uplink">
-          <div class="console-heading">
-            <span class="console-light" aria-hidden="true"></span>
-            <span>UPLINK CONTROL // CONNECT</span>
-          </div>
-          <h2>Launch standalone game</h2>
-          <p class="console-subtitle">The cockpit, HUD and graphics run locally; select the authoritative multiplayer server.</p>
-          <form id="connect-form" novalidate>
-            <label for="server-url">Game server address</label>
-            <input id="server-url" type="url" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://sunracer.ddns.net" required>
-            <p class="hint">Secure public server: <code>https://sunracer.ddns.net</code>. For local Phoenix development, use <code>http://127.0.0.1:4000</code>.</p>
-            <div class="actions">
-              <button type="submit" class="primary">Launch standalone game <span aria-hidden="true">→</span></button>
-              <button type="button" id="register-pilot" class="secondary">Create pilot account</button>
-              <button type="button" id="reset-password" class="secondary">Reset password</button>
-              <button type="button" id="visit-home" class="secondary">Visit homepage</button>
-              <button type="button" id="check-client-update" class="secondary">Check for client updates</button>
-            </div>
-            <div class="local-server">
+          <details id="native-server-settings">
+            <summary><span>Game server</span><span aria-hidden="true">⌄</span></summary>
+            <div class="networking-content">
+              <label for="server-url">Game server address</label>
+              <input id="server-url" form="connect-form" type="url" inputmode="url" autocomplete="url" spellcheck="false" placeholder="https://sunracer.ddns.net" required>
+              <p class="hint">Public: <code>https://sunracer.ddns.net</code><br>Local: <code>http://127.0.0.1:4000</code></p>
               <button type="button" id="use-local" class="text-button">Use local server / port 4000</button>
-              <button type="button" id="preview-local" class="text-button">Test locally bundled Atlas / 3D / SBS graphics</button>
               <button type="button" id="probe-native-server" class="text-button">Test server connection (no login)</button>
+              <p id="probe-result" role="status" aria-live="polite" class="hint" hidden></p>
             </div>
-            <p id="client-update-status" role="status" aria-live="polite" class="hint" hidden></p>
-            <p id="probe-result" role="status" aria-live="polite" class="hint" hidden></p>
-            <p role="alert" id="error" class="error" hidden></p>
-          </form>
-          <footer>Your pilot signs in through an authenticated HTTPS API; Phoenix Channels carry real-time gameplay. Registration, email verification and password recovery use the selected server's hosted website.</footer>
+          </details>
+          <details id="native-client-tools">
+            <summary><span>Client tools</span><span aria-hidden="true">⌄</span></summary>
+            <div class="networking-content">
+              <button type="button" id="check-client-update" class="text-button">Check for client updates</button>
+              <p id="client-update-status" role="status" aria-live="polite" class="hint" hidden></p>
+              <button type="button" id="preview-local" class="text-button">Test locally bundled Atlas / 3D / SBS graphics</button>
+              <button type="button" id="visit-home" class="text-button">Visit homepage</button>
+            </div>
+          </details>
         </section>
-      </main>
-
-      <div class="launcher-commandbar">
-        <span>SUNRACER // PILOT ACCESS</span>
-        <span>HTTPS 443 · AUTHORITATIVE SERVER</span>
       </div>
+      <main class="nova-main">
+        <header class="nova-brand">
+          <h1 id="nova-title" class="nova-wordmark">Space<span>Nova</span></h1>
+          <p class="nova-tagline">Space exploration <span>·</span> Trade <span>·</span> Combat <span>·</span> Adventure</p>
+        </header>
+        <form id="connect-form" class="nova-menu" aria-label="SpaceNova main menu" novalidate>
+          <button type="submit" class="nova-button nova-button-primary">
+            <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><path d="m8 5 12 7-12 7Z"/></svg>
+            <span>Play</span>
+          </button>
+          <button type="button" id="register-pilot" class="nova-button">
+            <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="9" cy="7" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M19 8v6m-3-3h6"/></svg>
+            <span>Create account</span>
+          </button>
+          <div class="nova-account-links">
+            <button type="button" id="reset-password" class="secondary">Reset password</button>
+          </div>
+          <p role="alert" id="error" class="error" hidden></p>
+        </form>
+        <div class="nova-description">
+          <p>YOUR SHIP. YOUR CHOICES. AN ENTIRE SYSTEM.</p>
+          <p>Chart your course through a living Solar System. Trade, explore, fight and survive among the worlds of Sol.</p>
+        </div>
+      </main>
+      <footer class="nova-footer">
+        <span>SpaceNova · Solar System playtest</span>
+        <span>Desktop client · Live multiplayer</span>
+      </footer>
     </div>
   </body>
 </html>

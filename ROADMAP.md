@@ -1,3 +1,9 @@
+## 2026-11-25 — Unify the installed SpaceNova launcher with the web title screen
+
+- Replaced the bundled desktop launcher's old two-column console with the approved SpaceNova artwork, wordmark and Play/Create account controls. Both launch surfaces use the same title CSS and static artwork. Native staging now explicitly bundles the shared CSS and background, including the SVG fallback, without runtime downloads.
+- Moved server selection, diagnostics, update and preview tools into the top-left settings menu. Existing native proxy form, Rust commands, local IPC boundary, package identity and standalone game launch are preserved.
+- Updated launcher markup, branding and offline staging regression tests. Static control-ID checks passed; Node suite, Tauri build and manual desktop verification pending. No new release version or EC2 deployment.
+
 ## 2026-11-25 — Restore native proxy settings in title menu
 
 - Moved the installed client's existing system/SOCKS5 proxy selector, host, port, tunnel override notice and save/restart flow into a top-left translucent, intrinsic-width hamburger menu. Existing Rust validation, persisted settings and local-only IPC capability are unchanged.

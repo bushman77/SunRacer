@@ -22,13 +22,18 @@ test("desktop packaging stages renderer and assets without build-time network ac
   const vendor = path.join(temp, "apps/sunracer_web/assets/node_modules/three")
   const images = path.join(temp, "apps/sunracer_web/priv/static/images/game/ships")
   const station = path.join(temp, "apps/sunracer_web/priv/static/images/game/station")
+  const landing = path.join(temp, "apps/sunracer_web/priv/static/images/landing")
+  const titleCss = path.join(temp, "apps/sunracer_web/assets/css")
   try {
     for (const dir of [path.join(client, "ui"), game,
       path.join(vendor, "build"), path.join(vendor, "examples/jsm/loaders"),
-      path.join(vendor, "examples/jsm/utils"), images, station]) {
+      path.join(vendor, "examples/jsm/utils"), images, station, landing, titleCss]) {
       await mkdir(dir, {recursive: true})
     }
     await writeFile(path.join(client, "ui/index.html"), "launcher")
+    await writeFile(path.join(landing, "spacenova-space.webp"), "approved-background")
+    await writeFile(path.join(landing, "sol-approach.svg"), "<svg/>")
+    await writeFile(path.join(titleCss, "spacenova-home.css"), ".nova-title-screen {}")
     await writeFile(path.join(game, "stereo_view.js"), 'import * as THREE from "three"')
     await writeFile(path.join(game, "stereo_view_test.mjs"), "must not ship")
     await writeFile(path.join(vendor, "build/three.module.js"), "export {}")
@@ -44,6 +49,9 @@ test("desktop packaging stages renderer and assets without build-time network ac
     const destination = path.join(client, "dist/ui")
     const result = await stageClient({sourceRoot: temp, client, destination, includeNativeGame: false})
     assert.equal(result.modules, 1)
+    assert.equal(await readFile(path.join(destination, "spacenova-home.css"), "utf8"), ".nova-title-screen {}")
+    assert.equal(await readFile(path.join(destination, "images/landing/spacenova-space.webp"), "utf8"), "approved-background")
+    assert.equal(await readFile(path.join(destination, "images/landing/sol-approach.svg"), "utf8"), "<svg/>")
     assert.equal(await readFile(path.join(destination, "index.html"), "utf8"), "launcher")
     assert.match(await readFile(path.join(destination, "game/stereo_view.js"), "utf8"),
       /game\/vendor\/three.module.js/)

@@ -57,7 +57,7 @@ test("production window creates with optional native SOCKS5 proxy only on opt-in
   assert.doesNotMatch(rustSource, /danger_accept_invalid_certs|ignore_certificate_errors/)
 })
 
-test("SunRacer desktop branding is consistent across the native package and launcher", () => {
+test("Native package identity remains stable while the launcher displays SpaceNova", () => {
   assert.equal(config.productName, "SunRacer")
   assert.equal(config.app.windows[0].title, "SunRacer")
   assert.equal(packageConfig.name, "sunracer-client")
@@ -66,8 +66,8 @@ test("SunRacer desktop branding is consistent across the native package and laun
   const npmLock = JSON.parse(readText("../package-lock.json"))
   assert.equal(npmLock.name, "sunracer-client")
   assert.equal(npmLock.packages[""].name, "sunracer-client")
-  assert.match(readText("../ui/index.html"), /<title>SunRacer/)
-  assert.match(readText("../ui/index.html"), /SUNRACER<\/span>/)
+  assert.match(readText("../ui/index.html"), /<title>SpaceNova/)
+  assert.match(readText("../ui/index.html"), /Space<span>Nova<\/span>/)
 })
 
 test("manual update uses the same native check and local-only IPC", () => {
