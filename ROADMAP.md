@@ -1,3 +1,9 @@
+## 2026-11-25 — SpaceNova native pilot authentication
+
+- Native Play/sign-in now uses the same staged artwork, logo, title stylesheet and angular action button as the launcher, with a translucent right-side login card and responsive sizing.
+- Preserved the native auth form IDs, password handling, server selection, recovery, launcher return, token lifecycle and initial gameplay visibility. Changed only the visible native window title to SpaceNova; package/update identity remains SunRacer.
+- Added native markup and styling regression checks. Static source/ID checks passed; Node suite, Tauri rebuild and manual login verification pending. No new release version or deployment.
+
 ## 2026-11-25 — Unify the installed SpaceNova launcher with the web title screen
 
 - Replaced the bundled desktop launcher's old two-column console with the approved SpaceNova artwork, wordmark and Play/Create account controls. Both launch surfaces use the same title CSS and static artwork. Native staging now explicitly bundles the shared CSS and background, including the SVG fallback, without runtime downloads.

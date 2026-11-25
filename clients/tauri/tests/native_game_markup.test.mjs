@@ -65,3 +65,23 @@ test("native login offers hosted account recovery on selected server", () => {
   const js = readFileSync(new URL("../ui/native_bootstrap.mjs", import.meta.url), "utf8")
   assert.match(js, /passwordResetUrl\(origin\)/)
 })
+
+test("native sign-in shares the SpaceNova title screen and retains its auth contract", () => {
+  assert.match(document, /<title>SpaceNova — Standalone Game<\/title>/)
+  assert.match(document, /href="\.\/spacenova-home\.css"/)
+  assert.match(document, /id="native-login" class="native-login nova-title-screen"/)
+  assert.match(document, /class="nova-wordmark">Space<span>Nova<\/span>/)
+  assert.match(document, /id="native-login-submit" class="nova-button nova-button-primary" type="submit"/)
+  for (const id of ["native-login", "native-login-form", "native-username",
+    "native-password", "native-login-submit", "native-login-error",
+    "native-server-name", "native-password-reset"]) {
+    assert.equal((document.match(new RegExp('id="' + id + '"', "g")) ?? []).length, 1, id)
+  }
+  assert.match(document, /id="native-password" type="password" name="password" autocomplete="current-password"/)
+  assert.match(document, /href="\.\/index\.html">← Return to launcher/)
+  assert.match(document, /id="game-client" hidden/)
+  assert.doesNotMatch(document, /SUNRACER \/ SECURE UPLINK/)
+  const css = readFileSync(new URL("../ui/native_shell.css", import.meta.url), "utf8")
+  assert.match(css, /background:rgb\(3 9 20 \/ 80%\)/)
+  assert.match(css, /\.native-login\[hidden\],#game-client\[hidden\],#native-login-error\[hidden\] \{display:none!important\}/)
+})

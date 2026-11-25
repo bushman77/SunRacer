@@ -59,7 +59,7 @@ test("production window creates with optional native SOCKS5 proxy only on opt-in
 
 test("Native package identity remains stable while the launcher displays SpaceNova", () => {
   assert.equal(config.productName, "SunRacer")
-  assert.equal(config.app.windows[0].title, "SunRacer")
+  assert.equal(config.app.windows[0].title, "SpaceNova")
   assert.equal(packageConfig.name, "sunracer-client")
   assert.match(cargoSource, /^name = "sunracer-client"$/m)
   assert.match(readText("../src-tauri/Cargo.lock"), /name = "sunracer-client"/)

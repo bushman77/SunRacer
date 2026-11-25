@@ -1,29 +1,44 @@
-/* Bundled login UI shown before the authoritative world connection begins. */
+/* Local authentication shares the SpaceNova title screen; gameplay CSS is untouched. */
 html, body { margin:0;min-width:320px;background:#020914;color:#e6f8ff }
-.native-login {position:fixed;z-index:200;inset:0;display:flex;align-items:center;
-  justify-content:center;padding:24px;background:radial-gradient(circle at 42% 35%,
-  #0b587044,transparent 55%),#020914;}
+.native-login.nova-title-screen {position:fixed;z-index:200;inset:0;min-height:0;
+  overflow:auto;overscroll-behavior:contain}
 .native-login[hidden],#game-client[hidden],#native-login-error[hidden] {display:none!important}
-.native-login-card {width:min(540px,100%);padding:clamp(22px,4vw,46px);
-  background:linear-gradient(155deg,#0c3041,#04131f);border:1px solid #3e899d;
-  border-radius:14px;box-shadow:0 20px 90px #000a;color:#e4faff}
-.native-eyebrow {color:#6ce9ff;font:800 11px/1.5 ui-monospace,monospace;letter-spacing:.18em}
-.native-login-card h1 {font-size:clamp(23px,3vw,38px);line-height:1.15;margin:18px 0}
-.native-login-card p {color:#adcbd7;line-height:1.65;font-size:14px}
-.native-login-card .native-server {font-family:ui-monospace,monospace;font-size:12px;overflow-wrap:anywhere}
-.native-login-card form {display:flex;flex-direction:column;gap:10px;margin:22px 0}
-.native-login-card label {font:700 12px/1.4 ui-monospace,monospace;color:#bbeefa}
-.native-login-card input {width:100%;min-height:46px;padding:10px 12px;background:#031525;
-  border:1px solid #2d748c;border-radius:5px;color:#fff;font-size:15px}
-.native-login-card button {min-height:46px;margin-top:10px;background:#81eaff;color:#03111b;
-  border:0;border-radius:5px;font-weight:800;cursor:pointer}
-.native-login-card button:disabled {opacity:.55}
-.native-login-card a {font-size:13px;color:#95ecfa}
+.native-login .nova-main {min-height:0;flex:1 0 auto}
+.native-login .nova-brand {margin-top:clamp(1.5rem,6vh,4.5rem)}
+.native-login-card {box-sizing:border-box;width:clamp(19rem,30vw,29rem);
+  max-width:calc(100% - 2rem);margin:auto 7% auto auto;padding:clamp(1rem,2vw,1.65rem);
+  background:rgb(3 9 20 / 80%);border:1px solid rgb(103 232 249 / 35%);
+  border-radius:.55rem;backdrop-filter:blur(5px);box-shadow:0 12px 45px #0008;color:#e4faff}
+.native-login-card h2 {font-size:clamp(1.15rem,1.6vw,1.55rem);line-height:1.25;
+  font-weight:750;margin:.65rem 0 .55rem}
+.native-login-card .native-eyebrow {color:#a5f3fc;font:700 .65rem/1.5 ui-monospace,monospace;letter-spacing:.12em}
+.native-login-card .native-server {font-family:ui-monospace,monospace;font-size:.7rem;color:#b6ceda;overflow-wrap:anywhere}
+.native-login-card form {display:flex;flex-direction:column;gap:.45rem;margin:.85rem 0}
+.native-login-card label {font:700 .75rem/1.4 ui-monospace,monospace;color:#bbeefa}
+.native-login-card input {width:100%;box-sizing:border-box;min-height:2.5rem;padding:.5rem .7rem;
+  background:rgb(3 21 37 / 85%);border:1px solid #2d748c;border-radius:.25rem;color:#fff;font-size:.9rem}
+.native-login-card input:focus-visible,.native-login-card button:focus-visible {outline:2px solid #67e8f9;outline-offset:3px}
+.native-login-card input+label {margin-top:.25rem}
+.native-login-card .nova-button {width:100%;border:0;background:transparent;cursor:pointer;
+  min-height:3rem;margin-top:.5rem;font-size:clamp(.85rem,1.1vw,1.05rem)}
+.native-login-card button:disabled {opacity:.55;cursor:wait;transform:none}
+.native-login-links {display:flex;flex-direction:column;align-items:center;gap:.35rem;font-size:.75rem}
+.native-login-links a {color:#b9efff;text-decoration:underline;text-underline-offset:.2em}
 #native-login-error {color:#ffb7b2;border:1px solid #9c4755;background:#411924;
-  border-radius:5px;padding:10px;font-size:13px}
+  border-radius:5px;padding:.5rem;font-size:.8rem;overflow-wrap:anywhere}
 .native-session-status {position:fixed;z-index:90;bottom:0;left:0;max-width:70vw;
   padding:5px 10px;color:#99d0d8;background:#031525cc;font:600 10px/1.4 ui-monospace,monospace;
   pointer-events:none}
+@media (max-height:700px) and (min-width:761px) {
+  .native-login .nova-brand {margin-top:1rem}
+  .native-login .nova-wordmark {font-size:clamp(2.8rem,6.5vw,6rem)}
+  .native-login .nova-tagline {margin-top:.65rem}
+  .native-login-card {margin-top:1rem;margin-bottom:1rem}
+}
+@media (max-width:760px) {
+  .native-login .nova-brand {margin-top:2rem}
+  .native-login-card {width:min(88%,28rem);margin:clamp(3rem,12vh,7rem) auto 1.5rem}
+}
 
 /* Initial overlay state must not depend on CSP-blocked HTML style attributes.
    Do not use !important: the shared controller opens panels via CSSOM. */
