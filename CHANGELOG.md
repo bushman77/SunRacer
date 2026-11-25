@@ -1,3 +1,8 @@
+## 2026-11-25 — Installed-client orrery visibility recovery
+
+- Keep the functional overhead map visible until an initial 3D frame is confirmed. On native clients, retain the WebGL drawing buffer and present via a regular 2D canvas, validating the first frame's solar-center pixel; use explicit stacking and the same high-performance GPU preference as the cockpit. Guard against zero draw calls, context loss and rendering exceptions. Show the failure reason and restore the overhead chart rather than leaving an interactive blank viewport. Disable invisible picks before first frame. Added mode transition tests.
+- This is a defensive fix for a reported blank installed-client viewport, not a verified diagnosis of WebKitGTK. Installed GPU verification and complete tests pending. No simulation, transport, package identity or release version changes.
+
 ## 2026-11-25 — SpaceNova 3D Solar Orrery
 
 - Added a locally rendered Three.js orrery with a tilted camera, shaded schematic planets, Saturn rings, thin cyan-blue orbit paths, midnight/nebula backdrop, labels, player and server-positioned station/contact markers and schematic route indicators. Left click selects, right click opens existing route actions, middle drag rotates, wheel zooms and double-click focuses; reset and keyboard camera controls are available. The overhead chart remains available and is the fallback if WebGL initialization fails.

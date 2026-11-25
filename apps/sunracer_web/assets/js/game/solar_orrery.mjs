@@ -29,7 +29,7 @@ export function orbitCamera({azimuth=0,elevation=.64,distance=670}={}) {
 }
 
 export class SolarOrrery {
-  constructor(THREE,host,actions={}) {
+  constructor(THREE,host,actions={}, {native=false}={}) {
     this.T=THREE
     this.host=host
     this.actions=actions
@@ -37,10 +37,20 @@ export class SolarOrrery {
     this.target=new THREE.Vector3()
     this.scene=new THREE.Scene()
     this.camera=new THREE.PerspectiveCamera(48,1,.1,6000)
-    this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:"low-power"})
-    this.renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio||1,1.5))
+    // WebKitGTK can composite a second, idle WebGL canvas incorrectly.
+    // In the packaged client present the rendered image through a regular
+    // canvas, with an explicit retained drawing buffer and a single GPU preference.
+    this.native=native
+    this.renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,
+      preserveDrawingBuffer:true,powerPreference:"high-performance"})
+    this.renderer.setPixelRatio(Math.min(globalThis.devicePixelRatio||1,native?1:1.5))
     this.renderer.setClearColor(0x000000,0)
-    this.canvas=this.renderer.domElement
+    this.glCanvas=this.renderer.domElement
+    this.canvas=native?document.createElement("canvas"):this.glCanvas
+    this.presentation=native?this.canvas.getContext("2d",{willReadFrequently:true}):null
+    if(native&&!this.presentation){this.renderer.dispose();throw Error("2D presentation unavailable")}
+    this.ready=false
+    this.failed=false
     this.canvas.className="orrery-canvas"
     this.canvas.setAttribute("aria-label","3D Solar System orrery. Middle drag to rotate, wheel to zoom. Select bodies using labeled buttons.")
     this.canvas.tabIndex=0
@@ -63,8 +73,10 @@ export class SolarOrrery {
     this.liveMarkers=[]
     this.active=false
     this.bind()
-    this.resizeObserver=new ResizeObserver(()=>{if(this.active)this.render()})
-    this.resizeObserver.observe(host)
+    if(typeof ResizeObserver==="function"){
+      this.resizeObserver=new ResizeObserver(()=>{if(this.active)this.render()})
+      this.resizeObserver.observe(host)
+    }
   }
 
   clear(group) {
@@ -239,12 +251,22 @@ export class SolarOrrery {
   }
 
   render() {
-    if(!this.active)return
-    const width=this.host.clientWidth,height=this.host.clientHeight
-    if(!width||!height)return
+    if(!this.active||this.failed||!this.state||!this.bodies.length)return false
+    const rect=this.host.getBoundingClientRect()
+    const width=Math.round(rect.width),height=Math.round(rect.height)
+    if(!width||!height)return false
+    try {return this.renderFrame(width,height)}
+    catch(error){this.fail(error);return false}
+  }
+
+  renderFrame(width,height) {
     if(this.width!==width||this.height!==height){
       this.width=width;this.height=height
       this.renderer.setSize(width,height,false)
+      if(this.native){
+        this.canvas.width=this.glCanvas.width
+        this.canvas.height=this.glCanvas.height
+      }
       this.camera.aspect=width/height;this.camera.updateProjectionMatrix()
     }
     const offset=orbitCamera(this.cameraState)
@@ -252,6 +274,23 @@ export class SolarOrrery {
     this.camera.lookAt(this.target)
     this.camera.updateMatrixWorld()
     this.renderer.render(this.scene,this.camera)
+    if(this.renderer.getContext().isContextLost()||this.renderer.info.render.calls===0)
+      throw Error("WebGL produced no draw calls")
+    if(this.presentation){
+      this.presentation.clearRect(0,0,this.canvas.width,this.canvas.height)
+      this.presentation.drawImage(this.glCanvas,0,0)
+      // Validate the initial full-system frame once, not every navigation tick.
+      // The Sun is centered in the default camera and must be opaque.
+      if(!this.ready){
+        const sun=this.bodies.find(b=>b.id==="sun")
+        const p=sun?.mesh.position.clone().project(this.camera)
+        const x=Math.floor((p.x+1)*this.canvas.width/2)
+        const y=Math.floor((1-p.y)*this.canvas.height/2)
+        if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>=this.canvas.width||y>=this.canvas.height||
+          this.presentation.getImageData(x,y,1,1).data[3]===0)
+          throw Error("Native orrery frame was empty")
+      }
+    }
     const entries=new Map([...this.bodies,...this.liveMarkers].map(e=>[e.key,e]))
     const occupied=[]
     // Give selected destinations priority when labels crowd together.
@@ -275,9 +314,30 @@ export class SolarOrrery {
       occupied.push(pos)
       node.style.left=pos.x+"px";node.style.top=pos.y+"px"
     }
+    this.ready=true
+    return true
   }
 
-  setActive(active) {this.active=active;if(active)this.render()}
+  fail(error) {
+    if(this.failed)return
+    this.failed=true;this.active=false;this.ready=false
+    console.warn("SpaceNova orrery unavailable:",error)
+    this.actions.unavailable?.(String(error?.message||error))
+  }
+
+  setActive(active) {
+    this.active=active&&!this.failed
+    if(this.active)this.render()
+  }
+
+  dispose() {
+    this.active=false
+    this.resizeObserver?.disconnect()
+    this.clear(this.staticGroup);this.clear(this.liveGroup)
+    this.renderer.dispose()
+    this.renderer.forceContextLoss?.()
+    this.host.replaceChildren()
+  }
 
   entryForEvent(event) {
     const key=event.target?.closest?.("[data-key]")?.dataset.key
@@ -295,6 +355,7 @@ export class SolarOrrery {
   }
 
   hit(event) {
+    if(!this.ready||!this.active||this.failed)return null
     const entry=this.entryForEvent(event)
     if(entry)return {kind:entry.kind,id:entry.id,point:entry.point}
     this.setRay(event)
@@ -357,8 +418,8 @@ export class SolarOrrery {
       if(["+","=","-"].includes(event.key))this.cameraState.distance=clamp(this.cameraState.distance*(event.key==="-"?1.15:.87),45,1800)
       this.render()
     })
-    this.canvas.addEventListener("webglcontextlost",event=>{
-      event.preventDefault();this.active=false;this.actions.unavailable?.()
+    this.glCanvas.addEventListener("webglcontextlost",event=>{
+      event.preventDefault();if(this.active)this.fail(Error("WebGL context lost"))
     })
   }
 }

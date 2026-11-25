@@ -394,7 +394,7 @@ class SpaceClient {
     }, true)
 
     this.navComputer = new NavigationComputer({
-      createOrrery: (host, actions) => new SolarOrrery(THREE, host, actions),
+      createOrrery: (host, actions) => new SolarOrrery(THREE, host, actions, {native: this.root.dataset.nativeClient === "true"}),
       root: this.root.querySelector("#navigation-computer"),
       getEntities: () => this.entities,
       getSelfId: () => this.selfId,

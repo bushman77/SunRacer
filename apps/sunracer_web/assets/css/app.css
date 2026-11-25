@@ -2088,3 +2088,10 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
   .navigation-computer .atlas-command-toolbar .nova-hud-icon {width:2rem;height:2rem;}
   .orrery-hint {display:none;}
 }
+/* Explicit native map stacking and retained frame presentation. */
+.navigation-computer #nav-orrery {display:block;z-index:0;background-color:var(--nova-space,#030914);}
+.navigation-computer #nav-solar-chart {z-index:1;}
+.navigation-computer #nav-orrery .orrery-canvas {z-index:0;width:100%;height:100%;}
+.navigation-computer #nav-orrery .orrery-labels {z-index:1;}
+.navigation-computer #nav-orrery-status {color:#ffcf91;max-width:42ch;overflow-wrap:anywhere;}
+.navigation-computer #nav-orrery-status[hidden] {display:none!important;}

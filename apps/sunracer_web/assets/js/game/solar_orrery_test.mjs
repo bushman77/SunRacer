@@ -30,3 +30,40 @@ test("camera orbit is bounded and does not mutate game positions",()=>{
   assert.equal(ORRERY_COLORS.active,"#23dfff")
   assert.equal(ORRERY_COLORS.background,"#030914")
 })
+
+import {NavigationComputer} from "./navigation_computer.mjs"
+
+function fixture(renderer) {
+  const nodes=new Map(["#nav-orrery-mode","#nav-flat-mode","#nav-orrery-reset",
+    "#nav-orrery-hint","#nav-orrery-status"].map(id=>[id,{
+      hidden:true,setAttribute(){},classList:{toggle(){}}
+    }]))
+  const nav=new NavigationComputer({root:{querySelector:id=>nodes.get(id)},
+    createOrrery:()=>renderer})
+  nav.orreryHost={hidden:true}
+  nav.solarSvg={hidden:false}
+  nav.isOpen=true
+  nav.renderSolarView=()=>{}
+  return {nav,nodes}
+}
+
+test("overhead stays available when 3D cannot produce a frame",()=>{
+  const {nav,nodes}=fixture({ready:false,update(){},setActive(){}})
+  nav.setSolarPresentation("orrery")
+  assert.equal(nav.solarPresentation,"flat")
+  assert.equal(nav.solarSvg.hidden,false)
+  assert.equal(nav.orreryHost.hidden,true)
+  assert.match(nodes.get("#nav-orrery-status").textContent,/3D unavailable/)
+})
+
+test("overhead hides only after a successful initial frame",()=>{
+  const renderer={ready:false,update(){assert.equal(nav.solarSvg.hidden,false)},
+    setActive(active){if(active)this.ready=true}}
+  const {nav}=fixture(renderer)
+  nav.setSolarPresentation("orrery")
+  assert.equal(nav.solarPresentation,"orrery")
+  assert.equal(nav.solarSvg.hidden,true)
+  nav.orreryUnavailable("context lost")
+  assert.equal(nav.solarPresentation,"flat")
+  assert.equal(nav.solarSvg.hidden,false)
+})

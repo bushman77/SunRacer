@@ -285,7 +285,7 @@ export class NavigationComputer {
     const system=view==="system"
     this.root.querySelector("#nav-solar-view").hidden=!system
     this.root.querySelector("#nav-sector-view").hidden=system
-    this.orrery?.setActive(system&&this.isOpen&&this.solarPresentation==="orrery")
+    if(!system)this.orrery?.setActive(false)
     this.root.querySelector("#nav-view-system").setAttribute("aria-selected",String(system))
     this.root.querySelector("#nav-view-sector").setAttribute("aria-selected",String(!system))
     this.root.querySelector("#nav-view-system").classList.toggle("is-active",system)
@@ -302,28 +302,60 @@ export class NavigationComputer {
   setSolarPresentation(mode) {
     if(!["flat","orrery"].includes(mode)||!this.orreryHost)return
     this.closeSolarContextMenu()
-    if(mode==="orrery"&&!this.orrery){
-      try {
-        this.orrery=this.createOrrery?.(this.orreryHost,{
-          select:hit=>this.selectOrreryHit(hit),
-          context:(hit,x,y)=>this.contextOrreryHit(hit,x,y),
-          unavailable:()=>this.setSolarPresentation("flat"),
-        })
-      }catch(error){console.warn("Orrery unavailable; retaining overhead map",error)}
-      if(!this.orrery)mode="flat"
+    const status=this.root.querySelector("#nav-orrery-status")
+    if(mode==="flat"){
+      this.applySolarPresentation("flat")
+      if(status)status.hidden=true
+      if(this.isOpen&&this.view==="system")this.renderSolarView()
+      return
     }
+    if(!this.isOpen||this.view!=="system")return
+    // Keep the overhead chart visible until a usable frame exists.
+    this.applySolarPresentation("flat")
+    if(status){status.hidden=false;status.textContent="Preparing 3D map…"}
+    try {
+      if(this.orrery?.failed){this.orrery.dispose();this.orrery=null}
+      if(!this.orrery)this.orrery=this.createOrrery?.(this.orreryHost,{
+        select:hit=>this.selectOrreryHit(hit),
+        context:(hit,x,y)=>this.contextOrreryHit(hit,x,y),
+        unavailable:reason=>this.orreryUnavailable(reason),
+      })
+      if(!this.orrery)throw Error("3D renderer unavailable")
+      this.orreryHost.hidden=false
+      // Render under the still-visible overhead chart, then reveal atomically.
+      this.orrery.update(this.orreryState())
+      this.orrery.setActive(true)
+      if(!this.orrery.ready)throw Error("No usable first frame")
+      this.applySolarPresentation("orrery")
+      if(status){status.textContent="3D map ready";status.hidden=true}
+    }catch(error){this.orreryUnavailable(error.message)}
+  }
+
+  applySolarPresentation(mode) {
     this.solarPresentation=mode
     const active=mode==="orrery"
     this.orreryHost.hidden=!active
     if(this.solarSvg)this.solarSvg.hidden=active
+    this.orrery?.setActive(active&&this.isOpen&&this.view==="system")
     for(const [id,enabled] of [["#nav-orrery-mode",active],["#nav-flat-mode",!active]]){
       const button=this.root.querySelector(id)
       button?.setAttribute("aria-pressed",String(enabled))
       button?.classList.toggle("is-active",enabled)
     }
     for(const id of ["#nav-orrery-reset","#nav-orrery-hint"]){const node=this.root.querySelector(id);if(node)node.hidden=!active}
-    this.orrery?.setActive(active&&this.isOpen&&this.view==="system")
+  }
+
+  orreryUnavailable(reason) {
+    this.applySolarPresentation("flat")
+    const status=this.root.querySelector("#nav-orrery-status")
+    if(status){status.hidden=false;status.textContent="3D unavailable · overhead active ("+String(reason||"rendering error").slice(0,120)+")"}
     if(this.isOpen&&this.view==="system")this.renderSolarView()
+  }
+
+  orreryState(){
+    return {focus:this.solarFocus,selectedId:this.solarSelection,
+      navigation:this.solarNavigation,waypoint:this.solarWaypoint,
+      selectedStarbaseId:this.solarStarbaseSelected}
   }
 
   selectOrreryHit(hit){
@@ -633,11 +665,14 @@ export class NavigationComputer {
   }
 
   renderSolarView() {
-    const state={focus:this.solarFocus,selectedId:this.solarSelection,
-      navigation:this.solarNavigation,waypoint:this.solarWaypoint,
-      selectedStarbaseId:this.solarStarbaseSelected}
-    if(this.solarPresentation==="orrery"&&this.orrery)this.orrery.update(state)
-    else drawSolarAtlas(this.solarSvg,state)
+    const state=this.orreryState()
+    if(this.solarPresentation==="orrery"&&this.orrery){
+      try {
+        this.orrery.update(state)
+        this.orrery.setActive(true)
+        if(!this.orrery.ready)throw Error("No usable 3D frame")
+      }catch(error){this.orreryUnavailable(error.message);return}
+    }else drawSolarAtlas(this.solarSvg,state)
     renderSolarDetails(this.root,this.solarSelection)
     if(this.solarWaypoint){
       const set=(id,text)=>{const node=this.root.querySelector(id);if(node)node.textContent=text}
