@@ -10,7 +10,9 @@ const config = JSON.parse(read("../src-tauri/tauri.conf.json"))
 
 test("native modal defaults are CSP-safe and shared controllers can still open them", () => {
   const html = nativeGameDocument(convertGameMarkup(template))
-  const ids = ["starbase-docking-prompt", "starbase-docked-panel", "station-npc-prompt",
+  assert.doesNotMatch(html, /\bid="starbase-docking-prompt"/)
+  assert.match(html, /id="starbase-docking-countdown" hidden/)
+  const ids = ["starbase-docked-panel", "station-npc-prompt",
     "station-npc-dialogue", "station-outfitting-panel", "station-trade-panel",
     "story-dispatch-dialogue", "pilot-inventory-panel"]
   for (const id of ids) {

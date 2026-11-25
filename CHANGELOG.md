@@ -1,3 +1,7 @@
+## 2026-11-25 — Fix installer regression gate after docking popup removal
+
+- CI on 51a9b22 reported 56 passing native tests and one failure in native-overlay-visibility.test.mjs: its legacy overlay list still required the intentionally removed docking popup. Replace that expectation with an absence assertion and retain the countdown and all remaining CSP-safe overlay checks. Linux and Windows installers had been skipped after the failed test; no new package was produced by those runs. Full CI and installed visual acceptance of this correction pending.
+
 ## 2026-11-25 — Remove redundant Green Starbase docking popup
 
 - Removed the approach instruction panel, immediate-docking button and their client-only handlers from the shared cockpit. The server's automatic five-second stationary docking hold, countdown, collision warnings, docked interior and launch controls remain intact. The existing server manual-docking endpoint is unchanged; it is no longer exposed through this popup.
