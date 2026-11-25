@@ -213,12 +213,15 @@ test("end to end: laptop stick reaches the headset line through the LAN pose", a
   assert.ok(tip.x > 0 && tip.y > 0, "right and up on the laptop is right and up in the headset")
 })
 
-test("headset and laptop both report the stick-link state", () => {
+test("stick-link diagnostics remain available without the SBS overlay", () => {
   const helmet = read("./helmet_client.mjs")
   for (const state of ["NO LAN RELAY", "NO LAPTOP POSE", "LAPTOP NOT SENDING STICK"]) {
     assert.match(helmet, new RegExp(state))
   }
-  assert.match(read("./stereo_view.js"), /"STICK LINE: " \+ link, \.\.\.rest/)
+  const view = read("./stereo_view.js")
+  assert.doesNotMatch(view, /^\s*framing\.add\(this\.steeringStatus\)/m)
+  assert.doesNotMatch(view, /"STICK LINE: " \+ link/)
+  assert.match(view, /cockpitLabel\(\[link, \.\.\.rest\]/)
   // Second line: once-a-second headset frame rate / slow frames / sensor rate.
   assert.match(helmet, /" FPS · "/)
   assert.match(helmet, /this\.measureHeadsetPerformance\(time\)/)
