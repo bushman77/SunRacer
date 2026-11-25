@@ -24,6 +24,16 @@ def validate_version(value):
         raise ValueError('Version must be numeric X.Y.Z')
     return tuple(map(int, value.split('.')))
 
+def next_version(current, kind):
+    major, minor, patch = validate_version(current)
+    if kind == 'patch':
+        return f'{major}.{minor}.{patch + 1}'
+    if kind == 'minor':
+        return f'{major}.{minor + 1}.0'
+    if kind == 'major':
+        return f'{major + 1}.0.0'
+    raise ValueError('Version increment must be patch, minor or major')
+
 def set_version(root, version):
     new = validate_version(version)
     current = umbrella_version(root)
@@ -58,7 +68,7 @@ def sync_client_metadata(root, version):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['get', 'check', 'set', 'sync'])
+    parser.add_argument('command', choices=['get', 'check', 'set', 'sync', 'next'])
     parser.add_argument('version', nargs='?')
     parser.add_argument('--root', type=pathlib.Path, default=ROOT)
     args = parser.parse_args()
@@ -67,6 +77,8 @@ def main():
         current = umbrella_version(root)
         if args.command == 'get':
             print(current)
+        elif args.command == 'next':
+            print(next_version(current, args.version))
         elif args.command == 'check':
             if not args.version or args.version != current:
                 raise ValueError(f'Expected root version {args.version}, found {current}')

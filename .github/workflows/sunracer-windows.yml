@@ -4,6 +4,8 @@ on:
   push:
     branches: [native_client, story_line]
     paths:
+      - "mix.exs"
+      - "scripts/sunracer-version.py"
       - "clients/tauri/**"
       - "apps/sunracer_web/assets/js/game/**"
       - "apps/sunracer_web/assets/js/native_game.js"
@@ -31,12 +33,20 @@ jobs:
         with:
           node-version: "22"
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Generate installer metadata from umbrella mix.exs
+        run: python scripts/sunracer-version.py sync
+
       - name: Set up Windows Rust toolchain
         uses: dtolnay/rust-toolchain@stable
 
       - name: Install Tauri CLI
         working-directory: clients/tauri
-        run: npm install
+        run: npm ci
 
       - name: Set up Elixir/OTP for local game asset compilation
         uses: erlef/setup-beam@v1

@@ -62,6 +62,8 @@ jobs:
           if gh api "repos/$GITHUB_REPOSITORY/git/ref/tags/v$RELEASE_VERSION" >/dev/null 2>&1; then
             echo "Tag already exists" >&2; exit 1
           fi
+      - name: Offline release and deployment helper regression tests
+        run: python3 -m unittest discover -s scripts -p 'test_sunracer_*.py'
       - name: Full Elixir suite
         env:
           MIX_ENV: test

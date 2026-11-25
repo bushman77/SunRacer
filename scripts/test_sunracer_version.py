@@ -43,6 +43,15 @@ class VersionTest(unittest.TestCase):
         self.assertEqual(lock["packages"][""]["version"], "0.4.0")
         self.assertIn('version = "0.4.0"', (client / "src-tauri" / "Cargo.toml").read_text())
 
+    def test_semver_increment_is_read_only(self):
+        current = MODULE.umbrella_version(self.root)
+        self.assertEqual(MODULE.next_version(current, "patch"), "0.3.2")
+        self.assertEqual(MODULE.next_version(current, "minor"), "0.4.0")
+        self.assertEqual(MODULE.next_version(current, "major"), "1.0.0")
+        self.assertEqual(MODULE.umbrella_version(self.root), current)
+        with self.assertRaises(ValueError):
+            MODULE.next_version(current, "invalid")
+
     def test_rejects_downgrade_and_bad_version(self):
         with self.assertRaises(ValueError):
             MODULE.set_version(self.root, "0.3.0")
