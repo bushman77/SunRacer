@@ -85,7 +85,6 @@ export class HelmetClient {
     this.respawnError = null
     this.surrenderPending = false
     this.surrenderError = null
-    this.surrenderDismissed = false
     this.modePending = false
     this.beams = []
     this.lastLaserFeedback = null
@@ -729,7 +728,6 @@ export class HelmetClient {
     this.respawnError = null
     this.surrenderPending = false
     this.surrenderError = null
-    this.surrenderDismissed = false
     this.modePending = false
     this.view?.setHelmetDestroyed({destroyed: false})
     this.view?.setHelmetModeIcon({visible: false})
@@ -817,43 +815,87 @@ export class HelmetClient {
     this.updateSurrenderChoice()
   }
 
-  applyWorld(map, {snap = false} = {}) {
-    if (!map?.entities || this.mode !== "combat") return
-    // The helmet uses its pilot's server-subscribed orbital region, not a
-    // phone-provided map ID. Green Starbase must only appear in deep space.
-    const previousMapId = this.mapId
-    this.mapId = typeof map.map_id === "string" ? map.map_id : null
-    // A different map is a new place: never sweep the camera across it.
-    if (previousMapId && this.mapId !== previousMapId) snap = true
-    const wasDocked = this.docked
-    this.docked = pilotDockedInWorld(map, this.selfId)
-    this.stationPosition = this.docked ?
-      map.station_avatars?.find(avatar => key(avatar.player_id) === this.selfId) || null
-      : null
-    this.stationAttendants = Array.isArray(map.station_attendants) ?
-      map.station_attendants : []
-    this.stationDockingHold = this.docked ? null :
-      syncDockingHold(this.stationDockingHold, map, this.selfId, performance.now())
-    if (wasDocked !== this.docked) {
-      this.gaze.reset()
-      this.view?.setHelmetNavOpen(false)
-    }
-    this.orbitalBase = map.orbital_base || null
-    const active = new Set()
-    for (const e of map.entities) {
-      // Keep one object per entity so smoothing state survives updates.
-      const entity = upsertHelmetEntity(this.entities, e, key, {snap})
-      active.add(entity.id)
-    }
-    for (const id of this.entities.keys()) {
-      if (!active.has(id)) this.entities.delete(id)
-    }
-    this.selectedTargetId = this.entities.get(this.selfId)?.targetId || null
-    this.planetaryWarningDisplay = planetaryWarningView(ownPlanetaryWarning(map, this.selfId))
-    this.updateSurrender(helmetSurrenderFromEntities(this.entities, this.selfId))
-    this.updateRespawnPanel()
-    this.updateModeIcon()
+applyWorld(map, {snap = false} = {}) {
+  if (!map?.entities || this.mode !== "combat") return
+
+  this.syncMapIdentity(map)
+  this.syncDockingState(map, {snap})
+  this.syncStationState(map)
+  this.syncEntities(map, {snap})
+  this.syncHudState(map)
+}
+
+// --- Map transitions -------------------------------------------------------
+
+syncMapIdentity(map) {
+  // The helmet uses its pilot's server-subscribed orbital region, not a
+  // phone-provided map ID. Green Starbase must only appear in deep space.
+  const previousMapId = this.mapId
+  this.mapId = typeof map.map_id === "string" ? map.map_id : null
+  // A different map is a new place: never sweep the camera across it.
+  this._pendingSnap ||= this.mapId && previousMapId && this.mapId !== previousMapId
+}
+
+// --- Docking & station state -----------------------------------------------
+
+syncDockingState(map, {snap}) {
+  if (this._pendingSnap) snap = true
+  this._pendingSnap = false
+
+  const wasDocked = this.docked
+  this.docked = pilotDockedInWorld(map, this.selfId)
+
+  // Clear the docking hold once docked; otherwise keep it in sync.
+  this.stationDockingHold = this.docked ? null :
+    syncDockingHold(this.stationDockingHold, map, this.selfId, performance.now())
+
+  // A docking transition is a new context: reset gaze and close the nav panel.
+  if (wasDocked !== this.docked) {
+    this.gaze.reset()
+    this.view?.setHelmetNavOpen(false)
   }
+}
+
+syncStationState(map) {
+  this.stationPosition = this.docked
+    ? map.station_avatars?.find(avatar => key(avatar.player_id) === this.selfId) || null
+    : null
+  this.stationAttendants = Array.isArray(map.station_attendants)
+    ? map.station_attendants : []
+  this.orbitalBase = map.orbital_base || null
+}
+
+// --- Entities --------------------------------------------------------------
+
+syncEntities(map, {snap}) {
+  const active = new Set()
+  for (const e of map.entities) {
+    // Keep one object per entity so smoothing state survives updates.
+    const entity = upsertHelmetEntity(this.entities, e, key, {snap})
+    active.add(entity.id)
+  }
+  // Prune entities that are no longer in the world snapshot.
+  for (const id of this.entities.keys()) {
+    if (!active.has(id)) this.entities.delete(id)
+  }
+  this.selectedTargetId = this.entities.get(this.selfId)?.targetId || null
+}
+
+// --- HUD updates -----------------------------------------------------------
+
+syncHudState(map) {
+  this.planetaryWarningDisplay = planetaryWarningView(ownPlanetaryWarning(map, this.selfId))
+
+  // Preserve an active surrender offer from the helmet_surrender event.
+  // World deltas can arrive before the entity's state field catches up,
+  // closing the panel before the pilot makes a choice.
+  if (this.helmetSurrender?.surrendered !== true) {
+    this.updateSurrender(helmetSurrenderFromEntities(this.entities, this.selfId))
+  }
+
+  this.updateRespawnPanel()
+  this.updateModeIcon()
+}
 
   updateModeIcon() {
     this.view?.setHelmetModeIcon(
@@ -1068,11 +1110,6 @@ export class HelmetClient {
       this.requestSurrenderOutcome("solar_accept_surrender")
     } else if (update.activated === "surrender_seize") {
       this.requestSurrenderOutcome("solar_seize_cargo")
-    } else if (update.activated === "surrender_dismiss") {
-      // Keep firing: purely local, nothing is sent and the fight continues.
-      this.surrenderDismissed = true
-      this.gaze.reset()
-      this.updateSurrenderChoice()
     } else if (update.activated === "respawn") {
       // Do NOT reset the latch here: the panel disarms itself while the
       // request is in flight, so a held gaze cannot fire a second recovery.

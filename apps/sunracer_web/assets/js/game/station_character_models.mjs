@@ -4,6 +4,8 @@
 //   bash make_character.sh --name NAME --image|--prompt-file ... --install-as FILE
 export const STATION_CHARACTER_ASSETS = Object.freeze({
   repair: "/images/game/station/mara_venn.glb",       // Mara Venn
+  trade: "/images/game/station/tarek_sol.glb",           // Tarek Sol
+  resupply: "/images/game/station/sera_vale.glb",     // Sera Vale
   outfitting: "/images/game/station/ilya_quill.glb",  // Ilya Quill
 })
 

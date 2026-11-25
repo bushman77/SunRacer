@@ -336,7 +336,7 @@ export class StereoSpaceView {
     this.steeringStatus.renderOrder = 72
     this.steeringStatus.visible = false
     this.steeringStatusText = null
-    framing.add(this.steeringStatus)
+    //framing.add(this.steeringStatus)
 
     // A NAV switch mounted right of the main telemetry instrument.
     this.navSwitch = new THREE.Mesh(
@@ -349,7 +349,7 @@ export class StereoSpaceView {
     // Within the narrower per-eye SBS field of view; turn right/down slightly.
     this.navSwitch.position.set(1.24, -0.68, -2.46)
     this.navSwitch.renderOrder = 68
-    framing.add(this.navSwitch)
+    //framing.add(this.navSwitch)
 
     // The HUD itself is gaze-selectable. Inspecting it opens this compact,
     // read-only information panel; there are no HMD flight/combat commands.
@@ -446,7 +446,7 @@ export class StereoSpaceView {
     framing.add(this.helmetModeHitbox)
 
     this.helmetSurrenderButtons = {}
-    for (const [name, x] of [["accept", -0.58], ["seize", 0.0], ["dismiss", 0.58]]) {
+    for (const [name, x] of [["accept", -0.58], ["seize", 0.0]]) {
       const button = new THREE.Mesh(
         new THREE.PlaneGeometry(0.54, 0.22),
         new THREE.MeshBasicMaterial({
@@ -708,7 +708,7 @@ export class StereoSpaceView {
       this.helmetNavOpen ?
         [this.helmetNavClose, this.helmetNavRecenter, this.helmetNavFlight,
           this.helmetNavContacts, this.helmetNavSpace, ...surrender, ...mode] :
-        [this.navSwitch, this.hudPanel, ...surrender, ...mode]
+        [...surrender, ...mode]
     this.camera.updateMatrixWorld(true)
     this.cockpitFraming.updateMatrixWorld(true)
     this.raycaster.set(this.camera.position,
@@ -722,13 +722,12 @@ export class StereoSpaceView {
     if (target === this.helmetRespawnButton) return "respawn"
     if (target === this.helmetSurrenderButtons?.accept) return "surrender_accept"
     if (target === this.helmetSurrenderButtons?.seize) return "surrender_seize"
-    if (target === this.helmetSurrenderButtons?.dismiss) return "surrender_dismiss"
     if (target === this.helmetNavClose) return "nav_close"
     if (target === this.helmetNavRecenter) return "recenter"
     if (target === this.helmetNavFlight) return "hud_flight"
     if (target === this.helmetNavContacts) return "hud_contacts"
     if (target === this.helmetNavSpace) return "hud_space"
-    return target === this.hudPanel ? "hud_inspect" : "nav_open"
+    return null
   }
 
   updateGazeFeedback({target = null, armed = false, progress = 0} = {}) {
@@ -1082,7 +1081,7 @@ export class StereoSpaceView {
     label.material.map?.dispose()
     // First line: stick link state; optional second line: headset perf.
     const [link, ...rest] = status.split("\n")
-    label.material.map = cockpitLabel(["STICK LINE: " + link, ...rest], {width: 1024, height: 232})
+    label.material.map = cockpitLabel([link, ...rest], {width: 1024, height: 232})
     label.material.needsUpdate = true
   }
 

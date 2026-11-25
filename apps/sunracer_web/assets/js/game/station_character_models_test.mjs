@@ -48,8 +48,8 @@ test("Green Starbase swaps Mara's visual and keeps all attendant interactions", 
       return new Promise(resolve => {resolveModel = resolve})
     },
   })
-  const trader = {...mara, id: "trade", x: 49, name: "Tarek Sol"}
-  room.update({x: 0, z: 43}, 100, [mara, trader])
+  const missions = {...mara, id: "missions", x: -16, z: -211, name: "Juno Rook"}
+  room.update({x: 0, z: 43}, 100, [mara, missions])
   await Promise.resolve() // Request starts on a microtask, never per frame.
   assert.equal(requested, STATION_CHARACTER_ASSETS.repair)
   resolveModel(meshGltf())
@@ -59,9 +59,9 @@ test("Green Starbase swaps Mara's visual and keeps all attendant interactions", 
   assert.ok(room.node.children.filter(o =>
     o.name?.startsWith("attendant:repair:")).every(o => o.visible === false))
   assert.ok(room.node.children.filter(o =>
-    o.name?.startsWith("attendant:trade:")).every(o => o.visible !== false))
+    o.name?.startsWith("attendant:missions:")).every(o => o.visible !== false))
   const count = room.node.children.length
-  room.update({x: 0, z: 43}, 200, [mara, trader])
+  room.update({x: 0, z: 43}, 200, [mara, missions])
   assert.equal(room.node.children.length, count, "no per-frame model rebuilding")
   room.dispose()
   assert.equal(scene.children.includes(room.node), false)
@@ -171,18 +171,20 @@ test("every listed attendant gets its own model; others keep their figures", asy
   })
   const ilya = {...mara, id: "outfitting", x: -49, z: -181, name: "Ilya Quill"}
   const tarek = {...mara, id: "trade", x: 49, name: "Tarek Sol"}
-  room.update({x: 0, z: 43}, 100, [mara, ilya, tarek])
+  const supply = {...mara, id: "resupply", x: 49, z: -181, name: "Sera Vale"}
+  const missions = {...mara, id: "missions", x: -16, z: -211, name: "Juno Rook"}
+  room.update({x: 0, z: 43}, 100, [mara, ilya, tarek, supply, missions])
   await new Promise(resolve => setImmediate(resolve))
   assert.deepEqual(requested.sort(), [STATION_CHARACTER_ASSETS.outfitting,
-    STATION_CHARACTER_ASSETS.repair].sort())
-  for (const id of ["repair", "outfitting"]) {
+    STATION_CHARACTER_ASSETS.repair, "/images/game/station/tarek_sol.glb", "/images/game/station/sera_vale.glb"].sort())
+  for (const id of ["repair", "outfitting", "trade", "resupply"]) {
     assert.ok(room.node.children.some(o => o.name === `station-character:${id}`))
     assert.ok(room.node.children.filter(o => o.name?.startsWith(`attendant:${id}:`))
       .every(o => o.visible === false))
   }
-  assert.ok(room.node.children.filter(o => o.name?.startsWith("attendant:trade:"))
-    .every(o => o.visible !== false), "Tarek has no model yet and keeps his figure")
-  room.update({x: 0, z: 43}, 200, [mara, ilya, tarek])
-  assert.equal(requested.length, 2, "no repeated requests")
+  assert.ok(room.node.children.filter(o => o.name?.startsWith("attendant:missions:"))
+    .every(o => o.visible !== false), "Juno keeps her procedural figure")
+  room.update({x: 0, z: 43}, 200, [mara, ilya, tarek, supply, missions])
+  assert.equal(requested.length, 4, "no repeated requests")
   room.dispose()
 })
