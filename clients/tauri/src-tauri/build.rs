@@ -2,6 +2,7 @@ fn main() {
     tauri_build::try_build(
         tauri_build::Attributes::new().app_manifest(
             tauri_build::AppManifest::new().commands(&[
+                "check_client_update",
                 "get_network_settings",
                 "save_network_settings",
                 "restart_client",

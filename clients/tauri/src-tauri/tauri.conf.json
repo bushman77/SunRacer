@@ -33,6 +33,7 @@
           ],
           "local": true,
           "permissions": [
+            "allow-check-client-update",
             "allow-get-network-settings",
             "allow-save-network-settings",
             "allow-restart-client",

@@ -3,6 +3,10 @@ import {
   initialServerOrigin
 } from "./server_url.mjs"
 import {probeNativeServer} from "./server_probe.mjs"
+import {bindClientUpdate} from "./client_update.mjs"
+
+bindClientUpdate(document.querySelector("#check-client-update"),
+  document.querySelector("#client-update-status"), () => window.__TAURI__?.core?.invoke)
 
 const input = document.querySelector("#server-url")
 const form = document.querySelector("#connect-form")
