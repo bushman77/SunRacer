@@ -41,7 +41,12 @@ function fixture(renderer) {
   const nav=new NavigationComputer({root:{querySelector:id=>nodes.get(id)},
     createOrrery:()=>renderer})
   nav.orreryHost={hidden:true}
-  nav.solarSvg={hidden:false}
+  // Model SVG DOM semantics: visibility is an attribute, not an HTML property.
+  const attributes=new Set()
+  nav.solarSvg=Object.freeze({
+    toggleAttribute(name,force){if(force)attributes.add(name);else attributes.delete(name)},
+    hasAttribute(name){return attributes.has(name)},
+  })
   nav.isOpen=true
   nav.renderSolarView=()=>{}
   return {nav,nodes}
@@ -51,19 +56,19 @@ test("overhead stays available when 3D cannot produce a frame",()=>{
   const {nav,nodes}=fixture({ready:false,update(){},setActive(){}})
   nav.setSolarPresentation("orrery")
   assert.equal(nav.solarPresentation,"flat")
-  assert.equal(nav.solarSvg.hidden,false)
+  assert.equal(nav.solarSvg.hasAttribute("hidden"),false)
   assert.equal(nav.orreryHost.hidden,true)
   assert.match(nodes.get("#nav-orrery-status").textContent,/3D unavailable/)
 })
 
 test("overhead hides only after a successful initial frame",()=>{
-  const renderer={ready:false,update(){assert.equal(nav.solarSvg.hidden,false)},
+  const renderer={ready:false,update(){assert.equal(nav.solarSvg.hasAttribute("hidden"),false)},
     setActive(active){if(active)this.ready=true}}
   const {nav}=fixture(renderer)
   nav.setSolarPresentation("orrery")
   assert.equal(nav.solarPresentation,"orrery")
-  assert.equal(nav.solarSvg.hidden,true)
+  assert.equal(nav.solarSvg.hasAttribute("hidden"),true)
   nav.orreryUnavailable("context lost")
   assert.equal(nav.solarPresentation,"flat")
-  assert.equal(nav.solarSvg.hidden,false)
+  assert.equal(nav.solarSvg.hasAttribute("hidden"),false)
 })

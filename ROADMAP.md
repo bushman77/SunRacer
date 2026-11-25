@@ -1,3 +1,7 @@
+## 2026-11-25 — Fix SVG layer obscuring the installed 3D Atlas
+
+- The overhead map is an SVGElement, not an HTMLElement. Setting its `.hidden` property did not set the DOM `hidden` attribute required by the CSS, leaving the opaque overhead layer above the 3D scene. Toggle the actual attribute on mode changes and regression-test SVG attribute semantics. Preserve the previous native first-frame guard and overhead fallback. Installed-client visual verification pending.
+
 ## 2026-11-25 — Installed-client orrery visibility recovery
 
 - Keep the functional overhead map visible until an initial 3D frame is confirmed. On native clients, retain the WebGL drawing buffer and present via a regular 2D canvas, validating the first frame's solar-center pixel; use explicit stacking and the same high-performance GPU preference as the cockpit. Guard against zero draw calls, context loss and rendering exceptions. Show the failure reason and restore the overhead chart rather than leaving an interactive blank viewport. Disable invisible picks before first frame. Added mode transition tests.

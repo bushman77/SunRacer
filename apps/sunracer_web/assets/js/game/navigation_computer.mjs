@@ -335,7 +335,9 @@ export class NavigationComputer {
     this.solarPresentation=mode
     const active=mode==="orrery"
     this.orreryHost.hidden=!active
-    if(this.solarSvg)this.solarSvg.hidden=active
+    // SVGElement is not HTMLElement: assigning .hidden creates an expando,
+    // not a DOM attribute. The opaque SVG otherwise covers the 3D scene.
+    this.solarSvg?.toggleAttribute("hidden",active)
     this.orrery?.setActive(active&&this.isOpen&&this.view==="system")
     for(const [id,enabled] of [["#nav-orrery-mode",active],["#nav-flat-mode",!active]]){
       const button=this.root.querySelector(id)
