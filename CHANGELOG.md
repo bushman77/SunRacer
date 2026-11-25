@@ -1,3 +1,8 @@
+## 2026-11-25 — Installed headset relay: no command-line configuration
+
+- Opening the HMD panel selects the already discovered private HTTPS headset IPv4 and binds port 4455 on that exact interface. The optional developer bind override must match. No wildcard/public/loopback bind, no listener at app startup, no TLS downgrade. Existing trusted local Phoenix certificate/key are discovered in the standard app config directory or the existing ~/SunRacer checkout. A native Certificate setup button selects and validates a certificate/key pair once and saves only local file paths; retry requires no relaunch or environment variables. Existing Phoenix pairing is preserved on relay failure.
+- The trusted HTTPS phone page on the same LAN IP:4443 and phone CA trust remain prerequisites for the optimized local stream. Public EC2 phone origins retain direct Phoenix connectivity; fully automatic trusted certificate provisioning and local asset serving for arbitrary installations remain separate work. No secrets bundled or transferred. Added Rust address validation and native markup/IPC checks; full builds and Galaxy acceptance pending.
+
 ## 2026-11-25 — Fix SVG layer obscuring the installed 3D Atlas
 
 - The overhead map is an SVGElement, not an HTMLElement. Setting its `.hidden` property did not set the DOM `hidden` attribute required by the CSS, leaving the opaque overhead layer above the 3D scene. Toggle the actual attribute on mode changes and regression-test SVG attribute semantics. Preserve the previous native first-frame guard and overhead fallback. Installed-client visual verification pending.

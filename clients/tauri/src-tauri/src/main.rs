@@ -34,6 +34,7 @@ fn main() {
             network::restart_client,
             native_loopback::native_loopback_post,
             sbs_relay_probe::start_sbs_relay_probe,
+            sbs_relay_probe::configure_sbs_relay_tls,
             sbs_relay_probe::sbs_relay_probe_status,
             sbs_relay_probe::stop_sbs_relay_probe,
             sbs_relay_probe::publish_sbs_relay_world,

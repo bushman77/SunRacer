@@ -16,10 +16,16 @@ const network = read("../src-tauri/src/network.rs")
 const build = read("../src-tauri/build.rs")
 const config = JSON.parse(read("../src-tauri/tauri.conf.json"))
 
-test("secure relay proof is disabled by default and explicitly bound to private LAN only", () => {
+test("secure relay starts on demand with automatically selected private LAN address", () => {
   assert.match(native, /std::env::var\("SUNRACER_SBS_BIND"\)/)
-  assert.match(native, /SocketAddr::V4\(a\) if a\.port\(\) >= 1024 && private_lan/)
-  assert.match(native, /tls_config\(\)\?/)
+  assert.match(native, /filter\(\|ip\| private_lan\(\*ip\)\)/)
+  assert.match(native, /SocketAddr::from\(\(ip, 4455\)\)/)
+  assert.match(native, /tls_config\(&credentials\(&app\)\?\)\?/)
+  assert.match(native, /credentials\.json/)
+  assert.match(control, /invoke\("start_sbs_relay_probe", \{helmetOrigin\}\)/)
+  assert.match(control, /invoke\("configure_sbs_relay_tls"\)/)
+  assert.match(native, /blocking_pick_file\(\)/)
+  assert.match(native, /home\.join\("SunRacer\/apps\/sunracer_web\/priv\/cert"\)/)
   assert.match(native, /TlsAcceptor::from\(config\)/)
   assert.match(native, /ServerConfig::builder_with_provider\(Arc::new\(/)
   assert.match(native, /rustls::crypto::ring::default_provider\(\)/)
@@ -63,7 +69,7 @@ test("native IPC capabilities are strictly local and explicit", () => {
   assert.equal(capability.local, true)
   assert.deepEqual(capability.windows, ["main"])
   for (const command of [
-    "start_sbs_relay_probe", "sbs_relay_probe_status", "stop_sbs_relay_probe",
+    "start_sbs_relay_probe", "configure_sbs_relay_tls", "sbs_relay_probe_status", "stop_sbs_relay_probe",
     "publish_sbs_relay_world"
   ]) {
     assert.match(main, new RegExp("sbs_relay_probe::" + command))
@@ -83,7 +89,7 @@ test("native IPC capabilities are strictly local and explicit", () => {
 
 test("relay controls live only in the native PILOT HMD panel", () => {
   assert.doesNotMatch(launcher, /sbs-relay-open|sbs-relay-panel|sbs_relay_probe.mjs/)
-  for (const id of ["helmet-relay-mini", "helmet-relay-status", "helmet-relay-check"]) {
+  for (const id of ["helmet-relay-mini", "helmet-relay-status", "helmet-relay-check", "helmet-relay-configure"]) {
     assert.equal(gameMarkup.split('id="' + id + '"').length - 1, 1, id)
   }
   assert.match(control, /start_sbs_relay_probe/)

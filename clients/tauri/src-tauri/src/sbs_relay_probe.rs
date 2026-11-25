@@ -1,14 +1,16 @@
-//! Opt-in TLS-only headset LAN pairing proof. Stage 1 only: NO game data,
-//! assets, remote Phoenix bridge or control commands. The proof is single-use.
+//! TLS-only headset LAN relay, started on demand by the native HMD panel.
+//! No arbitrary asset bridge or control commands. Invitations are single-use.
 use ring::{constant_time, rand::{SecureRandom, SystemRandom}};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::{Value, Map};
 use std::{
     net::{IpAddr, Ipv4Addr, SocketAddr},
+    fs, path::PathBuf,
     sync::{atomic::{AtomicBool, AtomicU64, Ordering}, Arc, Mutex, OnceLock},
     time::{Duration, Instant},
 };
-use tauri::WebviewWindow;
+use tauri::{AppHandle, Manager, WebviewWindow};
+use tauri_plugin_dialog::DialogExt;
 use tokio::{
     io::{AsyncReadExt, AsyncWrite, AsyncWriteExt},
     net::{TcpListener, TcpStream},
@@ -138,27 +140,98 @@ fn private_lan(ip: Ipv4Addr) -> bool {
         (a == 10 || (a == 172 && (16..=31).contains(&b)) ||
          (a == 192 && b == 168) || (a == 100 && (64..=127).contains(&b)))
 }
-fn bind_address() -> Result<SocketAddr, String> {
-    let raw = std::env::var("SUNRACER_SBS_BIND")
-        .map_err(|_| "Set SUNRACER_SBS_BIND=your-LAN-IP:4455 before launching Tauri.")?;
-    let address: SocketAddr = raw.parse()
-        .map_err(|_| "SUNRACER_SBS_BIND must be a private IPv4 address with a port.")?;
-    match address {
-        SocketAddr::V4(a) if a.port() >= 1024 && private_lan(*a.ip()) => Ok(address),
-        _ => Err("SBS requires an explicit private IPv4 address, not 0.0.0.0, loopback or a public address.".into()),
+// Pairing already discovers a phone-reachable HTTPS origin through Phoenix.
+ // Bind the same local IPv4, not the OS default route (which may be a VPN).
+fn select_bind(helmet_origin: Option<&str>, override_address: Option<&str>) -> Result<SocketAddr, String> {
+    let ip: Ipv4Addr = helmet_origin
+        .and_then(|origin| origin.strip_prefix("https://"))
+        .and_then(|origin| origin.strip_suffix(":4443"))
+        .and_then(|host| host.parse().ok())
+        .filter(|ip| private_lan(*ip))
+        .ok_or("Local relay needs the laptop's trusted HTTPS headset address on port 4443. Direct headset connection remains available.")?;
+    let expected = SocketAddr::from((ip, 4455));
+    if let Some(raw) = override_address {
+        let address: SocketAddr = raw.parse()
+            .map_err(|_| "Invalid optional SBS bind override.")?;
+        if address != expected {
+            return Err("SBS bind override must match the headset LAN address and port 4455.".into());
+        }
     }
+    Ok(expected)
 }
-fn tls_config() -> Result<Arc<ServerConfig>, String> {
-    let cert = std::env::var("SUNRACER_SBS_CERT")
-        .map_err(|_| "Set SUNRACER_SBS_CERT to your trusted PEM certificate.")?;
-    let key = std::env::var("SUNRACER_SBS_KEY")
-        .map_err(|_| "Set SUNRACER_SBS_KEY to your matching PEM private key.")?;
-    let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_file_iter(&cert)
+
+fn bind_address(helmet_origin: Option<&str>) -> Result<SocketAddr, String> {
+    select_bind(helmet_origin, std::env::var("SUNRACER_SBS_BIND").ok().as_deref())
+}
+
+#[derive(Deserialize, Serialize)]
+struct RelayCredentials {
+    cert: PathBuf,
+    key: PathBuf,
+}
+fn credentials_dir(app: &AppHandle) -> Result<PathBuf, String> {
+    Ok(app.path().app_config_dir().map_err(|error| error.to_string())?.join("sbs"))
+}
+
+fn credentials(app: &AppHandle) -> Result<RelayCredentials, String> {
+    // Explicit overrides remain a developer escape hatch, not a requirement.
+    match (std::env::var_os("SUNRACER_SBS_CERT"), std::env::var_os("SUNRACER_SBS_KEY")) {
+        (Some(cert), Some(key)) => return Ok(RelayCredentials {cert: cert.into(), key: key.into()}),
+        (None, None) => {},
+        _ => return Err("Both optional SBS certificate overrides must be supplied together.".into()),
+    }
+    let dir = credentials_dir(app)?;
+    let saved = dir.join("credentials.json");
+    match fs::read_to_string(&saved) {
+        Ok(content) => return serde_json::from_str(&content)
+            .map_err(|_| "Saved headset certificate settings are invalid. Select the certificate again.".into()),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {},
+        Err(error) => return Err(format!("Cannot read headset certificate settings: {error}")),
+    }
+    let local = RelayCredentials {cert:dir.join("localhost.pem"),key:dir.join("localhost-key.pem")};
+    if local.cert.is_file() && local.key.is_file() {return Ok(local)}
+    // Compatibility with existing local Phoenix development installations.
+    if let Ok(home) = app.path().home_dir() {
+        let dev = home.join("SunRacer/apps/sunracer_web/priv/cert");
+        let local = RelayCredentials {cert:dev.join("localhost.pem"),key:dev.join("localhost-key.pem")};
+        if local.cert.is_file() && local.key.is_file() {return Ok(local)}
+    }
+    Err("Select the existing trusted headset certificate and matching key (one-time setup).".into())
+}
+
+#[tauri::command]
+pub async fn configure_sbs_relay_tls(app: AppHandle, window: WebviewWindow) -> Result<bool, String> {
+    crate::network::require_local(&window)?;
+    // Native picker: no paths or key contents accepted from the webview.
+    // Run the blocking dialogs away from the UI thread.
+    tauri::async_runtime::spawn_blocking(move || {
+        let Some(cert) = app.dialog().file().set_title("Select trusted headset certificate (PEM)")
+            .add_filter("PEM certificate", &["pem", "crt"]).blocking_pick_file() else {return Ok(false)};
+        let Some(key) = app.dialog().file().set_title("Select matching headset private key (PEM)")
+            .add_filter("PEM key", &["pem", "key"]).blocking_pick_file() else {return Ok(false)};
+        let selected = RelayCredentials {
+            cert:cert.into_path().map_err(|_| "Choose a local certificate file.")?,
+            key:key.into_path().map_err(|_| "Choose a local private key file.")?,
+        };
+        // Validate before persisting paths; never copy or expose private keys.
+        tls_config(&selected)?;
+        let dir = credentials_dir(&app)?;
+        fs::create_dir_all(&dir).map_err(|error| error.to_string())?;
+        let content = serde_json::to_vec_pretty(&selected).map_err(|error| error.to_string())?;
+        fs::write(dir.join("credentials.json"), content).map_err(|error| error.to_string())?;
+        Ok(true)
+    }).await.map_err(|error| error.to_string())?
+}
+
+fn tls_config(credentials: &RelayCredentials) -> Result<Arc<ServerConfig>, String> {
+    let cert = &credentials.cert;
+    let key = &credentials.key;
+    let certs: Vec<CertificateDer<'static>> = CertificateDer::pem_file_iter(cert)
         .map_err(|error| format!("SBS certificate cannot be read: {error}"))?
         .collect::<Result<_, _>>()
         .map_err(|error| format!("SBS certificate invalid: {error}"))?;
     if certs.is_empty() {return Err("SBS certificate PEM is empty.".into())}
-    let key = PrivateKeyDer::from_pem_file(&key)
+    let key = PrivateKeyDer::from_pem_file(key)
         .map_err(|error| format!("SBS key cannot be loaded: {error}"))?;
     // Both aws-lc-rs and ring are enabled transitively by the Tauri/
     // reqwest dependency graph. ServerConfig::builder() panics when rustls
@@ -183,7 +256,7 @@ fn random_token() -> Result<String, String> {
 }
 
 #[tauri::command]
-pub async fn start_sbs_relay_probe(window: WebviewWindow) -> Result<ProbeInfo, String> {
+pub async fn start_sbs_relay_probe(app: AppHandle, window: WebviewWindow, helmet_origin: Option<String>) -> Result<ProbeInfo, String> {
     crate::network::require_local(&window)?;
     if window.label() != "main" {
         return Err("The SBS relay requires the local Tauri main game window.".into())
@@ -192,8 +265,8 @@ pub async fn start_sbs_relay_probe(window: WebviewWindow) -> Result<ProbeInfo, S
         return Err("SBS test already running. Stop it before making another invitation.".into())
     }
     // Validate cert and exact LAN address before binding; NEVER use plain HTTP.
-    let address = bind_address()?;
-    let config = tls_config()?;
+    let address = bind_address(helmet_origin.as_deref())?;
+    let config = tls_config(&credentials(&app)?)?;
     let token = random_token()?;
     let listener = TcpListener::bind(address).await
         .map_err(|error| format!("Unable to bind secure SBS listener: {error}"))?;
@@ -714,6 +787,20 @@ mod tests {
             assert!(private_lan(ip.parse().unwrap()), "{ip}");
         }
     }
+    #[test]
+    fn automatic_bind_matches_the_discovered_headset_origin() {
+        assert_eq!(select_bind(Some("https://192.168.1.8:4443"), None).unwrap(),
+            "192.168.1.8:4455".parse::<SocketAddr>().unwrap());
+        assert!(select_bind(Some("https://192.168.1.8:4443"), Some("192.168.1.8:4455")).is_ok());
+        for invalid in [None, Some("http://192.168.1.8:4443"), Some("https://8.8.8.8:4443"),
+                        Some("https://127.0.0.1:4443"), Some("https://0.0.0.0:4443"),
+                        Some("https://192.168.1.8:4443/path"), Some("https://192.168.1.8:4444")] {
+            assert!(select_bind(invalid, None).is_err());
+        }
+        assert!(select_bind(Some("https://192.168.1.8:4443"), Some("192.168.1.9:4455")).is_err());
+        assert!(select_bind(Some("https://192.168.1.8:4443"), Some("0.0.0.0:4455")).is_err());
+    }
+
     #[test]
     fn malformed_http_and_cross_host_requests_fail() {
         let addr = "192.168.1.8:4455".parse().unwrap();

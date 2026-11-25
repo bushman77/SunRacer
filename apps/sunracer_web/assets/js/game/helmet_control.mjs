@@ -23,6 +23,7 @@ export class HelmetControl {
     this.relayPoll = null
     this.relayVerified = false
     this.relayReconnectQRReady = false
+    this.relayPreparing = false
   }
 
   nativeRelayInvoke() {
@@ -39,7 +40,13 @@ export class HelmetControl {
     const available = Boolean(this.nativeRelayInvoke())
     if (panel) panel.hidden = !available
     if (label) label.textContent = this.relayStatus
-    if (check) check.hidden = !available || !this.status.connected
+    if (check) {
+      check.hidden = !available
+      check.disabled = this.relayPreparing
+      check.textContent = this.relayUrl ? "CHECK LINK" : "RETRY LOCAL LINK"
+    }
+    const configure = this.root.querySelector("#helmet-relay-configure")
+    if (configure) {configure.hidden = !available; configure.disabled = this.relayPreparing}
     const reconnect = this.root.querySelector("#helmet-relay-reconnect")
     if (reconnect) reconnect.hidden =
       !available || !this.status.paired || !this.relayUrl ||
@@ -69,18 +76,21 @@ export class HelmetControl {
   }
 
   async prepareRelayQR(code) {
+    if (this.relayPreparing) return
     const invoke = this.nativeRelayInvoke()
     this.relayUrl = null
     this.relayVerified = false
     this.relayReconnectQRReady = false
     if (!invoke) return this.drawQR() // Browser-only game retains Phoenix QR.
+    this.relayPreparing = true
     this.relayStatus = "LOCAL LINK / PREPARING"
     this.renderRelayStatus()
     try {
       // Replace a previous single-use challenge, never keep multiple
       // active pairing tokens. This is only called after opening PILOT HMD.
       await invoke("stop_sbs_relay_probe")
-      const invitation = await invoke("start_sbs_relay_probe")
+      const helmetOrigin = this.root.querySelector("#helmet-host")?.value.trim().replace(/\/+$/, "") || null
+      const invitation = await invoke("start_sbs_relay_probe", {helmetOrigin})
       if (!this.open || this.code !== code) {
         await invoke("stop_sbs_relay_probe")
         return
@@ -92,7 +102,9 @@ export class HelmetControl {
       this.relayStatus = "LOCAL LINK / AWAITING PHONE"
     } catch (error) {
       // Never break the existing authenticated Phoenix QR enrollment.
-      this.relayStatus = "LOCAL LINK / UNAVAILABLE (" + String(error).slice(0, 85) + ")"
+      this.relayStatus = "LOCAL LINK / UNAVAILABLE (" + String(error).slice(0, 180) + ")"
+    } finally {
+      this.relayPreparing = false
     }
     this.renderRelayStatus()
     if (this.open && this.code === code) {
@@ -127,7 +139,26 @@ export class HelmetControl {
     this.root.querySelector("#nav-helmet-open")?.addEventListener("click", () => this.openPanel())
     this.root.querySelector("#nav-helmet-close")?.addEventListener("click", () => this.closePanel())
     this.root.querySelector("#helmet-forget")?.addEventListener("click", () => this.forget())
-    this.root.querySelector("#helmet-relay-check")?.addEventListener("click", () => this.checkRelay())
+    this.root.querySelector("#helmet-relay-check")?.addEventListener("click", () => {
+      if (this.relayUrl) void this.checkRelay()
+      else void this.prepareRelayQR(this.code)
+    })
+    this.root.querySelector("#helmet-relay-configure")?.addEventListener("click", async () => {
+      const invoke = this.nativeRelayInvoke()
+      if (!invoke || this.relayPreparing) return
+      this.relayPreparing = true
+      this.renderRelayStatus()
+      let configured = false
+      try {
+        configured = await invoke("configure_sbs_relay_tls")
+      } catch (error) {
+        this.relayStatus = "LOCAL LINK / " + String(error).slice(0, 180)
+      } finally {
+        this.relayPreparing = false
+        this.renderRelayStatus()
+      }
+      if (configured && this.open) await this.prepareRelayQR(this.code)
+    })
     // Center the phone while it is already mounted in the VR headset.
     // Keep this separate from the calibration arrows and flight controls.
     window.addEventListener("keydown", event => {
@@ -141,7 +172,10 @@ export class HelmetControl {
     }, true)
     const host = this.root.querySelector("#helmet-host")
     host?.addEventListener("input", () => { this.hostEdited = true })
-    host?.addEventListener("change", () => this.drawQR())
+    host?.addEventListener("change", () => {
+      if (this.nativeRelayInvoke() && this.open) void this.prepareRelayQR(this.code)
+      else void this.drawQR()
+    })
     // Do not offer localhost as a QR destination: a phone cannot reach it.
     if (host) host.value = chooseHelmetOrigin((window.SUNRACER_SERVER_ORIGIN || window.location.origin))
 

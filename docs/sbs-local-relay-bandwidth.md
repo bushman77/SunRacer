@@ -250,3 +250,9 @@ control WebSocket. Moving versioned assets to the local Tauri relay is
 a separate, subsequent milestone. Do not deploy to EC2 before the
 Galaxy S21 on-device test confirms fallback, restart, region switches
 and traffic measurements.
+
+## 2026-11-25 — Installed headset relay: no command-line configuration
+
+- Opening the HMD panel selects the already discovered private HTTPS headset IPv4 and binds port 4455 on that exact interface. The optional developer bind override must match. No wildcard/public/loopback bind, no listener at app startup, no TLS downgrade. Existing trusted local Phoenix certificate/key are discovered in the standard app config directory or the existing ~/SunRacer checkout. A native Certificate setup button selects and validates a certificate/key pair once and saves only local file paths; retry requires no relaunch or environment variables. Existing Phoenix pairing is preserved on relay failure.
+- The trusted HTTPS phone page on the same LAN IP:4443 and phone CA trust remain prerequisites for the optimized local stream. Public EC2 phone origins retain direct Phoenix connectivity; fully automatic trusted certificate provisioning and local asset serving for arbitrary installations remain separate work. No secrets bundled or transferred. Added Rust address validation and native markup/IPC checks; full builds and Galaxy acceptance pending.
+

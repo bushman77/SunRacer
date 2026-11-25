@@ -39,6 +39,7 @@
             "allow-restart-client",
             "allow-native-loopback-post",
             "allow-start-sbs-relay-probe",
+            "allow-configure-sbs-relay-tls",
             "allow-sbs-relay-probe-status",
             "allow-stop-sbs-relay-probe",
             "allow-publish-sbs-relay-world"

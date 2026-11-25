@@ -84,3 +84,7 @@ revoke an otherwise working pairing before verifying the secure endpoint.
 This changes **development** only. It does not enable the development
 certificate on EC2, modify production TLS termination, or redirect the native
 client away from localhost port 4000.
+
+## Installed desktop relay (2026-11-25)
+
+Open Atlas → Settings → SBS / Headset. The installed client uses the discovered HTTPS headset origin and its existing trusted local certificate automatically; no SBS environment variables are required. If no certificate is found, choose **Certificate setup** and select the existing PEM certificate and matching private key once. Only paths are saved. Reissue a certificate if its LAN IP changes; the phone must trust the issuing CA. Direct Phoenix pairing remains available if local relay prerequisites are not met.

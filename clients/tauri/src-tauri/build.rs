@@ -8,6 +8,7 @@ fn main() {
                 "restart_client",
                 "native_loopback_post",
                 "start_sbs_relay_probe",
+                "configure_sbs_relay_tls",
                 "sbs_relay_probe_status",
                 "stop_sbs_relay_probe",
                 "publish_sbs_relay_world",
