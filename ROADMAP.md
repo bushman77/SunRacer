@@ -1,3 +1,8 @@
+## 2026-11-25 — Minimal cockpit ship readout
+
+- Replaced the bulky pilot/status card with a 15rem translucent hull/shield bar and actual velocity magnitude readout. Removed redundant pilot, configuration, coordinates, equipment and per-card editing controls. Existing HUD unlock/drag, visibility menu, and minimap remain; legacy saved collapsed state is normalized for the readout. No change to physics, combat, networking or SBS.
+- Added shared and native markup regression tests; static ID/reference checks passed. Full Node/ExUnit suites, mix precommit, installer and visual verification pending.
+
 ## 2026-11-25 — Fix installer regression gate after docking popup removal
 
 - CI on 51a9b22 reported 56 passing native tests and one failure in native-overlay-visibility.test.mjs: its legacy overlay list still required the intentionally removed docking popup. Replace that expectation with an absence assertion and retain the countdown and all remaining CSP-safe overlay checks. Linux and Windows installers had been skipped after the failed test; no new package was produced by those runs. Full CI and installed visual acceptance of this correction pending.

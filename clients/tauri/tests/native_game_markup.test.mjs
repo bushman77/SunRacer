@@ -112,3 +112,11 @@ test("installed cockpit keeps automatic docking countdown without approach popup
   assert.match(document,/id="station-proximity-warning"/)
   assert.match(document,/id="starbase-docked-panel"/)
 })
+
+test("installed ship readout contains only essential flight instruments",()=>{
+  const panel=document.slice(document.indexOf('id="cockpit-window-ship-status"'),document.indexOf('id="cockpit-window-minimap"'))
+  for(const id of ["hud-hp","hud-hp-bar","hud-shields","hud-shield-bar","hud-speed"])
+    assert.match(panel,new RegExp('id="'+id+'"'))
+  assert.doesNotMatch(panel,/id="(?:hud-pilot|hud-ship|hud-config|hud-equipment|hud-coordinates|ship-status-hide|ship-status-collapse)"/)
+  assert.doesNotMatch(panel,/<button/)
+})

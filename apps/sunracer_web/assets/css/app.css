@@ -2095,3 +2095,38 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 .navigation-computer #nav-orrery .orrery-labels {z-index:1;}
 .navigation-computer #nav-orrery-status {color:#ffcf91;max-width:42ch;overflow-wrap:anywhere;}
 .navigation-computer #nav-orrery-status[hidden] {display:none!important;}
+/* Flight essentials: no permanent title, editing buttons or nested cards. */
+.cockpit-window.cockpit-window-ship,
+.cockpit-interface.is-compact .cockpit-window.cockpit-window-ship {
+  width: min(15rem, calc(100vw - 1.5rem));
+  flex-basis: min(15rem, calc(100vw - 1.5rem));
+  border: 1px solid rgb(103 232 249 / 18%);
+  border-radius: .35rem;
+  background: rgb(3 9 20 / 62%);
+  box-shadow: none;
+}
+.ship-status-readout {
+  display: grid;
+  gap: .38rem;
+  padding: .5rem .65rem;
+  font: 600 .65rem/1.25 ui-monospace, monospace;
+  font-variant-numeric: tabular-nums;
+  color: #d9e5f2;
+  user-select: none;
+}
+.ship-status-row {
+  display: grid;
+  grid-template-columns: 3.2rem minmax(0,1fr) auto;
+  gap: .4rem;
+  align-items: center;
+}
+.ship-status-label {text-transform: uppercase;letter-spacing: .06em;color: #a4bdcc;}
+.ship-status-label.hull-label {color: #6ef5a4;}
+.ship-status-label.shield-label {color: #23dfff;}
+.ship-status-track {height: .27rem;background: #233247;border-radius: 9999px;overflow: hidden;}
+.ship-status-value {white-space: nowrap;text-align: right;}
+.ship-status-speed {display: flex;justify-content: space-between;align-items: center;}
+.cockpit-interface.is-unlocked .ship-status-readout {cursor: grab;touch-action: none;}
+.cockpit-interface.is-unlocked .cockpit-window-ship {border-style: dashed;}
+.cockpit-interface.is-unlocked .cockpit-window-ship.is-dragging .ship-status-readout {cursor: grabbing;}
+.ship-status-readout:focus-visible {outline: 1px solid #23dfff;outline-offset: -2px;}

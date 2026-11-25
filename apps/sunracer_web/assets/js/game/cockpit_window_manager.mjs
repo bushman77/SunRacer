@@ -341,6 +341,7 @@ export class CockpitWindowManager {
     const state = this.layout.windows[id]
     if (!element || !state) return
 
+    if (element.hasAttribute?.("data-cockpit-fixed-expanded")) state.collapsed = false
     element.hidden = !state.visible
     element.classList.toggle("is-collapsed", state.collapsed)
     element.dataset.cockpitCollapsed = String(state.collapsed)

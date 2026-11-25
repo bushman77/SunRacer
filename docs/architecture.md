@@ -390,3 +390,5 @@ Native orrery frame presentation uses a retained WebGL buffer copied to a regula
 Orrery wheel zoom scales the camera and orbit target about a world-space point on the cursor ray, preserving its perspective projection. Object surfaces and label depth take precedence over the orbital plane; near-horizon empty space uses a camera-facing target plane. This is presentation-only, with unchanged chart picking and server authority.
 
 Green Starbase approach no longer displays a redundant manual docking popup. The server-verified stationary hold drives the existing five-second countdown and docked transition; collision warnings and launch controls remain available. The legacy server docking endpoint is unchanged.
+
+The cockpit ship_status window is a compact hull/shield/actual velocity readout. The full readout acts as the unlocked drag handle, and the existing visibility menu remains authoritative for local HUD layout. Previously saved collapsed states are normalized without resetting placement or minimap preferences.

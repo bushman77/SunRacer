@@ -2057,8 +2057,6 @@ class SpaceClient {
       const c = response.combat
       this.text("#hud-hp", String(c.hull) + " / " + String(c.max_hull))
       this.text("#hud-shields", String(c.shields) + " / " + String(c.max_shields))
-      this.text("#hud-compact-hp", c.hull)
-      this.text("#hud-compact-shields", c.shields)
       this.setWidth("#hud-hp-bar", healthPercent(c.hull, c.max_hull))
       this.setWidth("#hud-shield-bar", healthPercent(c.shields, c.max_shields))
     }
@@ -2570,25 +2568,15 @@ class SpaceClient {
 
   populateHud() {
     const {pilot, ship, stats, configuration} = this.player
-    this.text("#hud-pilot", pilot.pilot_name)
-    this.text("#hud-ship", `${ship.name} · Pilot #${pilot.id}`)
-    this.text("#hud-config", `C-${configuration.number}`)
     this.text("#atlas-pilot-name", pilot.pilot_name)
     this.text("#atlas-pilot-ship", ship.name)
     this.text("#atlas-pilot-config", `C-${configuration.number}`)
     this.text("#hud-hp", `${number(stats.hit_points)} / ${number(stats.hit_points)}`)
     this.text("#hud-shields", `${number(stats.shields)} / ${number(stats.shields)}`)
-    this.text("#hud-compact-hp", number(stats.hit_points))
-    this.text("#hud-compact-shields", number(stats.shields))
-    this.text("#hud-speed", `${number(stats.speed)} u/s`)
+    this.text("#hud-speed", "—")
     this.root.querySelector("#hud-hp-bar").style.width = "100%"
     this.root.querySelector("#hud-shield-bar").style.width = stats.shields > 0 ? "100%" : "0%"
 
-    const equipment = [...configuration.lasers, ...configuration.generators, ...configuration.drones]
-    this.text(
-      "#hud-equipment",
-      equipment.length ? equipment.map(item => item.name).join(" · ") : "Garnet laser (10) · Forward-1 shield · Standard missile tube"
-    )
   }
 
   setupFlightModeButtons() {
@@ -2630,11 +2618,12 @@ class SpaceClient {
     const ownShip = this.entities.get(this.selfId)
     this.syncFlightModeButtons(ownShip?.flightMode)
     if (!ownShip) return
-    this.text("#hud-coordinates", `${number(ownShip.render.x)} / ${number(ownShip.render.y)} / ${number(ownShip.render.z)}`)
     this.text("#hud-flight-mode", (ownShip.flightMode || "cruise").toUpperCase())
     this.text("#hud-throttle", `${Math.round((ownShip.throttle || 0) * 100)}%`)
     const v = ownShip.velocity || {x: 0, y: 0, z: 0}
-    this.text("#hud-actual-speed", `${Math.round(Math.hypot(v.x, v.y, v.z))} u/s`)
+    const speed = `${Math.round(Math.hypot(v.x, v.y, v.z))} u/s`
+    this.text("#hud-speed", speed)
+    this.text("#hud-actual-speed", speed)
     const a = orientationTelemetry(
       ownShip.orientation, ownShip.attitude || {yaw: 0, pitch: 0, roll: 0}
     )
@@ -2669,8 +2658,6 @@ class SpaceClient {
     if (ownShip) {
       this.text("#hud-hp", `${number(ownShip.hull)} / ${number(ownShip.maxHull)}`)
       this.text("#hud-shields", `${number(ownShip.shields)} / ${number(ownShip.maxShields)}`)
-      this.text("#hud-compact-hp", number(ownShip.hull))
-      this.text("#hud-compact-shields", number(ownShip.shields))
       this.setWidth("#hud-hp-bar", healthPercent(ownShip.hull, ownShip.maxHull))
       this.setWidth("#hud-shield-bar", healthPercent(ownShip.shields, ownShip.maxShields))
     }
