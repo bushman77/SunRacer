@@ -36,3 +36,24 @@ test("Launch game opens local HTML, not the server-hosted /play page", () => {
   assert.match(js, /window\.location\.assign\("\.\/game\.html"\)/)
   assert.doesNotMatch(js, /navigateTo\(gameUrl\)/)
 })
+
+test("native proxy controls live in the compact top-left settings menu", () => {
+  assert.match(html, /id="networking-open"[^>]*aria-expanded="false"[^>]*aria-controls="networking-panel"/)
+  assert.match(html, /id="networking-panel"[^>]*hidden/)
+  assert.match(html, /<details id="native-network-settings">/)
+  assert.match(html, /<option value="system">System network settings<\/option>/)
+  assert.match(html, /<option value="socks5">Manual SOCKS5 proxy<\/option>/)
+  assert.match(css, /\.networking-panel \{[\s\S]*?width:max-content;/)
+  assert.match(css, /background:rgb\(3 9 20 \/ 80%\)/)
+})
+
+test("native proxy capabilities remain restricted to bundled pages", () => {
+  const config = JSON.parse(readFileSync(new URL("../src-tauri/tauri.conf.json", import.meta.url), "utf8"))
+  const capability = config.app.security.capabilities.find(value => value.identifier === "local-networking-settings")
+  assert.equal(capability.local, true)
+  assert.deepEqual(capability.windows, ["main"])
+  assert.equal(capability.remote, undefined)
+  for (const permission of ["allow-get-network-settings", "allow-save-network-settings", "allow-restart-client"]) {
+    assert.ok(capability.permissions.includes(permission))
+  }
+})

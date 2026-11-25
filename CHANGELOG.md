@@ -1,3 +1,9 @@
+## 2026-11-25 — Restore native proxy settings in title menu
+
+- Moved the installed client's existing system/SOCKS5 proxy selector, host, port, tunnel override notice and save/restart flow into a top-left translucent, intrinsic-width hamburger menu. Existing Rust validation, persisted settings and local-only IPC capability are unchanged.
+- Browser title screen explains where native proxy configuration lives; no remote IPC or browser proxy bypass introduced.
+- Added markup and capability regression coverage; local Node suite, Tauri build and real proxy/restart verification pending. No Mix formatting or deployment performed.
+
 ## 2026-11-25 — SpaceNova title settings menu
 
 - Removed duplicate Pilot Sign In; Play still routes guests to login and authenticated pilots to the cockpit.

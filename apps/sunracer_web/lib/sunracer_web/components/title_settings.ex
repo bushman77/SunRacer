@@ -33,7 +33,7 @@ defmodule SunracerWeb.TitleSettings do
             <p id="nova-network-status" class="nova-network-status" role="status"></p>
             <p class="nova-network-note">
               Configure proxy settings in your browser or operating system.
-              The desktop launcher has its own networking controls.
+              In the installed desktop client, open the top-left Settings menu and select Network settings to configure a SOCKS5 proxy.
             </p>
           </div>
         </details>

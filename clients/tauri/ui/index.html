@@ -15,11 +15,16 @@
       <header class="launcher-rail">
         <span class="launcher-brand"><span aria-hidden="true">✦</span> SUNRACER</span>
         <span class="launcher-rail-status">FLIGHT SYSTEMS // DESKTOP CLIENT</span>
-        <button type="button" id="networking-open" class="networking-open">⚙ Network settings</button>
       </header>
 
-      <section id="networking-panel" class="networking-panel" hidden aria-label="Native networking settings">
-        <div class="networking-title"><h2>Networking</h2><button type="button" id="networking-close" class="text-button">Close ✕</button></div>
+      <div class="launcher-settings">
+        <button type="button" id="networking-open" class="networking-open" aria-label="Settings" title="Settings" aria-expanded="false" aria-controls="networking-panel">
+          <svg aria-hidden="true" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        <section id="networking-panel" class="networking-panel" hidden aria-label="Settings">
+          <details id="native-network-settings">
+            <summary><span>Network settings</span><span aria-hidden="true" class="networking-chevron">⌄</span></summary>
+            <div class="networking-content">
         <form id="networking-form">
           <label for="proxy-mode">Connection mode</label>
           <select id="proxy-mode" name="proxy-mode">
@@ -34,10 +39,13 @@
           </div>
           <p id="networking-override" class="networking-note" hidden>The SUNRACER_USE_SOCKS_TUNNEL=1 launch option currently forces 127.0.0.1:1080. Restart without that option to apply your saved preference.</p>
           <p id="networking-status" role="status" class="networking-note"></p>
-          <button class="primary" type="submit">Save and restart client</button>
+          <button class="primary" type="submit" disabled>Save and restart client</button>
         </form>
         <p class="networking-note">These settings affect the native client only. They do not start an SSH tunnel or change GNOME's system proxy.</p>
-      </section>
+            </div>
+          </details>
+        </section>
+      </div>
 
       <main class="shell">
         <section class="launcher-briefing" aria-label="SunRacer flight briefing">
