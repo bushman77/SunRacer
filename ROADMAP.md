@@ -1,3 +1,8 @@
+## 2026-11-25 — Cursor-anchored Orrery zoom
+
+- Mouse wheel now dollies toward the cursor's scene ray: visible object surfaces, offset labels at object depth, or the orbital plane for empty space. A camera-facing plane bounds near-horizon picks. The orbit target translates with the camera to keep the anchor projected at the same screen position. Existing camera limits, keyboard zoom, reset, gameplay coordinates and server authority are unchanged.
+- Added regression tests for projection invariance, distance bounds and reversible zoom. 28 isolated mathematical cases passed in the authoring runtime; repository Node suite, mix precommit and installed-client visual verification not run. No version bump or deployment.
+
 ## 2026-11-25 — Installed headset relay: no command-line configuration
 
 - Opening the HMD panel selects the already discovered private HTTPS headset IPv4 and binds port 4455 on that exact interface. The optional developer bind override must match. No wildcard/public/loopback bind, no listener at app startup, no TLS downgrade. Existing trusted local Phoenix certificate/key are discovered in the standard app config directory or the existing ~/SunRacer checkout. A native Certificate setup button selects and validates a certificate/key pair once and saves only local file paths; retry requires no relaunch or environment variables. Existing Phoenix pairing is preserved on relay failure.

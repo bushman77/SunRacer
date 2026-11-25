@@ -28,6 +28,19 @@ export function orbitCamera({azimuth=0,elevation=.64,distance=670}={}) {
     y:radius*Math.sin(angle),z:radius*Math.cos(angle)*Math.cos(azimuth)}
 }
 
+// Translate the orbit target as the camera dollies. Both camera and target
+// scale about the same world point, keeping its screen projection invariant.
+export function zoomAround(target, anchor, distance, requestedDistance) {
+  const nextDistance=clamp(requestedDistance,45,1800)
+  const ratio=nextDistance/distance
+  const point=anchor||target
+  return {distance:nextDistance,target:{
+    x:point.x+(target.x-point.x)*ratio,
+    y:point.y+(target.y-point.y)*ratio,
+    z:point.z+(target.z-point.z)*ratio,
+  }}
+}
+
 export class SolarOrrery {
   constructor(THREE,host,actions={}, {native=false}={}) {
     this.T=THREE
@@ -363,6 +376,45 @@ export class SolarOrrery {
     return point?{kind:"waypoint",position:orreryToWorld(point,this.focus,this.state?.navigation?.position_km?.z??0)}:null
   }
 
+  zoomAnchor(event) {
+    // Use a ray through the actual cursor, including when over a DOM label.
+    this.setRay(event)
+    const ray=this.ray.ray
+    const entries=[...this.bodies,...this.liveMarkers]
+    const key=event.target?.closest?.("[data-key]")?.dataset.key
+    const labeled=key&&entries.find(entry=>entry.key===key)
+    if(labeled){
+      // Intersect a camera-facing plane at the labeled object's depth, not
+      // its center (the label may be offset from the object on screen).
+      const normal=this.camera.getWorldDirection(new this.T.Vector3())
+      const plane=new this.T.Plane().setFromNormalAndCoplanarPoint(normal,labeled.mesh.position)
+      const point=ray.intersectPlane(plane,new this.T.Vector3())
+      if(point)return point
+    }
+    const hit=this.ray.intersectObjects(entries.map(entry=>entry.mesh),false)[0]
+    if(hit)return hit.point
+    // Empty space: prefer the orbital plane; avoid huge jumps near its horizon.
+    const point=ray.intersectPlane(this.plane,new this.T.Vector3())
+    if(point&&point.distanceTo(this.camera.position)<=this.cameraState.distance*4)return point
+    const normal=this.camera.getWorldDirection(new this.T.Vector3())
+    const plane=new this.T.Plane().setFromNormalAndCoplanarPoint(normal,this.target)
+    return ray.intersectPlane(plane,new this.T.Vector3())
+  }
+
+  zoomAt(event) {
+    if(!this.ready||!this.active||this.failed)return
+    const units=event.deltaMode===1?16:event.deltaMode===2?this.height:1
+    const delta=event.deltaY*units
+    if(!Number.isFinite(delta)||delta===0)return
+    const distance=this.cameraState.distance
+    const requested=distance*Math.exp(clamp(delta,-400,400)*.0012)
+    if(clamp(requested,45,1800)===distance)return
+    const next=zoomAround(this.target,this.zoomAnchor(event),distance,requested)
+    this.target.set(next.target.x,next.target.y,next.target.z)
+    this.cameraState.distance=next.distance
+    this.render()
+  }
+
   reset() {
     this.cameraState={azimuth:.45,elevation:.66,distance:730}
     this.target.set(0,0,0);this.render()
@@ -387,8 +439,7 @@ export class SolarOrrery {
     this.host.addEventListener("auxclick",event=>{if(event.button===1)event.preventDefault()})
     this.host.addEventListener("wheel",event=>{
       event.preventDefault()
-      this.cameraState.distance=clamp(this.cameraState.distance*Math.exp(clamp(event.deltaY,-400,400)*.0012),45,1800)
-      this.render()
+      this.zoomAt(event)
     },{passive:false})
     this.host.addEventListener("click",event=>{
       if(event.button!==0)return

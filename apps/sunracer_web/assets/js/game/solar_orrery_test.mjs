@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {solarLayout, solarChartToPosition} from "./solar_system.mjs"
-import {chartToOrrery, worldToOrrery, orreryToWorld, orbitCamera, ORRERY_COLORS} from "./solar_orrery.mjs"
+import {chartToOrrery, worldToOrrery, orreryToWorld, orbitCamera, zoomAround, ORRERY_COLORS} from "./solar_orrery.mjs"
 
 test("orrery preserves the existing schematic positions",()=>{
   for(const focus of ["system","inner"])for(const body of solarLayout(focus)){
@@ -71,4 +71,29 @@ test("overhead hides only after a successful initial frame",()=>{
   nav.orreryUnavailable("context lost")
   assert.equal(nav.solarPresentation,"flat")
   assert.equal(nav.solarSvg.hasAttribute("hidden"),false)
+})
+
+test("cursor anchored dolly retains the same perspective ray for zoom in and out",()=>{
+  const target={x:0,y:4,z:10}, anchor={x:110,y:8,z:-85}
+  const camera=orbitCamera({azimuth:.45,elevation:.66,distance:730})
+  for(const requested of [365,1460,1,99999]){
+    const next=zoomAround(target,anchor,730,requested)
+    const offset=orbitCamera({azimuth:.45,elevation:.66,distance:next.distance})
+    const ratio=next.distance/730
+    for(const axis of ["x","y","z"]){
+      // Camera-to-anchor vector scales without changing its direction.
+      const before=target[axis]+camera[axis]-anchor[axis]
+      const after=next.target[axis]+offset[axis]-anchor[axis]
+      assert.ok(Math.abs(after-before*ratio)<1e-9)
+    }
+  }
+  assert.deepEqual(target,{x:0,y:4,z:10})
+  assert.deepEqual(zoomAround(target,anchor,45,1).target,target)
+  assert.deepEqual(zoomAround(target,null,730,365).target,target)
+})
+test("zoom in and out about the same cursor point reverses the camera translation",()=>{
+  const target={x:12,y:5,z:-20},anchor={x:84,y:12,z:30}
+  const near=zoomAround(target,anchor,730,365)
+  const far=zoomAround(near.target,anchor,near.distance,730)
+  for(const axis of ["x","y","z"])assert.ok(Math.abs(far.target[axis]-target[axis])<1e-9)
 })
