@@ -35,6 +35,10 @@ defmodule SunracerWeb.Router do
     get "/helmet", HelmetController, :show
     get "/login", SessionController, :new
     post "/login", SessionController, :create
+    get "/forgot-password", PasswordResetController, :new
+    post "/forgot-password", PasswordResetController, :create
+    get "/reset-password", PasswordResetController, :edit
+    post "/reset-password", PasswordResetController, :update
     get "/register", RegistrationController, :new
     post "/register", RegistrationController, :create
     get "/register/success", RegistrationController, :success

@@ -9,6 +9,7 @@ defmodule Sunracer.Accounts do
   import Ecto.Query, warn: false
 
   alias Sunracer.Accounts.PlayerAccount
+  alias Sunracer.Accounts.PasswordReset
   alias Sunracer.Accounts.Verification
   alias Sunracer.Fleet
   alias Sunracer.Inventory
@@ -149,13 +150,88 @@ defmodule Sunracer.Accounts do
 
   def login_account(username, password)
       when is_binary(username) and is_binary(password) do
-    with {:ok, %PlayerAccount{} = account} <-
-           authenticate_by_username_and_password(username, password) do
-      account
-      |> PlayerAccount.system_changeset(%{"session_id" => random_token(32)})
-      |> Repo.update()
-    end
+    # Serialize login with password reset: a stale password must not create
+    # a fresh session after a concurrent reset has committed.
+    Repo.transaction(fn ->
+      account =
+        from(player in PlayerAccount, where: player.username == ^username, lock: "FOR UPDATE")
+        |> Repo.one()
+
+      cond do
+        is_nil(account) ->
+          Bcrypt.no_user_verify()
+          Repo.rollback(:invalid_credentials)
+
+        not Bcrypt.verify_pass(password, account.password_hash) ->
+          Repo.rollback(:invalid_credentials)
+
+        account.verification["verified"] != true ->
+          Repo.rollback(:unverified)
+
+        true ->
+          account
+          |> PlayerAccount.system_changeset(%{"session_id" => random_token(32)})
+          |> Repo.update()
+          |> case do
+            {:ok, updated} -> updated
+            {:error, changeset} -> Repo.rollback(changeset)
+          end
+      end
+    end)
   end
+
+  @doc "Issue recovery only to a verified account's existing email address."
+  def request_password_reset(email) when is_binary(email) and byte_size(email) <= 260 do
+    normalized = email |> String.trim() |> String.downcase()
+
+    Repo.transaction(fn ->
+      account =
+        from(player in PlayerAccount, where: player.email == ^normalized, lock: "FOR UPDATE")
+        |> Repo.one()
+
+      now = System.system_time(:second)
+
+      if account && account.verification["verified"] == true &&
+          PasswordReset.allowed?(account.password_reset, now) do
+        {record, token} = PasswordReset.issue(account.password_reset, now)
+        case account |> Ecto.Changeset.change(password_reset: record) |> Repo.update() do
+          {:ok, updated} -> {updated, token}
+          {:error, _} -> Repo.rollback(:reset_update_failed)
+        end
+      else
+        :ignored
+      end
+    end)
+  end
+
+  def request_password_reset(_), do: {:ok, :ignored}
+
+  @doc "Consume recovery atomically, replace only password and login session."
+  def reset_password(user_id, token, password, confirmation)
+      when is_integer(user_id) and is_binary(token) and is_binary(password) and
+           is_binary(confirmation) and byte_size(password) <= 72 and byte_size(confirmation) <= 72 do
+    Repo.transaction(fn ->
+      case lock_account(user_id) do
+        %PlayerAccount{verification: %{"verified" => true}} = account ->
+          if PasswordReset.valid?(account.password_reset, token, System.system_time(:second)) do
+            account
+            |> PlayerAccount.reset_password_changeset(password, confirmation,
+              random_token(32), PasswordReset.consume(account.password_reset))
+            |> Repo.update()
+            |> case do
+              {:ok, updated} -> %{updated | password: nil}
+              {:error, _} -> Repo.rollback(:invalid_password)
+            end
+          else
+            Repo.rollback(:invalid_or_expired_token)
+          end
+
+        _ -> Repo.rollback(:invalid_or_expired_token)
+      end
+    end)
+  end
+
+  def reset_password(_, _, _, _), do: {:error, :invalid_password}
 
   def logout_account(user_id, session_id)
       when is_integer(user_id) and is_binary(session_id) do

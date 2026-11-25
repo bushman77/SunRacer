@@ -14,6 +14,7 @@ defmodule Sunracer.Accounts.PlayerAccount do
     field :session_id, :string
     field :data, :map, default: %{}
     field :verification, :map, default: %{}
+    field :password_reset, :map, default: %{}, redact: true
     field :old_pilot_names, :map, default: %{"history" => []}
     field :ship_id, :integer, default: 1
     field :rank_id, :integer, default: 1
@@ -73,6 +74,20 @@ defmodule Sunracer.Accounts.PlayerAccount do
     |> validate_password_byte_length()
     |> put_password_hash()
     |> validate_required(@server_fields)
+    |> common_constraints()
+  end
+
+  @doc false
+  def reset_password_changeset(account, password, confirmation, session_id, reset_record) do
+    account
+    |> cast(%{"password" => password, "password_confirmation" => confirmation}, [:password])
+    |> validate_required([:password])
+    |> validate_confirmation(:password, required: true)
+    |> validate_length(:password, min: 8, max: 72)
+    |> validate_password_byte_length()
+    |> put_password_hash()
+    |> put_change(:session_id, session_id)
+    |> put_change(:password_reset, reset_record)
     |> common_constraints()
   end
 

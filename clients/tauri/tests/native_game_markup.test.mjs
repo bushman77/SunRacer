@@ -59,3 +59,9 @@ test("native markup generation is identical with Windows CRLF and Unix LF", () =
   const unix = template.replace(/\r\n?/g, "\n")
   assert.equal(convertGameMarkup(unix.replace(/\n/g, "\r\n")), markup)
 })
+
+test("native login offers hosted account recovery on selected server", () => {
+  assert.match(document, /id="native-password-reset"/)
+  const js = readFileSync(new URL("../ui/native_bootstrap.mjs", import.meta.url), "utf8")
+  assert.match(js, /new URL\("\/forgot-password", origin\)/)
+})

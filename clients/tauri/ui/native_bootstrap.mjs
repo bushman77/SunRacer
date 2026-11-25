@@ -23,6 +23,9 @@ try {
   origin = DEFAULT_SERVER_URL
 }
 server.textContent = origin
+// Recovery stays on the selected server's CSRF-protected hosted form.
+// The remote page does not receive the native Tauri command capability.
+document.querySelector("#native-password-reset").href = new URL("/forgot-password", origin).href
 
 async function postJson(route, payload, bearer = null) {
   const response = await nativePostJson(origin, route, payload, bearer)
