@@ -104,3 +104,11 @@ test("native package contains both strategic map renderers and real toolbar SVGs
   assert.match(document, /id="nav-orrery"[^>]*hidden/)
   assert.match(document, /<svg class="size-5" viewBox="0 0 24 24"/)
 })
+
+test("installed cockpit keeps automatic docking countdown without approach popup",()=>{
+  assert.doesNotMatch(document,/id="(?:starbase-docking-prompt|starbase-dock|starbase-dock-feedback)"/)
+  assert.match(document,/id="starbase-docking-countdown" hidden/)
+  assert.match(document,/id="starbase-docking-seconds"/)
+  assert.match(document,/id="station-proximity-warning"/)
+  assert.match(document,/id="starbase-docked-panel"/)
+})

@@ -509,8 +509,6 @@ class SpaceClient {
     this.navComputer.open()
     this.root.querySelector("#pilot-respawn-button")?.addEventListener(
       "click", () => this.requestRespawn())
-    this.root.querySelector("#starbase-dock")?.addEventListener("click",
-      () => this.requestStarbaseDock())
     this.root.querySelector("#starbase-launch")?.addEventListener("click",
       () => this.launchFromStarbase())
     this.outfittingPanel = new StationOutfittingPanel({
@@ -1829,29 +1827,6 @@ class SpaceClient {
     this.planetaryWarningPlanet = nextPlanet
   }
 
-  requestStarbaseDock() {
-    if (this.docked || this.channel?.state !== "joined") return
-    const feedback = this.root.querySelector("#starbase-dock-feedback")
-    if (feedback) feedback.textContent = "Requesting docking clearance…"
-    this.channel.push("station_dock", {}, 5000)
-      .receive("ok", () => this.setDocked(true))
-      .receive("error", response => {
-        const messages = {
-          outside_docking_bay: "Enter the glowing hangar opening before docking.",
-          stop_navigation_first: "Cancel local autopilot before docking.",
-          reduce_speed_to_dock: "Stop your ship and reduce throttle to zero.",
-          disengage_combat_first: "Disengage weapons before docking.",
-          not_at_starbase: "You must arrive at Green Starbase's actual SOL position.",
-          ship_destroyed: "Destroyed ships cannot dock.",
-        }
-        if (feedback) feedback.textContent =
-          messages[response.reason] || "Docking rejected: " + response.reason
-      })
-      .receive("timeout", () => {
-        if (feedback) feedback.textContent = "Docking request timed out."
-      })
-  }
-
   launchFromStarbase() {
     if (!this.docked || this.channel?.state !== "joined") return
     const feedback = this.root.querySelector("#starbase-launch-feedback")
@@ -1880,9 +1855,7 @@ class SpaceClient {
     if (this.docked) this.clearDockingCountdown()
     const panel = this.root.querySelector("#starbase-docked-panel")
     if (panel) panel.style.display = this.docked ? "grid" : "none"
-    const prompt = this.root.querySelector("#starbase-docking-prompt")
     if (this.docked) {
-      if (prompt) prompt.style.display = "none"
       if (!wasDocked) {
         // Force the local cockpit/hangar viewport to the foreground on a
         // fresh docking event OR when a parked pilot reconnects.
@@ -2144,9 +2117,6 @@ class SpaceClient {
     this.lastDockingCountdownLabel = seconds
     const number = this.root.querySelector("#starbase-docking-seconds")
     if (number) number.textContent = seconds === 0 ? "SECURING" : String(seconds)
-    const feedback = this.root.querySelector("#starbase-dock-feedback")
-    if (feedback && seconds !== null) feedback.textContent = seconds === 0 ?
-      "Docking clamps engaging…" : "Auto-docking in " + seconds + " · hold still."
   }
 
   applyStationWarning(warning, {announce = true} = {}) {
@@ -2170,10 +2140,6 @@ class SpaceClient {
       announcement.textContent = view?.announcement || "Station clearance restored."
     }
     this.stationWarningLevel = nextLevel
-    const prompt = this.root.querySelector("#starbase-docking-prompt")
-    if (prompt) prompt.style.display =
-      !this.docked && warning?.station_id === "sol:starbase:green" &&
-      nextLevel === "approach" ? "block" : "none"
   }
 
   showRespawnPanel(visible, message = "") {

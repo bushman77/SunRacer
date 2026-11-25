@@ -68,3 +68,15 @@ test("Atlas reorganizes existing controls into settings and command toolbar", ()
   assert.match(client,/this\.text\("#atlas-connection-status", label\)/)
   assert.match(client,/this\.text\("#atlas-pilot-name", pilot\.pilot_name\)/)
 })
+
+test("docking approach has no redundant manual request panel",()=>{
+  const client=readFileSync(new URL("./client.js",import.meta.url),"utf8")
+  assert.doesNotMatch(markup,/id="(?:starbase-docking-prompt|starbase-dock|starbase-dock-feedback)"/)
+  assert.doesNotMatch(client,/requestStarbaseDock|#starbase-docking-prompt|#starbase-dock-feedback/)
+  for(const id of ["starbase-docking-countdown","starbase-docking-seconds",
+    "station-proximity-warning","starbase-docked-panel","starbase-launch"]){
+    assert.equal((markup.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
+  }
+  assert.match(client,/dockingSeconds\(this\.stationDockingHold, time\)/)
+  assert.match(client,/stationWarningView\(warning\)/)
+})

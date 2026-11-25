@@ -388,3 +388,5 @@ The optional local Three.js `SolarOrrery` is injected into NavigationComputer by
 Native orrery frame presentation uses a retained WebGL buffer copied to a regular canvas. The overhead renderer stays visible until a usable initial frame is confirmed; render failure restores overhead and exposes an on-screen reason. This avoids a blank but interactive navigation surface. Native GPU verification pending.
 
 Orrery wheel zoom scales the camera and orbit target about a world-space point on the cursor ray, preserving its perspective projection. Object surfaces and label depth take precedence over the orbital plane; near-horizon empty space uses a camera-facing target plane. This is presentation-only, with unchanged chart picking and server authority.
+
+Green Starbase approach no longer displays a redundant manual docking popup. The server-verified stationary hold drives the existing five-second countdown and docked transition; collision warnings and launch controls remain available. The legacy server docking endpoint is unchanged.

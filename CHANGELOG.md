@@ -1,3 +1,8 @@
+## 2026-11-25 — Remove redundant Green Starbase docking popup
+
+- Removed the approach instruction panel, immediate-docking button and their client-only handlers from the shared cockpit. The server's automatic five-second stationary docking hold, countdown, collision warnings, docked interior and launch controls remain intact. The existing server manual-docking endpoint is unchanged; it is no longer exposed through this popup.
+- Added shared and native markup regression tests. Static ID/reference checks passed; Node suite, mix precommit, installer rebuild and manual docking verification pending. No server changes, version bump or deployment.
+
 ## 2026-11-25 — Cursor-anchored Orrery zoom
 
 - Mouse wheel now dollies toward the cursor's scene ray: visible object surfaces, offset labels at object depth, or the orbital plane for empty space. A camera-facing plane bounds near-horizon picks. The orbit target translates with the camera to keep the anchor projected at the same screen position. Existing camera limits, keyboard zoom, reset, gameplay coordinates and server authority are unchanged.
