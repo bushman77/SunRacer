@@ -55,7 +55,7 @@ test("render suppression only skips WebGL; simulation, mouse and relay keep runn
   assert.match(client, /if \(this\.desktopVrOnlyActive\) \{\s*this\.desktopVrRenderStats\.skipped\+\+/)
   assert.match(client, /this\.stereoView\.render\(this, time\)/)
   assert.match(client, /this\.beams = this\.beams\.filter/)
-  assert.match(client, /this\.sbsRelayWorld\.publish\(state\)/)
+  assert.match(client, /this\.sbsRelayWorld\.publish\(\{\.\.\.state,\s*station_pilots:\s*this\.stationPilots\}\)/)
 })
 
 test("desktop has a reversible cockpit control and a non-intercepting blackout layer", () => {

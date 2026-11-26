@@ -55,7 +55,9 @@ test("the five-second docking countdown is rendered in both SBS eyes", () => {
 
 test("the SBS viewer receives the immutable kiosk roster without station authority", () => {
   assert.match(helmet, /this\.stationAttendants = Array\.isArray\(map\.station_attendants\)/)
-  assert.match(view, /this\.hangar\.update\(client\.stationPosition, time, client\.stationAttendants\)/)
+  assert.match(view, /this\.hangar\.update\(client\.stationPosition, time, client\.stationAttendants,\s*client\.stationPilots \|\| \[\], client\.selfId\)/)
+  assert.match(helmet, /this\.stationPilots = this\.docked && Array\.isArray\(map\.station_pilots\) \? map\.station_pilots : \[\]/)
+  assert.doesNotMatch(helmet, /channel\.push\("station_pilots"|"station_walk"|"station_look"/)
   assert.doesNotMatch(helmet, /channel\.push\("station_talk"/)
 })
 
