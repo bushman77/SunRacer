@@ -1,3 +1,7 @@
+## 2026-11-25 — Preserve VR rendering regression contract before deployment
+
+- Move communications availability update before the existing VR-only synchronization and interpolation pair. CI run 45731346723 had three passing tests and one failed source adjacency assertion. The corrected source satisfies that assertion without changing the regression test, simulation, or renderer. Full CI and mix precommit remain pending; no deployment performed.
+
 ## 2026-11-25 — Unified communications and direct tells (milestone 1)
 
 - Global and direct chat share one compact four-tab interface, independent unread counts, bounded per-tab histories and pilot-name actions. Direct tells route via server-owned per-pilot PubSub inboxes; identity is socket-authenticated, exact verified pilot names resolve recipients, and no private message is broadcast to the shared channel topic. Global and direct actions share the existing per-pilot rate limit. Ignore preferences persist in account data; direct delivery checks both sides and global display filters ignored pilot IDs. Commands: /g, /p, /guild, /tell (quoted names supported), /r, /ignore, /unignore. Party/guild tabs explicitly unavailable until membership implementations; no pretend group broadcasts.

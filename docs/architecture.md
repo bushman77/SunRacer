@@ -402,3 +402,5 @@ The pilot socket joins chat:global independently of world:* and subscribes acros
 ### Unified pilot communications
 
 Global and direct chat use separate Phoenix channel subscriptions on the same socket. The direct channel derives its internal PubSub inbox from authenticated pilot ID; only the sender and recipient inbox receive a tell. Shared ChatMessage validation and ChatLimiter cover both channels. Ignore preferences use account data under row lock, no schema migration; direct checks both accounts and global display filters the stable ID locally. Live-only accepted sends are not delivery receipts. Party/guild membership and moderation remain future milestones.
+
+Communications availability is checked before desktop VR synchronization and interpolation, preserving the original rendering-loop adjacency contract.

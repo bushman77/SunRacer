@@ -2281,8 +2281,8 @@ class SpaceClient {
     this.drawMouseSteeringVector()
     // Suppress only laptop WebGL draws. Input, world prediction, physics
     // commands, LAN relay and the RAF simulation heartbeat keep running.
-    this.syncDesktopVrOnly()
     this.globalChat?.syncAvailability()
+    this.syncDesktopVrOnly()
     this.interpolate(deltaSeconds)
     // Publish the same locally predicted cockpit pose that desktop draws.
     // Only the authenticated Rust LAN link receives it; Phoenix never does.
