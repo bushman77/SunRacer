@@ -12,7 +12,7 @@ test("dense belt has far more objects than open space",()=>{
   const dense=environmentFieldObjects(belt,camera,"sol:free_3")
   const sparse=environmentFieldObjects(open,camera,"sol:free_3")
   assert.ok(dense.length>100)
-  assert.ok(sparse.length<dense.length/10)
+  assert.ok(sparse.length<dense.length/4)
   assert.ok(dense.every(obj=>Math.hypot(obj.x-camera.x,
     obj.y-camera.y,obj.z-camera.z)>=32))
 })
@@ -49,4 +49,43 @@ test("region and local map salt the visual field",()=>{
     environmentFieldObjects(belt,camera,"sol:free_4"))
   assert.notDeepEqual(environmentFieldObjects(belt,camera,"sol:free_3"),
     environmentFieldObjects({...belt,region_id:"sol:other"},camera,"sol:free_3"))
+})
+
+test("open space has sparse small debris compared with peak Earth orbit",()=>{
+  const earth={region_id:"sol:orbital_debris:earth",kind:"orbital_debris",
+    intensity:0.55,visual_only:true}
+  const map="sol:free_3"
+  let sparseCount=0,denseCount=0
+  for(let i=0;i<20;i++){
+    const p={x:camera.x+i*480,y:camera.y,z:camera.z-i*720}
+    const sparse=environmentFieldObjects(open,p,map)
+    const dense=environmentFieldObjects(earth,p,map)
+    sparseCount+=sparse.length
+    denseCount+=dense.length
+    assert.ok(sparse.every(o=>o.size>=1.5&&o.size<=7))
+    assert.ok(sparse.every(o=>Math.hypot(o.x-p.x,o.y-p.y,o.z-p.z)>=32))
+  }
+  assert.ok(sparseCount>=160)
+  assert.ok(sparseCount<denseCount/3)
+})
+
+test("open-space fragments stay fixed across spatial cell boundaries",()=>{
+  const map="sol:free_3"
+  const before=environmentFieldObjects(open,camera,map)
+  assert.deepEqual(environmentFieldObjects(open,camera,map),before)
+  const after=environmentFieldObjects(open,{...camera,x:camera.x+260},map)
+  const byId=new Map(after.map(o=>[o.id,o]))
+  const common=before.filter(o=>byId.has(o.id))
+  assert.ok(common.length>0)
+  for(const obj of common)assert.deepEqual(obj,byId.get(obj.id))
+})
+
+test("open-space density is capped and zero intensity is respected",()=>{
+  const map="sol:free_3"
+  const zero={...open,intensity:0}
+  const high={...open,intensity:1}
+  assert.deepEqual(environmentFieldObjects(zero,camera,map),[])
+  assert.notEqual(environmentFieldKey(zero,camera,map),environmentFieldKey(open,camera,map))
+  assert.equal(environmentFieldKey(high,camera,map),environmentFieldKey(open,camera,map))
+  assert.deepEqual(environmentFieldObjects(high,camera,map),environmentFieldObjects(open,camera,map))
 })

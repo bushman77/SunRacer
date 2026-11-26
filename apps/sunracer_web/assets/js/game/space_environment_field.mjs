@@ -26,7 +26,8 @@ export function environmentFieldKey(profile,position,mapId=""){
     [position.x,position.y,position.z].some(n=>Math.abs(n)>1e8))return null
   const xyz=[position.x,position.y,position.z].map(n=>
     Math.floor(n/ENVIRONMENT_CELL_SIZE))
-  const bucket=Math.floor(Math.max(0,Math.min(1,profile.intensity))*12)
+  const intensity=Math.max(0,Math.min(1,profile.intensity))
+  const bucket=profile.kind==="open_space"?Math.min(0.025,intensity):Math.floor(intensity*12)
   return [String(mapId),profile.region_id,profile.kind,bucket,...xyz].join(":")
 }
 
@@ -35,9 +36,11 @@ export function environmentFieldObjects(profile,position,mapId=""){
   const cell=ENVIRONMENT_CELL_SIZE
   const [cx,cy,cz]=[position.x,position.y,position.z].map(n=>Math.floor(n/cell))
   const intensity=Math.max(0,Math.min(1,profile.intensity))
-  const density=intensity*(profile.kind==="ion_storm"?2.8:
-    profile.kind==="asteroid_belt"?2.5:
-    profile.kind==="orbital_debris"?2.0:1.8)
+  const open=profile.kind==="open_space"
+  // At the server's 0.025 open-space intensity, expect 0.22 fragments/cell
+  // (20% of peak Earth orbital debris density), capped to keep space sparse.
+  const density=open?Math.min(0.22,intensity*8.8):intensity*(profile.kind==="ion_storm"?2.8:
+    profile.kind==="asteroid_belt"?2.5:2.0)
   const result=[]
   // All overlapping cells retain their exact object IDs and coordinates.
   for(let ix=cx-2;ix<=cx+2;ix++){
@@ -52,7 +55,7 @@ export function environmentFieldObjects(profile,position,mapId=""){
           const y=(iy+random())*cell
           const z=(iz+random())*cell
           const size=profile.kind==="ion_storm"?
-            1+random()*4:1.5+Math.pow(random(),2)*20
+            1+random()*4:1.5+Math.pow(random(),2)*(open?5.5:20)
           const rx=random()*Math.PI*2
           const ry=random()*Math.PI*2
           const rz=random()*Math.PI*2

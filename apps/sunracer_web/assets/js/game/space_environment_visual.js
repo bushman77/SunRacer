@@ -49,7 +49,7 @@ export class SpaceEnvironmentVisual {
     const mesh=new this.THREE.InstancedMesh(
       storm?this.stormGeometry:this.rockGeometry,
       storm?this.stormMaterial:
-        profile.kind==="orbital_debris"?this.debrisMaterial:this.rockMaterial,
+        (profile.kind==="orbital_debris"||profile.kind==="open_space")?this.debrisMaterial:this.rockMaterial,
       objects.length,
     )
     mesh.name="sol-environment-"+profile.kind
