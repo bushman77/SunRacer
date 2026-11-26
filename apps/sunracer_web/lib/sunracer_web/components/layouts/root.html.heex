@@ -9,8 +9,8 @@
     } />
     <meta name="csrf-token" content={get_csrf_token()} />
     <meta name="theme-color" content="#030914" />
-    <meta name="description" content={if assigns[:spacenova_home], do: "SpaceNova is an original multiplayer space adventure set in a living Solar System. Explore, trade and fight.", else: "SunRacer is an original multiplayer space adventure set in a living Solar System. Explore, fly and fight."} />
-    <.live_title default="SunRacer" suffix={if(assigns[:spacenova_home], do: "", else: " · SunRacer")}>
+    <meta name="description" content="SpaceNova is an original multiplayer space adventure set in a living Solar System. Explore, trade and fight." />
+    <.live_title default="SpaceNova" suffix={if(assigns[:spacenova_home], do: "", else: " · SpaceNova")}>
       {assigns[:page_title]}
     </.live_title>
     <link phx-track-static rel="stylesheet" href={~p"/assets/css/app.css"} />

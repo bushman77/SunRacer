@@ -432,3 +432,7 @@ Private free-flight maps remain isolated. StationPilots reads active sessions an
 ## Deep-space motion reference scenery
 
 The existing server-owned SOL environmental profile is unchanged. The shared desktop/SBS cockpit renderer derives a visual-only open-space debris field from local tactical cells, with deterministic map and region salts. At intensity 0.025 it generates an expected 0.22 small fragments per 240-unit cell, capped at that density; peak Earth orbit remains at 1.1 objects per cell. Open-space fragments reuse the orbital debris material, with sizes 1.5–7 scene units. Their fixed coordinates produce motion parallax from camera translation rather than throttle or heading. The field uses the existing instanced mesh and cell cache, including its camera-clearance filter on batch creation. No object replication, collision, damage, gameplay authority or artificial velocity trails are added. Cabin and docked station rendering remain separate. Manual desktop/SBS validation and full suites are pending.
+
+## Public account theme
+
+`SunracerWeb.Layouts.auth/1` provides the common SpaceNova account view shell for login, registration, verification, resend and password recovery. It uses the title screen's existing artwork, CSS palette and wordmark, while each view retains its own form and route. Public branding is independent of internal OTP application and deployment names. Controller markup tests cover the common shell and protected token pages; visual acceptance and full compilation remain pending.

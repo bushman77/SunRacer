@@ -72,6 +72,45 @@ defmodule SunracerWeb.Layouts do
     """
   end
 
+  @doc "Shared SpaceNova account shell; individual pages own their forms and actions."
+  attr :id, :string, required: true
+  attr :kicker, :string, default: "PILOT SERVICES // SOL-01"
+  attr :headline, :string, default: "YOUR PILOT."
+  attr :headline_tail, :string, default: "YOUR JOURNEY."
+  attr :copy, :string, default: "Your next flight begins with a secure pilot account."
+  slot :inner_block, required: true
+
+  def auth(assigns) do
+    ~H"""
+    <div id={@id} class="hud-screen hud-auth-screen nova-auth-screen">
+      <div class="hud-auth-ambient" aria-hidden="true"></div>
+      <div class="hud-auth-layout">
+        <aside class="hud-auth-story" aria-label="SpaceNova mission briefing">
+          <div class="hud-auth-brand">
+            <a href={~p"/"} class="nova-wordmark nova-auth-wordmark" aria-label="SpaceNova home">SPACE<span>NOVA</span></a>
+            <small>FLIGHT OPERATIONS / SOL</small>
+          </div>
+          <div class="hud-auth-orbit" aria-hidden="true">
+            <span class="hud-auth-orbit-core"></span>
+            <span class="hud-auth-orbit-ship"></span>
+          </div>
+          <p class="hud-kicker">{@kicker}</p>
+          <h2>{@headline}<br />{@headline_tail}</h2>
+          <p class="hud-auth-story-copy">{@copy}</p>
+          <div class="hud-auth-specs">
+            <div><span>THEATRE</span><strong>SOLAR SYSTEM / SOL</strong></div>
+            <div><span>FLIGHT SYSTEMS</span><strong>ATLAS + 3D + SBS</strong></div>
+            <div><span>SIMULATION</span><strong>SERVER AUTHORITATIVE</strong></div>
+          </div>
+        </aside>
+        <main class="hud-auth-panel">
+          {render_slot(@inner_block)}
+        </main>
+      </div>
+    </div>
+    """
+  end
+
   @doc """
   Shows the flash group with standard titles and content.
 

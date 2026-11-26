@@ -3,6 +3,25 @@ defmodule SunracerWeb.SessionControllerTest do
 
   import Sunracer.AccountsFixtures
 
+  test "public account pages share the SpaceNova theme", %{conn: _conn} do
+    for {path, id} <- [
+          {~p"/login", "login-page"},
+          {~p"/register", "registration-page"},
+          {~p"/register/resend", "pilot-resend-page"},
+          {~p"/register/success", "registration-success"},
+          {~p"/forgot-password", "pilot-recovery-page"}
+        ] do
+      html = html_response(get(build_conn(), path), 200)
+      document = LazyHTML.from_document(html)
+
+      assert Enum.count(LazyHTML.query(document, "#" <> id <> ".nova-auth-screen")) == 1
+      assert Enum.count(LazyHTML.query(document, ".nova-auth-wordmark[aria-label='SpaceNova home']")) == 1
+      assert Enum.count(LazyHTML.query(document, ".hud-auth-layout main")) == 1
+      refute html =~ "SUNRACER / ACCOUNT"
+      refute html =~ "SunRacer mission briefing"
+    end
+  end
+
   test "the game route requires an authenticated pilot", %{conn: conn} do
     conn = get(conn, ~p"/play")
 

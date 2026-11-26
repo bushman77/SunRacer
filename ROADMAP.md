@@ -1,3 +1,7 @@
+## 2026-11-26 — Shared SpaceNova account theme
+
+- Login, registration, success, verification, resend and both password recovery views now use one `Layouts.auth` component, the existing SpaceNova title artwork, wordmark and palette. Preserve existing form IDs, routes, authentication, registration gates and token handling; browser title/description now match public branding. Internal Sunracer namespaces, deployment, ship name and mail transport are unchanged. Added controller markup regression coverage; source reviewed, compilation, Mix precommit, controller tests and desktop/mobile visual checks pending.
+
 ## 2026-11-26 — Sparse deep-space debris for motion reference
 
 - Increase only the client-side open-space field to a capped 0.22 fragments per 240-unit cell at the existing server intensity 0.025 (20% of peak Earth orbital debris density); shrink fragments to 1.5–7 scene units and reuse the orbital debris material. Keep deterministic map/cell coordinates and existing camera clearance. No speed lines, network payload changes, collision, mining, server physics, or changes to dense regions. Desktop and SBS share the existing instanced renderer; docked and cabin scenes remain separate. Eight focused Node generator tests passed in an isolated copy, including three new regression cases. Full JS suite, Mix precommit, installed-client build and manual desktop/SBS flight verification pending; density is a tuning starting point.

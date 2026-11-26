@@ -20,6 +20,7 @@ defmodule SunracerWeb.PasswordResetControllerTest do
       refute stored.password_reset["hash"] == token
       page = get(build_conn(), ~p"/reset-password?#{%{id: account.id, token: token}}")
       assert html_response(page, 200) =~ "pilot-reset-form"
+      assert html_response(page, 200) =~ "nova-auth-wordmark"
       assert get_resp_header(page, "cache-control") == ["no-store"]
       assert get_resp_header(page, "referrer-policy") == ["no-referrer"]
       assert Accounts.get_player_account!(account.id).password_hash == stored.password_hash

@@ -2246,3 +2246,25 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 #game-client[data-ship-walk="true"] #cockpit-mouse-steering-status,
 #game-client[data-ship-walk="true"] #flight-indicators {display:none!important;}
 #ship-walk-toggle[hidden],#ship-walk-hint[hidden] {display:none!important;}
+
+/* SpaceNova account views use the same title artwork, palette and wordmark. */
+.nova-auth-screen {
+  background: radial-gradient(circle at 25% 18%,rgb(2 129 165 / .2),transparent 33%),
+    radial-gradient(circle at 83% 76%,rgb(8 52 126 / .23),transparent 40%),
+    var(--nova-space);
+}
+.nova-auth-screen .hud-auth-story {
+  background: linear-gradient(180deg,#030914e6,#061b2bd9 52%,#030914f5),
+    url("/images/landing/spacenova-space.webp") center / cover no-repeat,
+    var(--nova-deep-blue);
+}
+.nova-auth-screen .nova-auth-wordmark {
+  font-size: clamp(1.75rem,3.1vw,2.65rem);
+  letter-spacing: -.075em;
+  text-decoration: none;
+}
+.nova-auth-screen .hud-auth-brand small { color: var(--nova-silver); }
+.nova-auth-screen .nova-auth-wordmark:focus-visible {
+  outline: 2px solid var(--nova-cyan);
+  outline-offset: 4px;
+}

@@ -46,6 +46,7 @@ defmodule SunracerWeb.RegistrationControllerTest do
         get(build_conn(), ~p"/verify-account?#{%{id: account.id, token: token}}")
 
       assert html_response(pending, 200) =~ ~s(id="pilot-verification-form")
+      assert html_response(pending, 200) =~ "nova-auth-wordmark"
       assert Accounts.get_by_username(attrs.username).verification["verified"] == false
 
       verified =

@@ -1,33 +1,11 @@
-<div id="login-page" class="hud-screen hud-auth-screen">
-  <div class="hud-auth-ambient" aria-hidden="true"></div>
-  <div class="hud-auth-layout">
-    <aside class="hud-auth-story" aria-label="SunRacer mission briefing">
-      <div class="hud-auth-brand">
-        <.icon name="hero-rocket-launch" class="size-6" />
-        <span>SUNRACER</span>
-        <small>FLIGHT OPERATIONS / SOL</small>
-      </div>
-      <div class="hud-auth-orbit" aria-hidden="true">
-        <span class="hud-auth-orbit-core"></span>
-        <span class="hud-auth-orbit-ship"></span>
-      </div>
-      <p class="hud-kicker">PILOT UPLINK // SOL-01</p>
-      <h2>YOUR SHIP.<br />YOUR SOLAR SYSTEM.</h2>
-      <p class="hud-auth-story-copy">Chart interplanetary routes, take the helm in 3D, and fly alongside other pilots in SunRacer.</p>
-      <div class="hud-auth-specs">
-        <div><span>THEATRE</span><strong>SOLAR SYSTEM / SOL</strong></div>
-        <div><span>FLIGHT SYSTEMS</span><strong>ATLAS + 3D + SBS</strong></div>
-        <div><span>SIMULATION</span><strong>SERVER AUTHORITATIVE</strong></div>
-      </div>
-    </aside>
-  <main class="hud-auth-panel">
+<Layouts.auth id="login-page" kicker="PILOT UPLINK // SOL-01" headline="YOUR SHIP." headline_tail="YOUR SOLAR SYSTEM." copy="Chart interplanetary routes, take the helm in 3D, and fly alongside other pilots in SpaceNova.">
     <div class="hud-auth-heading mb-9 flex items-center gap-4">
       <div class="grid size-12 place-items-center rounded-2xl border border-cyan-300/25 bg-cyan-300/10 text-cyan-200 shadow-lg shadow-cyan-400/10">
         <.icon name="hero-rocket-launch" class="size-6" />
       </div>
       <div>
         <p class="text-[0.65rem] font-semibold uppercase tracking-[0.34em] text-cyan-300/70">
-          SunRacer uplink
+          SpaceNova uplink
         </p>
         <h1 class="mt-1 text-2xl font-semibold tracking-tight">Pilot authorization</h1>
       </div>
@@ -74,6 +52,4 @@
         Create pilot account
       </.link>
     </div>
-  </main>
-  </div>
-</div>
+  </Layouts.auth>
