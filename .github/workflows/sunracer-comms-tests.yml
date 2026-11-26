@@ -1,0 +1,64 @@
+name: Verify SpaceNova communications and parties
+
+on:
+  push:
+    branches: [native_client, story_line]
+    paths:
+      - "apps/sunracer_web/lib/**"
+      - "apps/sunracer_web/test/**"
+      - "apps/sunracer_web/assets/js/game/global_chat*.mjs"
+      - "apps/sunracer_web/mix.exs"
+      - "apps/sunracer/lib/**"
+      - "apps/sunracer/test/support/**"
+      - "apps/sunracer/priv/repo/migrations/**"
+      - "apps/sunracer/mix.exs"
+      - "config/**"
+      - "mix.exs"
+      - "mix.lock"
+      - ".github/workflows/sunracer-comms-tests.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  communications:
+    runs-on: ubuntu-24.04
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: sunracer_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      MIX_ENV: test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "27.3"
+          elixir-version: "1.18.4"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Fetch dependencies
+        run: mix deps.get
+      - name: Compile with warnings as errors
+        run: mix compile --warnings-as-errors
+      - name: Verify authenticated communications and party membership
+        run: |
+          mix test \
+            apps/sunracer_web/test/sunracer_web/party_manager_test.exs \
+            apps/sunracer_web/test/sunracer_web/channels/party_chat_channel_test.exs \
+            apps/sunracer_web/test/sunracer_web/channels/direct_chat_channel_test.exs \
+            apps/sunracer_web/test/sunracer_web/channels/global_chat_channel_test.exs
+      - name: Verify communications client routing and history
+        run: node --test apps/sunracer_web/assets/js/game/global_chat_test.mjs

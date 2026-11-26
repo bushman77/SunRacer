@@ -56,8 +56,15 @@ defmodule SunracerWeb.GlobalChatChannelTest do
       ref = push(sender, "send_message", %{"text" => "test"})
       assert_reply ref, :ok
     end
+    # ChannelTest links the channel to this test process. An intentional
+    # leave exits with {:shutdown, :left}; observe it rather than letting
+    # that expected exit terminate the test before the reconnect assertion.
+    channel_pid = sender.channel_pid
+    Process.unlink(channel_pid)
+    monitor = Process.monitor(channel_pid)
     ref = leave(sender)
     assert_reply ref, :ok
+    assert_receive {:DOWN, ^monitor, :process, ^channel_pid, {:shutdown, :left}}
     rejoined = pilot_socket(account)
     ref = push(rejoined, "send_message", %{"text" => "fifth"})
     assert_reply ref, :error, %{reason: "rate_limited"}

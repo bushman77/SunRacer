@@ -1,3 +1,7 @@
+## 2026-11-25 — Communications reconnect regression and dedicated CI
+
+- Local targeted run reported 10/11 passing; the global reconnect limiter test exited on its linked channel's intentional `{:shutdown, :left}` before reaching the fifth-message rejection. Unlink that channel before leave, monitor it, and assert its expected exit before reconnecting. Keep the rate-limit assertion intact. Add a dedicated communications workflow using the existing PostgreSQL/OTP/Elixir CI versions and targeted JS checks. No runtime behavior changed. Corrected test and CI execution pending; mix precommit not run.
+
 ## 2026-11-25 — Party channel compilation correction
 
 - CI runs 45739169514, 45739169495 and 45739169423 all failed compilation because the local `reply/2` helper conflicted with the imported `Phoenix.Channel.reply/2`. Rename only the private helper and its call sites to `action_reply/2`, preserving response tuples and authorization. No test relaxation or deployment. Full compile and regression verification pending on the corrective commit.
