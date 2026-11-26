@@ -375,10 +375,6 @@ defmodule Sunracer.World do
   def story_action(_session_id, _action), do: {:error, :invalid_story_action}
 
   @doc """
-  Report a server-confirmed event to the story engine on behalf of the
-  authenticated session. Story failures never fail the underlying action.
-  """
-  @doc """
   Recover an orphaned First Run rescue at a session lifecycle boundary only.
   Read the current authoritative navigation and ensure no map settlement
   is awaiting cleanup. Do not infer failure from a queued navigation event.
@@ -395,6 +391,10 @@ defmodule Sunracer.World do
     end
   end
 
+  @doc """
+  Report a server-confirmed event to the story engine on behalf of the
+  authenticated session. Story failures never fail the underlying action.
+  """
   def story_event(session_id, event) do
     case SessionManager.fetch(SessionManager, session_id) do
       {:ok, session} -> story_record(session.player_id, event, session_id)

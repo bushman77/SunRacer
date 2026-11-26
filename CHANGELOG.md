@@ -1,3 +1,7 @@
+## 2026-11-26 — v0.3.8 release compiler gate
+
+- Corrected consecutive `@doc` attributes in `Sunracer.World` by moving the existing story-event documentation to `story_event/2`. No executable code changed. Release, communications and EC2 package jobs failed at `mix compile --warnings-as-errors` on 8f77b40; fresh CI validation pending. Keep the strict compiler gate and retry the existing v0.3.8 version, not a new patch bump.
+
 ## 2026-11-26 — Release regression alignment
 
 - Updated the Atlas HUD markup regression to require only hull and shield in the movable floating ship-status panel, forbid the retired `hud-speed` element and client selector, and confirm the physical dashboard renders actual velocity. No runtime code or UI changes. Existing dashboard model tests cover velocity calculation. Full local release test rerun pending.
