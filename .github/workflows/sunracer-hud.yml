@@ -61,6 +61,7 @@ jobs:
           node --test \
             apps/sunracer_web/assets/js/game/solar_atlas_view_test.mjs \
             apps/sunracer_web/assets/js/game/solar_context_menu_test.mjs \
+            apps/sunracer_web/assets/js/game/ship_cabin_test.mjs \
             apps/sunracer_web/assets/js/game/floating_hud_test.mjs \
             apps/sunracer_web/assets/js/game/atlas_hud_layout_test.mjs \
             apps/sunracer_web/assets/js/game/atlas_hud_markup_test.mjs \

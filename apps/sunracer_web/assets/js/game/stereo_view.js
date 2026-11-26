@@ -1,4 +1,5 @@
 import {alignRemotePlayerModel} from "./atlas_pilot_markers.mjs"
+import {createCabinScene} from "./ship_cabin.mjs"
 import * as THREE from "three"
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js"
 import {pointerNdc, toScene, toWorld} from "./stereo_math.mjs"
@@ -1109,6 +1110,25 @@ export class StereoSpaceView {
   }
 
   render(client, time) {
+    // A private cabin uses the same WebGL renderer but its own camera.
+    // No ship transforms, network state or headset camera are changed.
+    if (client.shipWalkPose && this.mode === "3d") {
+      if (!this.cabinScene) {
+        this.cabinScene = createCabinScene(THREE)
+        this.cabinCamera = new THREE.PerspectiveCamera(75, 1, .08, 80)
+      }
+      this.interiorActive = true
+      const {width, height} = this.size
+      const pose = client.shipWalkPose
+      this.cabinCamera.aspect = width / height
+      this.cabinCamera.updateProjectionMatrix()
+      this.cabinCamera.position.set(pose.x, 1.7, pose.z)
+      this.cabinCamera.rotation.set(0, -pose.yaw, 0, "YXZ")
+      this.renderer.setScissorTest(false)
+      this.renderer.setViewport(0, 0, width, height)
+      this.renderer.render(this.cabinScene, this.cabinCamera)
+      return
+    }
     const feedback = client.lastLaserFeedback
     const active = feedback && time - feedback.at < LASER_FEEDBACK_MS
     this.sight?.material?.color?.setHex(active ?

@@ -1589,3 +1589,9 @@ docking, station walking and mission completion. Branch `story_line`.
 ### Native gameplay browser guard
 
 - Suppress WebView browser context menus and F5 / Ctrl+R / Cmd+R reload shortcuts during authenticated gameplay. Preserve custom Atlas menus, RMB firing, normal keyboard shortcuts, explicit logout and in-memory bearer credentials. Added native event regression tests; installed Linux and Windows WebView verification pending.
+
+
+### Walkable ship interior during SOL cruise (desktop MVP)
+
+- Optional first-person Sunracer cabin with bridge, crew quarters and engineering during active uninterrupted autopilot transit. Local bounded walking pose; existing server cruise and station movement authority remain unchanged. Return to cockpit automatically on arrival, encounter, Atlas, loss of session or SBS/headset activation. RMB cannot interrupt cruise while walking. Procedural interior is provisional, not a ship-specific GLB or shared multiplayer interior; SBS walk presentation remains future work.
+- Added movement/eligibility tests. CI and live transit verification pending; no release deployment performed.

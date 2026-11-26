@@ -17,6 +17,7 @@ import {
   smoothAngle,
 } from "./combat_controls.mjs"
 import {CockpitWindowManager} from "./cockpit_window_manager.mjs"
+import {advanceCabinPose, canWalkInTransit, cabinRoom, CABIN_START, EMPTY_WALK} from "./ship_cabin.mjs"
 import {FloatingHud} from "./floating_hud.mjs"
 import {MinimapRenderer} from "./minimap_renderer.mjs"
 import {PointerNavigation} from "./pointer_navigation.mjs"
@@ -178,6 +179,8 @@ class SpaceClient {
     this.lastDockingCountdownLabel = null
     this.respawnPending = false
     this.lastFlightInputState = null
+    this.shipWalkPose = null
+    this.shipWalkAxes = EMPTY_WALK
     this.manualLaserPointerHeld = false
     this.laserTakeoverPending = false
   }
@@ -201,6 +204,51 @@ class SpaceClient {
     const navigation = this.navComputer?.solarNavigation
     return navigation?.status === "traveling" && !navigation?.tactical_encounter &&
       !navigation?.free_flight
+  }
+
+  canWalkShip() {
+    return canWalkInTransit({
+      flightState: this.flightInputState(),
+      displayMode: this.displayMode,
+      pendingEncounter: Boolean(this.solarEncounter || this.navComputer?.solarNavigation?.pending_encounter),
+      headsetActive: headsetRendering(this.helmet?.status),
+    })
+  }
+
+  toggleShipWalk() {
+    if (this.shipWalkPose) {
+      this.leaveShipWalk()
+      return
+    }
+    if (!this.canWalkShip()) return
+    this.stationWalking?.release()
+    this.exitMouseSteering({silent: true})
+    this.flightControls?.release({silent: true})
+    this.manualLaserPointerHeld = false
+    this.spaceLaser?.release()
+    this.shipWalkAxes = EMPTY_WALK
+    this.shipWalkPose = {...CABIN_START}
+    this.root.dataset.shipWalk = "true"
+    this.lastFlightInputState = null
+    this.updateFlightInputStatus()
+    this.canvas.focus({preventScroll: true})
+  }
+
+  leaveShipWalk() {
+    if (!this.shipWalkPose) return
+    this.stationWalking?.release()
+    this.shipWalkPose = null
+    this.shipWalkAxes = EMPTY_WALK
+    delete this.root.dataset.shipWalk
+    if (document.pointerLockElement === this.canvas) document.exitPointerLock?.()
+    this.lastFlightInputState = null
+  }
+
+  syncShipWalk() {
+    const available = this.canWalkShip()
+    if (this.shipWalkPose && !available) this.leaveShipWalk()
+    const button = this.root.querySelector("#ship-walk-toggle")
+    if (button) button.hidden = !available
   }
 
   start() {
@@ -237,13 +285,19 @@ class SpaceClient {
     }).start()
     // Registered before flight handlers so docked WASD never controls the ship.
     this.stationWalking = new StationWalkingControls({
-      active: () => this.docked && !this.navComputer?.isOpen &&
+      active: () => (this.docked || Boolean(this.shipWalkPose && this.canWalkShip())) && !this.navComputer?.isOpen &&
         !this.stationNpcDialogOpen && !this.dispatchOfferOpen &&
         !this.inventoryPanel?.opened && !this.globalChat?.editing &&
         this.channel?.state === "joined",
       canvas: this.canvas,
-      sendWalk: input => this.channel?.push("station_walk", input),
-      sendLook: input => this.channel?.push("station_look", input),
+      sendWalk: input => {
+        if (this.shipWalkPose) this.shipWalkAxes = input
+        else if (this.docked) this.channel?.push("station_walk", input)
+      },
+      sendLook: input => {
+        if (this.shipWalkPose) this.shipWalkPose.yaw += input.delta_yaw
+        else if (this.docked) this.channel?.push("station_look", input)
+      },
     }).start()
     this.flightControls = new FlightControls({
       active: () => this.flightInputState() === "ready" && !this.globalChat?.editing,
@@ -252,9 +306,10 @@ class SpaceClient {
     this.setupMouseSteering()
     this.setupFlightModeButtons()
     this.setupDesktopVrOnlyControl()
+    this.root.querySelector("#ship-walk-toggle")?.addEventListener("click", () => this.toggleShipWalk())
     const takeHelm = this.root.querySelector("#cockpit-take-helm")
     takeHelm?.addEventListener("click", () => {
-      if (this.flightInputState() !== "cruise" || takeHelm.disabled) return
+      if (this.shipWalkPose || this.flightInputState() !== "cruise" || takeHelm.disabled) return
       takeHelm.disabled = true
       this.solarEnterFreeFlight((ok, navigation, reason) => {
         takeHelm.disabled = false
@@ -426,6 +481,7 @@ class SpaceClient {
       solarResumeCruise: done => this.solarResumeCruise(done),
       solarHail: (contactId, done) => this.solarHail(contactId, done),
       onOpen: () => {
+        this.leaveShipWalk()
         this.closeStationNpc({focus: false})
         this.stationWalking?.release()
         this.exitMouseSteering({silent: true})
@@ -1325,8 +1381,9 @@ class SpaceClient {
     if(label)label.textContent=navigation?.free_flight?"DEEP SPACE / MANUAL FLIGHT":
       navigation?.pending_encounter?"ENCOUNTER HOLD / CRUISE PAUSED":
       active?"SUBLIGHT CRUISE / FLIGHT LOCKED":"CONVENTIONAL FLIGHT"
+    this.syncShipWalk()
     if(active){
-      this.exitMouseSteering({silent: true})
+      if (!this.shipWalkPose) this.exitMouseSteering({silent: true})
       this.flightControls?.release({silent:true})
       this.spaceLaser?.release()
       this.navigation?.cancel()
@@ -1590,6 +1647,7 @@ class SpaceClient {
   }
 
   handleLaserPointerDown(event) {
+    if (this.shipWalkPose) return
     const input = this.flightInputState()
     const active = input === "ready"
     const takeover = input === "cruise" && this.inSystemCruise()
@@ -2356,7 +2414,12 @@ class SpaceClient {
     // Publish the same locally predicted cockpit pose that desktop draws.
     // Only the authenticated Rust LAN link receives it; Phoenix never does.
     this.publishOwnVisualPose(time)
+    this.syncShipWalk()
     this.stationWalking?.frame(time)
+    if (this.shipWalkPose) {
+      this.shipWalkPose = advanceCabinPose(this.shipWalkPose, this.shipWalkAxes, deltaSeconds)
+      this.text("#ship-walk-room", cabinRoom(this.shipWalkPose.z))
+    }
     this.updateDockingCountdown(time)
     this.flightControls?.heartbeat(time)
     this.updateFlightInputStatus()
@@ -2810,9 +2873,15 @@ class SpaceClient {
     panel.hidden = state === "ready" || state === "atlas"
     if (panel.hidden) return
     const label = this.root.querySelector("#cockpit-flight-input-reason")
-    if (label) label.textContent = FLIGHT_INPUT_LABELS[state] || "FLIGHT INPUT PAUSED"
+    if (label) label.textContent = this.shipWalkPose
+      ? "AUTOPILOT ACTIVE · WALKING ABOARD"
+      : FLIGHT_INPUT_LABELS[state] || "FLIGHT INPUT PAUSED"
     const takeHelm = this.root.querySelector("#cockpit-take-helm")
-    if (takeHelm) takeHelm.hidden = state !== "cruise"
+    if (takeHelm) takeHelm.hidden = state !== "cruise" || Boolean(this.shipWalkPose)
+    const walk = this.root.querySelector("#ship-walk-toggle")
+    if (walk) walk.textContent = this.shipWalkPose ? "RETURN TO COCKPIT" : "WALK AROUND SHIP"
+    const hint = this.root.querySelector("#ship-walk-hint")
+    if (hint) hint.hidden = !this.shipWalkPose
   }
 
   // Faint line from the crosshair to the virtual-joystick deflection.
@@ -3151,6 +3220,7 @@ class SpaceClient {
 
   setDisplayMode(mode) {
     if (!validFlightMode(mode)) return false
+    if (mode !== "3d") this.leaveShipWalk()
     if (!this.stereoView) {
       try {
         this.stereoView = new StereoSpaceView(this.root.querySelector("#space-viewport-3d"))

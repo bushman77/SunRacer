@@ -2240,3 +2240,9 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
   width:var(--floating-hud-width) !important;
   max-width:calc(100vw - 16px) !important;
 }
+
+/* Cruise continues while aboard; hide distracting tactical-only presentation. */
+#game-client[data-ship-walk="true"] #game-controls-hint,
+#game-client[data-ship-walk="true"] #cockpit-mouse-steering-status,
+#game-client[data-ship-walk="true"] #flight-indicators {display:none!important;}
+#ship-walk-toggle[hidden],#ship-walk-hint[hidden] {display:none!important;}
