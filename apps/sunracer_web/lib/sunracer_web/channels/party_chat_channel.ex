@@ -53,10 +53,10 @@ defmodule SunracerWeb.PartyChatChannel do
     with true <- ChatLimiter.allow?(id),
          %{id: target} when target != id <- Accounts.get_chat_pilot(name),
          false <- blocked?(id, target) do
-      reply(PartyManager.action({:invite, target}), socket)
+      action_reply(PartyManager.action({:invite, target}), socket)
     else
-      false -> reply({:error, "rate_limited"}, socket)
-      _ -> reply({:error, "recipient_unavailable"}, socket)
+      false -> action_reply({:error, "rate_limited"}, socket)
+      _ -> action_reply({:error, "recipient_unavailable"}, socket)
     end
   end
 
@@ -64,38 +64,38 @@ defmodule SunracerWeb.PartyChatChannel do
     id = socket.assigns.current_player_id
     with {:ok, %{invitation: %{id: ^token, inviter_id: inviter}}} <- PartyManager.action(:snapshot),
          false <- blocked?(id, inviter) do
-      reply(PartyManager.action({:accept, token}), socket)
+      action_reply(PartyManager.action({:accept, token}), socket)
     else
-      _ -> reply({:error, "invitation_unavailable"}, socket)
+      _ -> action_reply({:error, "invitation_unavailable"}, socket)
     end
   end
 
   def handle_in("decline", %{"invitation_id" => token}, socket) when is_integer(token),
-    do: reply(PartyManager.action({:decline, token}), socket)
+    do: action_reply(PartyManager.action({:decline, token}), socket)
 
-  def handle_in("leave", _, socket), do: reply(PartyManager.action(:leave), socket)
+  def handle_in("leave", _, socket), do: action_reply(PartyManager.action(:leave), socket)
 
   def handle_in(event, %{"pilot_id" => target}, socket)
       when event in ["remove", "transfer"] and is_integer(target) do
     action = if event == "remove", do: :remove, else: :transfer
     if ChatLimiter.allow?(socket.assigns.current_player_id),
-      do: reply(PartyManager.action({action, target}), socket),
-      else: reply({:error, "rate_limited"}, socket)
+      do: action_reply(PartyManager.action({action, target}), socket),
+      else: action_reply({:error, "rate_limited"}, socket)
   end
 
   def handle_in("send_message", %{"text" => raw}, socket) when is_binary(raw) do
     with {:ok, text} <- ChatMessage.validate_text(raw),
          true <- ChatLimiter.allow?(socket.assigns.current_player_id) do
-      reply(PartyManager.action({:message, text}), socket)
+      action_reply(PartyManager.action({:message, text}), socket)
     else
-      false -> reply({:error, "rate_limited"}, socket)
-      {:error, reason} -> reply({:error, reason}, socket)
+      false -> action_reply({:error, "rate_limited"}, socket)
+      {:error, reason} -> action_reply({:error, reason}, socket)
     end
   end
 
-  def handle_in(_, _, socket), do: reply({:error, "invalid_action"}, socket)
+  def handle_in(_, _, socket), do: action_reply({:error, "invalid_action"}, socket)
 
   defp blocked?(a, b), do: b in Accounts.chat_ignored_ids(a) or a in Accounts.chat_ignored_ids(b)
-  defp reply(:ok, socket), do: {:reply, :ok, socket}
-  defp reply({:error, reason}, socket), do: {:reply, {:error, %{reason: reason}}, socket}
+  defp action_reply(:ok, socket), do: {:reply, :ok, socket}
+  defp action_reply({:error, reason}, socket), do: {:reply, {:error, %{reason: reason}}, socket}
 end

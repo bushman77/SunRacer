@@ -1,3 +1,7 @@
+## 2026-11-25 — Party channel compilation correction
+
+- CI runs 45739169514, 45739169495 and 45739169423 all failed compilation because the local `reply/2` helper conflicted with the imported `Phoenix.Channel.reply/2`. Rename only the private helper and its call sites to `action_reply/2`, preserving response tuples and authorization. No test relaxation or deployment. Full compile and regression verification pending on the corrective commit.
+
 ## 2026-11-25 — Online pilots and temporary parties (milestone 2)
 
 - Phoenix Presence lists authenticated communications clients; multiple connections per pilot collapse to one directory entry. Supervised single-node PartyManager serializes six-seat membership, online invitations (60-second expiry), accept/decline, leave, leader removal/transfer and private message routing to registered member processes only. Five-minute reconnect grace; leader succession on leave/expiry. Party state is ephemeral across server/manager restarts. Party chat shares validation/rate limits and server-side recipient ignore filtering. Invite and accept check mutual blocks. UI includes directory, roster, invitation, leadership, /invite and /p; tells remain independent. No guild, party navigation markers, persistence or cluster support yet. Added manager/channel/JS/native tests; focused JS invite/state checks executed successfully, full CI and mix precommit pending, no live verification or deployment.

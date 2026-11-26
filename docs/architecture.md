@@ -412,3 +412,5 @@ Player laser reach is currently 1,080 world units, resolved by Core.Combat and r
 ### Temporary pilot parties
 
 Phoenix Presence provides a public pilot-name directory on chat:party; all private party state and messages are sent directly to monitored authenticated channel processes by PartyManager. Membership is serialized, six seats maximum, invitation expiry 60 seconds, reconnect grace five minutes. Leader departure transfers leadership; server restart clears state. The current implementation is single-node, with no database tables, guilds or shared navigation markers. No world-channel dependency.
+
+PartyChatChannel uses a private `action_reply/2` helper to translate manager results into channel callback tuples, avoiding the imported Phoenix.Channel.reply/2 API.
