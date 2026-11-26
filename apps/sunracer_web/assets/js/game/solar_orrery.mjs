@@ -1,6 +1,7 @@
 // Presentation-only 3D Solar Atlas. Three is injected by the shared client,
 // so pure projection tests do not require a browser or WebGL.
 import {solarLayout, solarPositionToChart, solarChartToPosition} from "./solar_system.mjs"
+import {WAYPOINT_COLOR, markerModelClass, markerHeading, markerScale, createOrreryMarker} from "./orrery_markers.mjs"
 
 export const ORRERY_COLORS = Object.freeze({
   background:"#030914", orbit:"#347d9d", active:"#23dfff", silver:"#d9e5f2",
@@ -72,7 +73,9 @@ export class SolarOrrery {
     host.replaceChildren(this.canvas,this.labels)
     this.staticGroup=new THREE.Group()
     this.liveGroup=new THREE.Group()
-    this.scene.add(this.staticGroup,this.liveGroup)
+    this.modelGroup=new THREE.Group()
+    this.models=new Map()
+    this.scene.add(this.staticGroup,this.liveGroup,this.modelGroup)
     this.scene.add(new THREE.AmbientLight(0xaecbff,1.0))
     const light=new THREE.PointLight(0xffe3b0,160000,0,2)
     light.position.set(0,28,0)
@@ -179,14 +182,40 @@ export class SolarOrrery {
     }
   }
 
-  marker(point,key,name,kind,color,radius=5) {
+  marker(point,key,name,kind,color,radius=5,shipClass=null,destination=null) {
     if(!point)return null
     const T=this.T
-    const mesh=new T.Mesh(new T.OctahedronGeometry(radius),new T.MeshBasicMaterial({color}))
-    mesh.position.set(point.x,radius+1,point.z)
-    this.liveGroup.add(mesh)
-    this.liveMarkers.push({key,id:key,name,kind,mesh,point,radius,color})
+    const modelClass=markerModelClass(kind,shipClass)
+    let mesh
+    if(modelClass){
+      const signature=modelClass+":"+color
+      let record=this.models.get(key)
+      if(record&&record.signature!==signature){this.removeModel(key);record=null}
+      if(!record){
+        mesh=createOrreryMarker(T,modelClass,color)
+        record={mesh,signature}
+        this.models.set(key,record)
+        this.modelGroup.add(mesh)
+      }
+      mesh=record.mesh
+      const heading=markerHeading(modelClass,point,destination)
+      if(heading!==null)mesh.rotation.y=heading
+      mesh.position.set(point.x,kind==="waypoint"?.2:1.3,point.z)
+    }else{
+      mesh=new T.Mesh(new T.OctahedronGeometry(radius),new T.MeshBasicMaterial({color}))
+      mesh.position.set(point.x,radius+1,point.z)
+      this.liveGroup.add(mesh)
+    }
+    this.liveMarkers.push({key,id:key,name,kind,mesh,point,radius,color,modelClass})
     return mesh
+  }
+
+  removeModel(key) {
+    const record=this.models.get(key)
+    if(!record)return
+    this.modelGroup.remove(record.mesh)
+    this.clear(record.mesh)
+    this.models.delete(key)
   }
 
   update(state) {
@@ -197,7 +226,8 @@ export class SolarOrrery {
     const locate=id=>this.bodies.find(b=>b.id===id)?.point
     const project=p=>worldToOrrery(p,state.focus)
     const current=project(nav?.position_km)||locate(nav?.location_id)
-    if(current)this.marker(current,"own-ship","YOUR SHIP","ship",ORRERY_COLORS.active,4)
+    const course=nav?.status==="traveling"?(project(nav.destination_position_km)||locate(nav.destination_id)):null
+    if(current)this.marker(current,"own-ship","YOUR SHIP","ship",ORRERY_COLORS.active,4,null,course)
     if(nav?.status==="traveling"){
       const a=project(nav.origin_position_km)||locate(nav.origin_id||nav.location_id)
       const b=project(nav.destination_position_km)||locate(nav.destination_id)
@@ -215,10 +245,11 @@ export class SolarOrrery {
       // Never infer a position from a call sign, origin or destination.
       const p=project(contact.position_km)
       if(p)this.marker(p,contact.id,contact.call_sign||"Sensor contact","contact",
-        contact.disposition==="hostile"?ORRERY_COLORS.hostile:ORRERY_COLORS.silver,3)
+        contact.disposition==="hostile"?ORRERY_COLORS.hostile:ORRERY_COLORS.silver,3,
+        contact.ship_class,contact.state==="in_transit"?locate(contact.destination_id):null)
     }
     if(state.waypoint&&!state.selectedStarbaseId)
-      this.marker(project(state.waypoint),"waypoint","FREE WAYPOINT","waypoint",ORRERY_COLORS.active,5)
+      this.marker(project(state.waypoint),"waypoint","FREE WAYPOINT","waypoint",WAYPOINT_COLOR,5)
     for(const region of nav?.environment_regions||[]){
       if(region.visual_only!==true)continue
       if(region.kind==="asteroid_belt"&&state.focus==="system"){
@@ -235,7 +266,9 @@ export class SolarOrrery {
     const selected=state.selectedStarbaseId
       ? this.liveMarkers.find(b=>b.id===state.selectedStarbaseId)
       : state.waypoint?this.liveMarkers.find(b=>b.kind==="waypoint"):this.bodies.find(b=>b.id===state.selectedId)
-    if(selected)this.ring(this.liveGroup,selected.point,selected.radius+5,ORRERY_COLORS.active,.95)
+    if(selected)this.ring(this.liveGroup,selected.point,selected.radius+5,selected.kind==="waypoint"?WAYPOINT_COLOR:ORRERY_COLORS.active,.95)
+    const activeModels=new Set(this.liveMarkers.filter(entry=>entry.modelClass).map(entry=>entry.key))
+    for(const key of this.models.keys())if(!activeModels.has(key))this.removeModel(key)
     this.syncLabels()
     if(this.active)this.render()
   }
@@ -257,6 +290,7 @@ export class SolarOrrery {
       }
       label.textContent=entry.name
       label.dataset.kind=entry.kind
+      label.dataset.hostile=String(entry.color===ORRERY_COLORS.hostile)
       label.dataset.selected=String(entry.kind==="body"?(!this.state.waypoint&&entry.id===this.state.selectedId):
         entry.kind==="starbase"&&entry.id===this.state.selectedStarbaseId)
       if(interactive)label.setAttribute("aria-pressed",label.dataset.selected)
@@ -286,6 +320,13 @@ export class SolarOrrery {
     this.camera.position.set(offset.x+this.target.x,offset.y+this.target.y,offset.z+this.target.z)
     this.camera.lookAt(this.target)
     this.camera.updateMatrixWorld()
+    for(const entry of this.liveMarkers){
+      if(!entry.modelClass)continue
+      const distance=entry.mesh.position.distanceTo(this.camera.position)
+      const length=entry.modelClass==="scow"?7:entry.modelClass==="sunracer"?5.5:entry.modelClass==="peg"?4.6:4.5
+      const pixels=entry.kind==="ship"?32:entry.kind==="waypoint"?24:25
+      entry.mesh.scale.setScalar(markerScale(distance,height,this.camera.fov,length,pixels))
+    }
     this.renderer.render(this.scene,this.camera)
     if(this.renderer.getContext().isContextLost()||this.renderer.info.render.calls===0)
       throw Error("WebGL produced no draw calls")
@@ -347,6 +388,7 @@ export class SolarOrrery {
     this.active=false
     this.resizeObserver?.disconnect()
     this.clear(this.staticGroup);this.clear(this.liveGroup)
+    for(const key of this.models.keys())this.removeModel(key)
     this.renderer.dispose()
     this.renderer.forceContextLoss?.()
     this.host.replaceChildren()
@@ -357,8 +399,12 @@ export class SolarOrrery {
     const entries=[...this.bodies,...this.liveMarkers].filter(e=>["body","starbase","contact"].includes(e.kind))
     if(key)return entries.find(e=>e.key===key)
     this.setRay(event)
-    const hit=this.ray.intersectObjects(entries.map(e=>e.mesh),false)[0]
-    return entries.find(e=>e.mesh===hit?.object)
+    const hit=this.ray.intersectObjects(entries.map(e=>e.mesh),true)[0]
+    for(let obj=hit?.object;obj;obj=obj.parent){
+      const entry=entries.find(e=>e.mesh===obj)
+      if(entry)return entry
+    }
+    return undefined
   }
 
   setRay(event) {
@@ -391,7 +437,7 @@ export class SolarOrrery {
       const point=ray.intersectPlane(plane,new this.T.Vector3())
       if(point)return point
     }
-    const hit=this.ray.intersectObjects(entries.map(entry=>entry.mesh),false)[0]
+    const hit=this.ray.intersectObjects(entries.map(entry=>entry.mesh),true)[0]
     if(hit)return hit.point
     // Empty space: prefer the orbital plane; avoid huge jumps near its horizon.
     const point=ray.intersectPlane(this.plane,new this.T.Vector3())

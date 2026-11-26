@@ -13,6 +13,7 @@ import {steeringLineTip, COCKPIT_VERTICAL_FOV_DEG} from "./mouse_steering.mjs"
 import {targetRange, LASER_FEEDBACK_MS} from "./laser_feedback.mjs"
 import {createDartModel, dartHeadingRotation} from "./dart_model.mjs"
 import {createScowModel} from "./scow_model.mjs"
+import {createSunracerModel} from "./sunracer_model.mjs"
 import {npcVisualClass} from "./ship_model_selection.mjs"
 import {surrenderedHudLabel} from "./target_hud_status.mjs"
 import {PlanetaryBody} from "./planetary_body.js"
@@ -44,21 +45,16 @@ function beam(a, b, radius, mat) {
 }
 
 function shipModel(npc, npcTypeId = null, shipClass = null) {
-  const model = npc ? npcVisualClass(npcTypeId, shipClass) : "player"
+  if (!npc) return createSunracerModel(THREE)
+  const model = npcVisualClass(npcTypeId, shipClass)
   if (model === "dart") return createDartModel(THREE)
   if (model === "scow") return createScowModel(THREE)
   const root = new THREE.Group()
   const hull = new THREE.Mesh(
-    npc ? new THREE.OctahedronGeometry(2, 0) : new THREE.ConeGeometry(1.65, 4.8, 4),
-    material(npc ? 0xe68b44 : 0x95c8ef),
+    new THREE.OctahedronGeometry(2, 0),
+    material(0xe68b44),
   )
-  if (!npc) hull.rotation.z = -Math.PI / 2
   root.add(hull)
-  if (!npc) {
-    const wing = new THREE.Mesh(new THREE.BoxGeometry(1.7, 0.25, 5.5), material(0x4a718a))
-    wing.position.x = -0.7
-    root.add(wing)
-  }
   const ring = new THREE.Mesh(new THREE.TorusGeometry(3.2, 0.08, 5, 48), new THREE.MeshBasicMaterial({color: 0xffa765}))
   ring.position.y = -1.25
   ring.rotation.x = -Math.PI / 2

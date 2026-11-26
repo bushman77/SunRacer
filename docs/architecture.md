@@ -392,3 +392,5 @@ Orrery wheel zoom scales the camera and orbit target about a world-space point o
 Green Starbase approach no longer displays a redundant manual docking popup. The server-verified stationary hold drives the existing five-second countdown and docked transition; collision warnings and launch controls remain available. The legacy server docking endpoint is unchanged.
 
 The cockpit ship_status window is a compact hull/shield/actual velocity readout. The full readout acts as the unlocked drag handle, and the existing visibility menu remains authoritative for local HUD layout. Previously saved collapsed states are normalized without resetting placement or minimap preferences.
+
+The Orrery caches miniature models by contact ID/class/colour, reusing shared player, Scow and Dart geometry. Map course bearings and bounded visual scaling affect presentation only. The free waypoint is a yellow navigation peg; existing route coordinates and click/hail callbacks remain unchanged.

@@ -97,3 +97,26 @@ test("zoom in and out about the same cursor point reverses the camera translatio
   const far=zoomAround(near.target,anchor,near.distance,730)
   for(const axis of ["x","y","z"])assert.ok(Math.abs(far.target[axis]-target[axis])<1e-9)
 })
+
+import {WAYPOINT_COLOR, markerModelClass, markerHeading, markerScale} from "./orrery_markers.mjs"
+test("Orrery uses known ship classes instead of painting all traffic as traders",()=>{
+  assert.equal(markerModelClass("ship"),"sunracer")
+  assert.equal(markerModelClass("contact","scow"),"scow")
+  assert.equal(markerModelClass("contact","dart"),"dart")
+  assert.equal(markerModelClass("contact","unknown"),null)
+  assert.equal(markerModelClass("waypoint"),"peg")
+  assert.equal(WAYPOINT_COLOR,"#ffdb57")
+})
+test("marker heading follows projected route with correct bow axes",()=>{
+  const p={x:0,z:0}
+  assert.equal(markerHeading("sunracer",p,{x:1,z:0}),-0)
+  assert.equal(markerHeading("scow",p,{x:0,z:-1}),0)
+  assert.equal(markerHeading("dart",p,p),null)
+  assert.equal(markerHeading("scow",p,null),null)
+})
+test("marker scale remains readable without growing excessively",()=>{
+  const near=markerScale(100,800,48,5.5,32)
+  const far=markerScale(200,800,48,5.5,32)
+  assert.ok(Math.abs(far-2*near)<1e-10)
+  assert.equal(markerScale(1e8,800,48,5.5,32),4)
+})

@@ -2130,3 +2130,6 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 .cockpit-interface.is-unlocked .cockpit-window-ship {border-style: dashed;}
 .cockpit-interface.is-unlocked .cockpit-window-ship.is-dragging .ship-status-readout {cursor: grabbing;}
 .ship-status-readout:focus-visible {outline: 1px solid #23dfff;outline-offset: -2px;}
+/* Orrery navigation beacons and contacts have distinct semantic colours. */
+.orrery-label[data-kind="waypoint"] {color:#ffdb57;}
+.orrery-label[data-kind="contact"][data-hostile="true"] {color:var(--nova-hostile,#fb7185);}

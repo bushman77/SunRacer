@@ -1,3 +1,8 @@
+## 2026-11-25 — Orrery miniature spacecraft and destination beacon
+
+- Reused the current player exterior mesh via shared sunracer_model.mjs; Scow and Dart strategic contacts use their existing geometry selected from authoritative ship_class. Neutral ships are silver, own ship cyan, hostiles red. Free waypoint is a yellow peg with a matching ring/label. Models remain schematic; course-aligned bearings are visual only. Cached miniature groups are resized to bounded screen size and disposed on departure; ray picking traverses their child meshes. Unknown contacts retain a generic marker. No transport, server, physics, or SBS changes.
+- Added marker class, bearing and sizing tests. Full build and installed visual acceptance pending.
+
 ## 2026-11-25 — Minimal cockpit ship readout
 
 - Replaced the bulky pilot/status card with a 15rem translucent hull/shield bar and actual velocity magnitude readout. Removed redundant pilot, configuration, coordinates, equipment and per-card editing controls. Existing HUD unlock/drag, visibility menu, and minimap remain; legacy saved collapsed state is normalized for the readout. No change to physics, combat, networking or SBS.
