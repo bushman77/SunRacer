@@ -1,3 +1,7 @@
+## 2026-11-26 — Interstellar catalogue foundation
+
+- Added `Core.Universe.StarSystems` and `Core.Universe.Wormholes`: unchanged SOL catalogue, two provisional expansion systems, reciprocal system-local wormhole mouths. Added focused tests and `docs/interstellar-navigation.md`. This is an unwired foundation; existing SOL campaign, NPC balance, saved voyages and live navigation unchanged. Compilation/tests pending.
+
 ## 2026-11-26 — Cockpit computer and tactical decisions
 
 - Removed duplicate speed from the floating hull/shield window. Physical dashboard now shows velocity, throttle, context-sensitive target/range or objective and tactical/comms/Atlas/cargo controls. Desktop pointer clicks raycast the physical panel before mouse capture; existing authenticated tactical buttons/commands remain the fallback and share the same request state. Fixed Dart surrender eligibility (formerly Scow-only). Existing headset gaze surrender and flight status remain available; new dashboard tabs are desktop-interactive only in this pass. Own surrender, combat rebalance and full VR tab interaction are separate work. Regression tests added; installed-client and full Mix verification pending.
