@@ -10,6 +10,9 @@ defmodule SunracerWeb.PartyManager do
   def register(id, name, server \\ __MODULE__), do: GenServer.call(server, {:register, id, name})
   def action(action, server \\ __MODULE__), do: GenServer.call(server, {:action, action})
 
+  @doc "Server-only read of the current party, independent of channel caller."
+  def member_ids(id), do: GenServer.call(__MODULE__, {:member_ids, id})
+
   @impl true
   def init(_) do
     Process.send_after(self(), :sweep, 1_000)
@@ -29,6 +32,16 @@ defmodule SunracerWeb.PartyManager do
       notify(state, next, pid)
       {:reply, {:ok, snapshot(next, id)}, next}
     end
+  end
+
+  def handle_call({:member_ids, id}, _from, state) do
+    cleaned = prune(state)
+    notify(state, cleaned)
+    ids = case party_for(cleaned, id) do
+      nil -> []
+      party -> party.members
+    end
+    {:reply, ids, cleaned}
   end
 
   def handle_call({:action, action}, {pid, _}, state) do

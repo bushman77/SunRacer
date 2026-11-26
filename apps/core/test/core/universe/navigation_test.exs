@@ -789,4 +789,15 @@ defmodule Core.Universe.NavigationTest do
     assert :sys.get_state(server).traffic[tactical.contact_id].state == :destroyed
   end
 
+  test "strategic position projection does not create voyages or disclose paused pilots", %{server: server} do
+    assert Navigation.pilot_positions(server, [101, 102]) == %{}
+    assert {:ok, navigation} = Navigation.snapshot(server, 101)
+    assert %{101 => %{position_km: position, location_id: "earth"}} =
+      Navigation.pilot_positions(server, [101, 102])
+    assert position == navigation.position_km
+    assert :ok = Navigation.pause_for_logout(server, 101)
+    assert Navigation.pilot_positions(server, [101, 102]) == %{}
+    assert :ok = Navigation.resume_after_login(server, 101)
+    assert Map.has_key?(Navigation.pilot_positions(server, [101]), 101)
+  end
 end

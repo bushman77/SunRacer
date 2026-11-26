@@ -2196,3 +2196,6 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 #chat-guild-roster>div>button:first-child {flex:1;text-align:left;overflow-wrap:anywhere;}
 #chat-guild-name,#chat-guild-recipient {flex:1;min-width:0;background:#091827;border:1px solid #674565;border-radius:.2rem;padding:.25rem;color:#edf7ff;}
 .global-chat-message[data-channel="guild"] button {color:#c4a0ff;}
+.atlas-pilot-contact {padding:.2rem 0;overflow-wrap:anywhere;color:#e2e8f0;}
+.atlas-pilot-contact[data-relation="party"] {color:#6ef5a4;}
+.atlas-pilot-contact[data-relation="guild"] {color:#c4a0ff;}

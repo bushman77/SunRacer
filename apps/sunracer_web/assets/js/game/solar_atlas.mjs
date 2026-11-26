@@ -1,3 +1,4 @@
+import {atlasPilotMarkers} from "./atlas_pilot_markers.mjs"
 import {
   SOLAR_BODIES, solarLayout, findSolarBody, solarBodySummary, solarClass,
   solarPositionToChart,
@@ -207,7 +208,7 @@ export function renderSpaceEnvironmentRegions(svg,regions,focus){
 }
 
 export function drawSolarAtlas(svg,{focus="system",selectedId="earth",navigation=null,
-  waypoint=null,selectedStarbaseId=null}={}){
+  waypoint=null,selectedStarbaseId=null,pilots=[]}={}){
   if(!svg)return
   const layer=svg.querySelector("#nav-solar-content")
   if(!layer)return
@@ -220,6 +221,15 @@ export function drawSolarAtlas(svg,{focus="system",selectedId="earth",navigation
   renderStarbases(layer,navigation?.starbases,focus,selectedStarbaseId)
   // Orbit draw order first, then active bodies/labels above orbit lines.
   for(const body of layout)renderBody(layer,body,selectedId)
+  for(const {pilot,point,stack,color} of atlasPilotMarkers(pilots,p=>solarPositionToChart(p,focus))){
+    // Marker displacement is schematic: line points back to the actual anchor.
+    const x=point.x+20+(stack%3)*16,y=point.y+20+Math.floor(stack/3)*19
+    const group=add(layer,"g",{"data-pilot-id":pilot.pilot_id,"pointer-events":"none"})
+    add(group,"line",{x1:point.x,y1:point.y,x2:x,y2:y,stroke:color,opacity:.65})
+    add(group,"path",{d:`M${x} ${y-6} l5 10 -5 -3 -5 3 Z`,fill:color})
+    add(group,"text",{x:x+8,y:y+4,fill:color,"font-size":11,"font-family":"monospace",
+      stroke:"#04101f","stroke-width":3,"paint-order":"stroke"},pilot.pilot_name)
+  }
 }
 
 export function renderSolarDetails(root,selectedId){

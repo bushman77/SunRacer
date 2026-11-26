@@ -1,3 +1,4 @@
+import {alignRemotePlayerModel} from "./atlas_pilot_markers.mjs"
 import * as THREE from "three"
 import {GLTFLoader} from "three/addons/loaders/GLTFLoader.js"
 import {pointerNdc, toScene, toWorld} from "./stereo_math.mjs"
@@ -881,9 +882,11 @@ export class StereoSpaceView {
       if (entity.kind === "player" && !entity.destination && entity.orientation) {
         const q = entity.renderOrientation || entity.orientation
         node.quaternion.set(q.x, q.y, q.z, q.w).normalize()
+        alignRemotePlayerModel(node)
       } else if (entity.kind === "player" && !entity.destination && entity.attitude) {
         const a = entity.renderAttitude || entity.attitude
         node.rotation.set(a.pitch, -a.yaw, a.roll, "YXZ")
+        alignRemotePlayerModel(node)
       } else if (entity.kind === "npc" &&
         npcVisualClass(entity.npcTypeId, entity.shipClass) !== "generic") {
         node.rotation.y = dartHeadingRotation(entity.angle)

@@ -50,6 +50,11 @@ defmodule Core.Universe.Navigation do
     GenServer.call(server, {:snapshot, player_id})
   end
 
+  @doc "Compact strategic positions for already-authorized live pilot IDs."
+  def pilot_positions(server, ids) when is_list(ids),
+    do: GenServer.call(server, {:pilot_positions, ids})
+
+
   @spec set_course(GenServer.server(), pos_integer(), term()) :: {:ok, map()} | {:error, atom()}
   def set_course(server, player_id, body_id)
       when is_integer(player_id) and player_id > 0 do
@@ -284,6 +289,18 @@ defmodule Core.Universe.Navigation do
   def handle_call({:snapshot, player_id}, _from, state) do
     {voyage, state} = ensure_player(state, player_id)
     {:reply, {:ok, public(voyage, state, player_id)}, state}
+  end
+
+  # Read existing strategic positions without loading or creating voyages.
+  def handle_call({:pilot_positions, ids}, _from, state) do
+    positions = for id <- Enum.uniq(ids),
+      %{position_km: position} = voyage <- [Map.get(state.voyages, id)],
+      not Map.get(voyage, :logout_paused, false),
+      into: %{} do
+      {id, %{position_km: position, location_id: voyage.location_id,
+        status: voyage.status, free_flight: voyage.free_flight}}
+    end
+    {:reply, positions, state}
   end
 
   def handle_call({:tactical_contact, player_id, encounter_id}, _from, state) do

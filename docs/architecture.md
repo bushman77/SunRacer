@@ -420,3 +420,7 @@ Communications CI explicitly checks global and direct channel authorization, rec
 ### Persistent guilds
 
 Guilds, membership and invitations live in PostgreSQL, independent of ephemeral PartyManager and NPC factions. Transaction-scoped advisory lock serializes mutations; unique pilot and name constraints backstop invariants. Guild chat uses private per-pilot PubSub inboxes and exact membership ID checks at delivery; no client-selected guild topic. Ranks leader/officer/member, 50 seats, seven-day invitation expiry, no persistent message history. A leader must transfer before leaving unless alone; last leader departure disbands. Deleting a leader account cascades guild deletion. No treasury, guild bases, territory or shared missions yet.
+
+### Strategic player markers
+
+The authenticated world channel serves a throttled, on-demand compact pilot-contact response only while the system Atlas is open. Party and guild membership grant strategic anchor visibility across sectors; unrelated pilots qualify through same-map 5,000-unit proximity. Active world sessions and unpaused existing voyages are required. The response omits remote course, encounter, inventory and local tactical coordinates. Both Atlas views draw named, color-coded miniatures at diagram-separated anchors; a roster preserves identification at crowded positions. Private deep-space maps remain independent. Cockpit manual remote model basis correction is local +90 degrees around Y; physics and shared +X Orrery geometry stay unchanged.

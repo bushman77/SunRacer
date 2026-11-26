@@ -472,6 +472,21 @@ defmodule SunracerWeb.WorldChannel do
   end
 
   # A client may request resynchronization only for its authenticated map.
+  # Separate, bounded on-demand stream: only Atlas clients poll it.
+  def handle_in("atlas_pilots", _payload, socket) do
+    now = System.monotonic_time(:millisecond)
+    last = socket.assigns[:atlas_pilots_at]
+    if is_integer(last) and now - last < 1_500 do
+      {:reply, {:error, %{reason: "rate_limited"}}, socket}
+    else
+      socket = assign(socket, :atlas_pilots_at, now)
+      case SunracerWeb.AtlasPilots.snapshot(socket.assigns.current_player_id, socket.assigns.world_session_id) do
+        {:ok, pilots} -> {:reply, {:ok, %{pilots: pilots}}, socket}
+        {:error, reason} -> {:reply, {:error, %{reason: reason}}, socket}
+      end
+    end
+  end
+
   def handle_in("world_resync", _payload,
                 %{assigns: %{world_stream: :delta_v1, map_id: map_id}} = socket) do
     case World.snapshot(map_id) do

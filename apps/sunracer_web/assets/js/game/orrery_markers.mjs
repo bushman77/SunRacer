@@ -5,7 +5,7 @@ import {createDartModel} from "./dart_model.mjs"
 export const WAYPOINT_COLOR = "#ffdb57"
 
 export function markerModelClass(kind, shipClass) {
-  if(kind==="ship")return "sunracer"
+  if(kind==="ship"||kind==="pilot")return "sunracer"
   if(kind==="waypoint")return "peg"
   if(kind==="contact"&&["scow","dart"].includes(shipClass))return shipClass
   return null

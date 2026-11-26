@@ -1,3 +1,4 @@
+import {atlasPilotMarkers} from "./atlas_pilot_markers.mjs"
 // Presentation-only 3D Solar Atlas. Three is injected by the shared client,
 // so pure projection tests do not require a browser or WebGL.
 import {solarLayout, solarPositionToChart, solarChartToPosition} from "./solar_system.mjs"
@@ -260,6 +261,12 @@ export class SolarOrrery {
         contact.disposition==="hostile"?ORRERY_COLORS.hostile:ORRERY_COLORS.silver,3,
         contact.ship_class,contact.state==="in_transit"?locate(contact.destination_id):null)
     }
+    for(const {pilot,point,stack,color} of atlasPilotMarkers(state.pilots,project)){
+      const mesh=this.marker(point,"pilot:"+pilot.pilot_id,pilot.pilot_name,"pilot",color,3)
+      // Raise the miniature above the orbital anchor; this is diagram-only,
+      // not physical altitude. Coincident pilots remain individually labeled.
+      if(mesh)mesh.position.y=8+stack*5
+    }
     if(state.waypoint&&!state.selectedStarbaseId)
       this.marker(project(state.waypoint),"waypoint","FREE WAYPOINT","waypoint",WAYPOINT_COLOR,5)
     for(const region of nav?.environment_regions||[]){
@@ -302,6 +309,7 @@ export class SolarOrrery {
       }
       label.textContent=entry.name
       label.dataset.kind=entry.kind
+      if(entry.kind==="pilot")label.style.color=entry.color
       label.dataset.hostile=String(entry.color===ORRERY_COLORS.hostile)
       label.dataset.selected=String(entry.kind==="body"?(!this.state.waypoint&&entry.id===this.state.selectedId):
         entry.kind==="starbase"&&entry.id===this.state.selectedStarbaseId)

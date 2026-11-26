@@ -747,6 +747,9 @@ class SpaceClient {
     this.mapId = mapId
     const channel = this.socket.channel(`world:${mapId}`, {stream: "delta_v1"})
     this.channel = channel
+    this.atlasPilotRequest = null
+    this.lastAtlasPilotPoll = -Infinity
+    this.navComputer?.setAtlasPilots([])
     channel.on("world_state", state => {
       if (this.channel !== channel) return
       if (this.worldStream) this.worldStream.reset(state)
@@ -1217,6 +1220,28 @@ class SpaceClient {
       })
       .receive("error", response => this.showError(`Flight controls rejected: ${response.reason}`))
       .receive("timeout", () => this.showError("Flight control link timed out."))
+  }
+
+  refreshAtlasPilots(time) {
+    const nav = this.navComputer, channel = this.channel
+    if (!nav?.isOpen || nav.view !== "system") return
+    if (channel?.state !== "joined") {
+      if (nav.atlasPilots.length) nav.setAtlasPilots([])
+      return
+    }
+    if (this.atlasPilotRequest || time - (this.lastAtlasPilotPoll ?? -Infinity) < 2000) return
+    this.lastAtlasPilotPoll = time
+    const token = {}
+    this.atlasPilotRequest = token
+    const finish = pilots => {
+      if (this.channel !== channel || this.atlasPilotRequest !== token) return
+      this.atlasPilotRequest = null
+      nav.setAtlasPilots(pilots)
+    }
+    channel.push("atlas_pilots", {}, 5000)
+      .receive("ok", response => finish(response.pilots || []))
+      .receive("error", () => finish([]))
+      .receive("timeout", () => finish([]))
   }
 
   applySolarNavigation(navigation) {
@@ -2297,6 +2322,7 @@ class SpaceClient {
     this.spaceLaser?.update(time)
     this.draw(time)
     this.minimap?.draw(time)
+    this.refreshAtlasPilots(time)
     this.navComputer?.draw(time)
     this.updateCoordinates()
     this.updateCombatHud()

@@ -66,6 +66,7 @@ export class NavigationComputer {
     this.solarWaypoint = null
     this.solarStarbaseSelected = null
     this.solarNavigation = null
+    this.atlasPilots = []
     this.solarPending = false
     this.solarStatusMessage = "Connecting to the system navigation computer…"
     this.lastDrawAt = -Infinity
@@ -356,7 +357,7 @@ export class NavigationComputer {
 
   orreryState(){
     return {focus:this.solarFocus,selectedId:this.solarSelection,
-      navigation:this.solarNavigation,waypoint:this.solarWaypoint,
+      navigation:this.solarNavigation,waypoint:this.solarWaypoint, pilots:this.atlasPilots,
       selectedStarbaseId:this.solarStarbaseSelected}
   }
 
@@ -466,6 +467,29 @@ export class NavigationComputer {
     const targetPanel=this.root.querySelector("#nav-target-panel")
     if(targetPanel)targetPanel.hidden=false
     if(this.isOpen&&this.view==="system")this.draw(0,true)
+  }
+
+  setAtlasPilots(pilots) {
+    const next=Array.isArray(pilots)?pilots:[]
+    if(JSON.stringify(next)===JSON.stringify(this.atlasPilots))return
+    this.atlasPilots=next
+    const list=this.root.querySelector("#nav-pilot-contacts")
+    if(list){
+      list.replaceChildren()
+      if(!next.length)list.textContent="No visible pilots."
+      for(const pilot of next){
+        const row=document.createElement("div")
+        row.className="atlas-pilot-contact"
+        row.dataset.relation=pilot.relation
+        row.textContent=pilot.pilot_name+" · "+pilot.relation.toUpperCase()+" · "+
+          (pilot.location_id?(findSolarBody(pilot.location_id)?.name||pilot.location_id):"Deep space")+
+          (pilot.status==="traveling"?" · in transit":"")
+        list.append(row)
+      }
+    }
+    const count=this.root.querySelector("#nav-pilot-count")
+    if(count)count.textContent=next.length+" visible pilot"+(next.length===1?"":"s")
+    if(this.isOpen&&this.view==="system")this.renderSolarView()
   }
 
   setSolarNavigation(navigation) {
