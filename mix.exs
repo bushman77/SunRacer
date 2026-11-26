@@ -4,7 +4,7 @@ defmodule Sunracer.Umbrella.MixProject do
   def project do
     [
       apps_path: "apps",
-      version: "0.3.6",
+      version: "0.3.7",
       elixir: "~> 1.15",
       start_permanent: Mix.env() == :prod,
       releases: [
