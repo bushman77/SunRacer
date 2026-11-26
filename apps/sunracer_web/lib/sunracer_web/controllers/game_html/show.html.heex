@@ -1196,17 +1196,33 @@
            stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
         <path d="M4 4h16v12H9l-5 4zM8 8h8M8 12h5" />
       </svg>
-      GLOBAL <span id="global-chat-unread" hidden></span>
+      COMMS <span id="global-chat-unread" hidden></span>
     </button>
-    <section id="global-chat-panel" hidden class="global-chat-panel" aria-label="Global chat">
+    <section id="global-chat-panel" hidden class="global-chat-panel" aria-label="Pilot communications">
       <header class="global-chat-header">
-        <span>GLOBAL COMMS</span>
-        <button id="global-chat-close" type="button" aria-label="Close global chat">×</button>
+        <span>PILOT COMMS</span>
+        <button id="global-chat-close" type="button" aria-label="Close communications">×</button>
       </header>
-      <div id="global-chat-log" role="log" aria-label="Global messages" aria-live="polite" tabindex="0"></div>
+      <nav class="comms-tabs" aria-label="Communication channels">
+        <button type="button" data-chat-tab="global" aria-pressed="true">Global <span data-chat-unread="global" hidden></span></button>
+        <button type="button" data-chat-tab="party" aria-pressed="false">Party</button>
+        <button type="button" data-chat-tab="guild" aria-pressed="false">Guild</button>
+        <button type="button" data-chat-tab="tells" aria-pressed="false">Tells <span data-chat-unread="tells" hidden></span></button>
+      </nav>
+      <div id="chat-recipient-row" hidden>
+        <label for="chat-recipient">To</label>
+        <input id="chat-recipient" type="text" maxlength="20" autocomplete="off" placeholder="Exact pilot name" />
+      </div>
+      <div id="chat-context" hidden class="comms-context">
+        <span id="chat-context-name"></span>
+        <button type="button" id="chat-context-tell">Direct tell</button>
+        <button type="button" id="chat-context-ignore">Ignore</button>
+        <button type="button" id="chat-context-close" aria-label="Close pilot actions">×</button>
+      </div>
+      <div id="global-chat-log" role="log" aria-label="Channel messages" aria-live="polite" tabindex="0"></div>
       <p id="global-chat-status" role="status">Connecting…</p>
       <form id="global-chat-form">
-        <input id="global-chat-input" type="text" aria-label="Global message" placeholder="Transmit message…"
+        <input id="global-chat-input" type="text" aria-label="Chat message" placeholder="Transmit message…"
                maxlength="280" autocomplete="off" />
         <button id="global-chat-send" type="submit" disabled>Send</button>
       </form>

@@ -26,6 +26,54 @@ defmodule Sunracer.Accounts do
     Repo.get_by(PlayerAccount, username: username)
   end
 
+  @doc "Find an exact, verified public pilot name; never resolve by email or login name."
+  def get_chat_pilot(name) when is_binary(name) and byte_size(name) <= 80 do
+    case Repo.get_by(PlayerAccount, pilot_name: name) do
+      %PlayerAccount{verification: %{"verified" => true}} = account -> account
+      _ -> nil
+    end
+  end
+
+  def get_chat_pilot(_), do: nil
+
+  def chat_ignored_ids(id) do
+    case Repo.get(PlayerAccount, id) do
+      %PlayerAccount{} = account -> ignored_ids(account)
+      nil -> []
+    end
+  end
+
+  def set_chat_ignored(id, other_id, ignored)
+      when is_integer(id) and is_integer(other_id) and id != other_id and is_boolean(ignored) do
+    Repo.transaction(fn ->
+      case lock_account(id) do
+        nil -> Repo.rollback(:account_not_found)
+        account ->
+          ids = ignored_ids(account)
+          next = if ignored, do: Enum.uniq([other_id | ids]), else: List.delete(ids, other_id)
+
+          if length(next) > 100 do
+            Repo.rollback(:ignore_limit)
+          else
+            account
+            |> PlayerAccount.system_changeset(%{"data" => Map.put(account.data || %{}, "chat_ignored_ids", next)})
+            |> Repo.update()
+            |> case do
+              {:ok, _} -> next
+              {:error, _} -> Repo.rollback(:ignore_update_failed)
+            end
+          end
+      end
+    end)
+  end
+
+  defp ignored_ids(account) do
+    case Map.get(account.data || %{}, "chat_ignored_ids", []) do
+      ids when is_list(ids) -> Enum.filter(ids, &is_integer/1)
+      _ -> []
+    end
+  end
+
   def get_by_session_id(session_id) when is_binary(session_id) do
     Repo.get_by(PlayerAccount, session_id: session_id)
   end

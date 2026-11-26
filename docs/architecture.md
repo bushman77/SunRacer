@@ -398,3 +398,7 @@ The Orrery caches miniature models by contact ID/class/colour, reusing shared pl
 ### Global pilot communications
 
 The pilot socket joins chat:global independently of world:* and subscribes across region handoffs. GlobalChatChannel derives sender identity from verified socket assigns and uses a supervised, node-local ChatLimiter. Messages broadcast only to connected subscribers; no persistence or gameplay authority. The shared desktop HUD retains a bounded text-only log; chat keyboard capture precedes flight handlers and existing release methods clear held input. The phone and SBS view are excluded. Two-client acceptance and moderation features remain outstanding.
+
+### Unified pilot communications
+
+Global and direct chat use separate Phoenix channel subscriptions on the same socket. The direct channel derives its internal PubSub inbox from authenticated pilot ID; only the sender and recipient inbox receive a tell. Shared ChatMessage validation and ChatLimiter cover both channels. Ignore preferences use account data under row lock, no schema migration; direct checks both accounts and global display filters the stable ID locally. Live-only accepted sends are not delivery receipts. Party/guild membership and moderation remain future milestones.

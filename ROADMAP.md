@@ -1,3 +1,8 @@
+## 2026-11-25 — Unified communications and direct tells (milestone 1)
+
+- Global and direct chat share one compact four-tab interface, independent unread counts, bounded per-tab histories and pilot-name actions. Direct tells route via server-owned per-pilot PubSub inboxes; identity is socket-authenticated, exact verified pilot names resolve recipients, and no private message is broadcast to the shared channel topic. Global and direct actions share the existing per-pilot rate limit. Ignore preferences persist in account data; direct delivery checks both sides and global display filters ignored pilot IDs. Commands: /g, /p, /guild, /tell (quoted names supported), /r, /ignore, /unignore. Party/guild tabs explicitly unavailable until membership implementations; no pretend group broadcasts.
+- Live-only tells, no offline queue or delivery/read receipt. Global filtering is client-side; no moderation/reporting, friends, or online directory yet. Chat remains outside SBS. Added server privacy/ignore and JS command/history/native markup tests. Full compilation, mix precommit, and multi-pilot installed acceptance pending. No migration, deployment or version bump.
+
 ## 2026-11-25 — Global pilot communications v1
 
 - Added an authenticated, region-independent Phoenix chat:global channel on the existing socket. Sender names come from verified socket assigns; only pilot credentials may join. Single-line 280-character/1120-byte cap, control-character rejection, four messages per rolling ten seconds per pilot on the server node, no DB migration. Text is rendered literally. No server history or offline delivery; each client retains at most 100 received messages in memory.

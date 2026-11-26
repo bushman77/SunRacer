@@ -2153,3 +2153,20 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 #global-chat-send:disabled {opacity:.45;cursor:default;}
 .global-chat button:focus-visible,#global-chat-input:focus-visible,#global-chat-log:focus-visible {outline:1px solid #23dfff;outline-offset:1px;}
 #game-client[data-display-mode="sbs"] #global-chat {display:none;}
+/* Compact unified communications: colours encode channel membership. */
+.comms-tabs {display:flex;gap:.25rem;margin:.4rem 0;}
+.comms-tabs button {flex:1;min-width:0;border:1px solid #28596d;border-radius:.25rem;padding:.3rem .15rem;color:#a4bdcc;cursor:pointer;}
+.comms-tabs button[data-chat-tab="global"] {--comms-color:#67e8f9;}
+.comms-tabs button[data-chat-tab="party"] {--comms-color:#6ef5a4;}
+.comms-tabs button[data-chat-tab="guild"] {--comms-color:#c4a0ff;}
+.comms-tabs button[data-chat-tab="tells"] {--comms-color:#f1a5d9;}
+.comms-tabs button[aria-pressed="true"] {color:var(--comms-color);border-color:var(--comms-color);background:#11273a;}
+.comms-tabs button span {font-size:.6rem;color:var(--comms-color);}
+#chat-recipient-row {display:flex;gap:.4rem;align-items:center;color:#f1a5d9;padding:.2rem 0;}
+#chat-recipient {flex:1;min-width:0;background:#091827;border:1px solid #674565;border-radius:.25rem;padding:.3rem;color:#edf7ff;}
+.global-chat-message button {color:#67e8f9;font-weight:700;text-align:left;cursor:pointer;max-width:100%;overflow-wrap:anywhere;}
+.global-chat-message[data-channel="tells"] button {color:#f1a5d9;}
+.global-chat-message button:hover {text-decoration:underline;}
+.comms-context {display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;padding:.35rem;border:1px solid #28596d;background:#0c1828;border-radius:.25rem;}
+.comms-context span {color:#a5e7f5;font-weight:700;flex-basis:100%;overflow-wrap:anywhere;}
+.comms-context button {border:1px solid #28596d;border-radius:.2rem;padding:.2rem .4rem;cursor:pointer;}

@@ -7,6 +7,7 @@ defmodule SunracerWeb.UserSocket do
   channel "world:*", SunracerWeb.WorldChannel
   channel "helmet:*", SunracerWeb.HelmetChannel
   channel "chat:global", SunracerWeb.GlobalChatChannel
+  channel "chat:direct", SunracerWeb.DirectChatChannel
 
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do

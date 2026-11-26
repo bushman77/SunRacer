@@ -128,3 +128,10 @@ test("installed global chat is a closed disclosure with bounded text input",()=>
   assert.match(document,/id="global-chat-panel" hidden/)
   assert.match(document,/id="global-chat-input"[^>]*maxlength="280"/)
 })
+
+test("installed communications exposes four tabs and a private recipient field",()=>{
+  for(const tab of ["global","party","guild","tells"])assert.match(document,new RegExp('data-chat-tab="'+tab+'"'))
+  for(const id of ["chat-recipient","chat-context","chat-context-tell","chat-context-ignore"])
+    assert.equal((document.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
+  assert.match(document,/id="chat-recipient-row" hidden/)
+})

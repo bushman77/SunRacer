@@ -1,10 +1,7 @@
 defmodule SunracerWeb.GlobalChatChannel do
   use SunracerWeb, :channel
 
-  alias SunracerWeb.ChatLimiter
-
-  @max_chars 280
-  @max_bytes 1120
+  alias SunracerWeb.{ChatLimiter, ChatMessage}
 
   @impl true
   def join("chat:global", _payload, %{assigns: %{socket_role: :pilot,
@@ -17,13 +14,9 @@ defmodule SunracerWeb.GlobalChatChannel do
 
   @impl true
   def handle_in("send_message", %{"text" => raw}, socket) when is_binary(raw) do
-    with {:ok, text} <- validate_text(raw),
+    with {:ok, text} <- ChatMessage.validate_text(raw),
          true <- ChatLimiter.allow?(socket.assigns.current_player_id) do
-      message = %{
-        pilot_name: socket.assigns.current_pilot_name,
-        text: text,
-        sent_at: DateTime.utc_now() |> DateTime.to_iso8601()
-      }
+      message = ChatMessage.build(socket, text)
 
       broadcast!(socket, "chat_message", message)
       {:reply, :ok, socket}
@@ -36,21 +29,4 @@ defmodule SunracerWeb.GlobalChatChannel do
   def handle_in(_event, _payload, socket),
     do: {:reply, {:error, %{reason: "invalid_message"}}, socket}
 
-  defp validate_text(raw) when byte_size(raw) <= @max_bytes do
-    if String.valid?(raw) do
-      # Single-line chat; reject control characters, including terminal escapes.
-      text = String.trim(raw)
-
-      if text != "" and String.length(text) <= @max_chars and
-           not Regex.match?(~r/[\x00-\x1f\x7f-\x9f]/u, raw) do
-        {:ok, text}
-      else
-        {:error, "invalid_message"}
-      end
-    else
-      {:error, "invalid_message"}
-    end
-  end
-
-  defp validate_text(_raw), do: {:error, "invalid_message"}
 end
