@@ -17,6 +17,7 @@ import {
   smoothAngle,
 } from "./combat_controls.mjs"
 import {CockpitWindowManager} from "./cockpit_window_manager.mjs"
+import {FloatingHud} from "./floating_hud.mjs"
 import {MinimapRenderer} from "./minimap_renderer.mjs"
 import {PointerNavigation} from "./pointer_navigation.mjs"
 import {StereoSpaceView} from "./stereo_view.js"
@@ -214,6 +215,17 @@ class SpaceClient {
     this.cockpit = new CockpitWindowManager({
       root: this.root.querySelector("#cockpit-interface"),
       playerId: this.root.dataset.layoutPlayerId,
+    }).start()
+    this.floatingHud = new FloatingHud({
+      root: this.root,
+      playerId: this.root.dataset.layoutPlayerId,
+      releaseInput: () => {
+        this.stationWalking?.release()
+        this.flightControls?.release()
+        this.exitMouseSteering()
+        this.manualLaserPointerHeld = false
+        this.spaceLaser?.release()
+      },
     }).start()
     this.minimap = new MinimapRenderer({
       canvas: this.root.querySelector("#cockpit-minimap-canvas"),

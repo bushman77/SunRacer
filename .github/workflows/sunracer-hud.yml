@@ -5,6 +5,7 @@ on:
     branches: [native_client, story_line]
     paths:
       - "apps/sunracer_web/assets/css/app.css"
+      - "apps/sunracer_web/assets/js/game/floating_hud*.mjs"
       - "apps/sunracer_web/lib/sunracer_web/controllers/**/*.heex"
       - "apps/sunracer_web/test/sunracer_web/controllers/**/*.exs"
       - "clients/tauri/**"
@@ -60,6 +61,7 @@ jobs:
           node --test \
             apps/sunracer_web/assets/js/game/solar_atlas_view_test.mjs \
             apps/sunracer_web/assets/js/game/solar_context_menu_test.mjs \
+            apps/sunracer_web/assets/js/game/floating_hud_test.mjs \
             apps/sunracer_web/assets/js/game/atlas_hud_layout_test.mjs \
             apps/sunracer_web/assets/js/game/atlas_hud_markup_test.mjs \
             apps/sunracer_web/assets/js/game/helmet_alignment_keys_test.mjs \

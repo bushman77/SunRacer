@@ -2199,3 +2199,33 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 .atlas-pilot-contact {padding:.2rem 0;overflow-wrap:anywhere;color:#e2e8f0;}
 .atlas-pilot-contact[data-relation="party"] {color:#6ef5a4;}
 .atlas-pilot-contact[data-relation="guild"] {color:#c4a0ff;}
+
+
+/* Floating desktop HUD. Controls are separate from the game input surface. */
+.floating-hud-tools {
+  display:flex; justify-content:flex-end; align-items:center; gap:.3rem;
+  margin-bottom:.3rem; user-select:none;
+}
+.floating-hud-tools button {
+  display:grid; place-items:center; width:1.55rem; height:1.55rem;
+  border:1px solid rgb(103 232 249 / .4); border-radius:.25rem;
+  color:#a5e7f5; background:#061321; font:700 1rem/1 ui-monospace,monospace;
+  touch-action:none;
+}
+.floating-hud-tools button:focus-visible {outline:2px solid #67e8f9;}
+.floating-hud-tools [data-hud-action="move"] {cursor:grab;}
+.floating-hud-tools [data-hud-action="size"] {cursor:nwse-resize;}
+.floating-hud-tools [data-hud-action="reset"] {cursor:pointer;}
+.floating-hud-tools button:active {cursor:grabbing;}
+.floating-hud-panel.floating-hud-positioned {
+  position:fixed !important;
+  left:var(--floating-hud-x) !important; top:var(--floating-hud-y) !important;
+  right:auto !important; bottom:auto !important;
+  width:var(--floating-hud-width) !important;
+  height:var(--floating-hud-height, auto) !important;
+  min-width:0 !important; min-height:0 !important;
+  max-width:calc(100vw - 16px) !important; max-height:calc(100dvh - 16px) !important;
+  margin:0 !important; transform:none !important; translate:none !important;
+  box-sizing:border-box; overflow:auto !important; overscroll-behavior:contain;
+}
+.floating-hud-panel.floating-hud-positioned:not([open]):is(details) {height:auto !important;}
