@@ -1,3 +1,7 @@
+## 2026-11-25 — Orrery left-button panning
+
+- Left drag pans along the orbital plane at the current zoom and elevation; five CSS pixels distinguish clicks from drags. Keep left-click selection, middle-button orbit, wheel cursor zoom, context menu and double-click focus. Pointer capture and cancellation prevent accidental waypoint selection; update cursor and control hint. Two new focused JS tests executed against the actual helper and binding logic (passed); full CI, mix precommit and installed-client visual acceptance pending. No server physics, network, version or deployment change.
+
 ## 2026-11-25 — Preserve VR rendering regression contract before deployment
 
 - Move communications availability update before the existing VR-only synchronization and interpolation pair. CI run 45731346723 had three passing tests and one failed source adjacency assertion. The corrected source satisfies that assertion without changing the regression test, simulation, or renderer. Full CI and mix precommit remain pending; no deployment performed.

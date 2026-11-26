@@ -29,6 +29,18 @@ export function orbitCamera({azimuth=0,elevation=.64,distance=670}={}) {
     y:radius*Math.sin(angle),z:radius*Math.cos(angle)*Math.cos(azimuth)}
 }
 
+// Pan parallel to the orbital plane, using the perspective scale at the
+// orbit target. Compensate for elevation so vertical dragging feels natural
+// at any orbit angle while preserving camera height and zoom.
+export function panOrrery(target,{azimuth=0,elevation=.64,distance=670},dx,dy,height,fov=48) {
+  if(!Number.isFinite(height)||height<=0||!Number.isFinite(dx)||!Number.isFinite(dy))return {...target}
+  const units=2*clamp(distance,45,1800)*Math.tan(fov*Math.PI/360)/height
+  const along=dy*units/Math.sin(clamp(elevation,.18,1.51))
+  const across=-dx*units
+  return {x:target.x+across*Math.cos(azimuth)-along*Math.sin(azimuth),
+    y:target.y,z:target.z-across*Math.sin(azimuth)-along*Math.cos(azimuth)}
+}
+
 // Translate the orbit target as the camera dollies. Both camera and target
 // scale about the same world point, keeping its screen projection invariant.
 export function zoomAround(target, anchor, distance, requestedDistance) {
@@ -66,7 +78,7 @@ export class SolarOrrery {
     this.ready=false
     this.failed=false
     this.canvas.className="orrery-canvas"
-    this.canvas.setAttribute("aria-label","3D Solar System orrery. Middle drag to rotate, wheel to zoom. Select bodies using labeled buttons.")
+    this.canvas.setAttribute("aria-label","3D Solar System orrery. Left drag to pan, middle drag to rotate, wheel to zoom. Select bodies using labeled buttons.")
     this.canvas.tabIndex=0
     this.labels=document.createElement("div")
     this.labels.className="orrery-labels"
@@ -467,21 +479,52 @@ export class SolarOrrery {
   }
 
   bind() {
-    let drag=null
+    let drag=null, suppressClick=false, suppressDoubleClick=false
     this.host.addEventListener("pointerdown",event=>{
-      if(event.button!==1)return
-      event.preventDefault()
-      drag={x:event.clientX,y:event.clientY,id:event.pointerId}
-      this.host.setPointerCapture?.(event.pointerId)
+      if(!this.active||!this.ready||drag||![0,1].includes(event.button))return
+      suppressClick=false
+      const rotate=event.button===1
+      drag={x:event.clientX,y:event.clientY,startX:event.clientX,startY:event.clientY,
+        id:event.pointerId,rotate,moved:rotate}
+      // Do not capture a left press yet: ordinary DOM label clicks must
+      // still reach their original button, including keyboard focus.
+      if(rotate){
+        event.preventDefault()
+        this.host.setPointerCapture?.(event.pointerId)
+        this.host.dataset.dragging="rotate"
+      }
     })
     this.host.addEventListener("pointermove",event=>{
       if(!drag||event.pointerId!==drag.id)return
-      this.cameraState.azimuth-=(event.clientX-drag.x)*.008
-      this.cameraState.elevation=clamp(this.cameraState.elevation+(event.clientY-drag.y)*.007,.18,1.51)
+      if(!drag.moved){
+        if(Math.hypot(event.clientX-drag.startX,event.clientY-drag.startY)<5)return
+        drag.moved=true
+        suppressClick=true;suppressDoubleClick=true
+        this.host.setPointerCapture?.(event.pointerId)
+        this.host.dataset.dragging="pan"
+      }
+      event.preventDefault()
+      const dx=event.clientX-drag.x,dy=event.clientY-drag.y
+      if(drag.rotate){
+        this.cameraState.azimuth-=dx*.008
+        this.cameraState.elevation=clamp(this.cameraState.elevation+dy*.007,.18,1.51)
+      }else{
+        const next=panOrrery(this.target,this.cameraState,dx,dy,this.height,this.camera.fov)
+        this.target.set(next.x,next.y,next.z)
+      }
       drag.x=event.clientX;drag.y=event.clientY;this.render()
     })
-    for(const type of ["pointerup","pointercancel","lostpointercapture"])
-      this.host.addEventListener(type,event=>{if(drag?.id===event.pointerId)drag=null})
+    const finishDrag=event=>{
+      if(drag?.id!==event.pointerId)return
+      // Implicit capture on a touch target can be replaced by host capture;
+      // ignore the child's lostpointercapture while the host owns the drag.
+      if(event.type==="lostpointercapture"&&event.target!==this.host)return
+      if(event.type==="pointerleave"&&drag.moved)return
+      drag=null
+      delete this.host.dataset.dragging
+    }
+    for(const type of ["pointerup","pointercancel","lostpointercapture","pointerleave"])
+      this.host.addEventListener(type,finishDrag)
     this.host.addEventListener("auxclick",event=>{if(event.button===1)event.preventDefault()})
     this.host.addEventListener("wheel",event=>{
       event.preventDefault()
@@ -489,6 +532,9 @@ export class SolarOrrery {
     },{passive:false})
     this.host.addEventListener("click",event=>{
       if(event.button!==0)return
+      // Pointer-up can synthesize click even after capture and movement.
+      if(suppressClick&&event.detail!==0){event.preventDefault();return}
+      if(event.detail<=1)suppressDoubleClick=false
       const hit=this.hit(event)
       if(hit)this.actions.select?.(hit)
     })
@@ -498,6 +544,7 @@ export class SolarOrrery {
       if(hit)this.actions.context?.(hit,event.clientX,event.clientY)
     })
     this.host.addEventListener("dblclick",event=>{
+      if(suppressClick||suppressDoubleClick)return
       const entry=this.entryForEvent(event)
       if(!entry)return
       this.target.copy(entry.mesh.position)

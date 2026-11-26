@@ -1,7 +1,7 @@
 import test from "node:test"
 import assert from "node:assert/strict"
 import {solarLayout, solarChartToPosition} from "./solar_system.mjs"
-import {chartToOrrery, worldToOrrery, orreryToWorld, orbitCamera, zoomAround, ORRERY_COLORS} from "./solar_orrery.mjs"
+import {chartToOrrery, worldToOrrery, orreryToWorld, orbitCamera, zoomAround, panOrrery, SolarOrrery, ORRERY_COLORS} from "./solar_orrery.mjs"
 
 test("orrery preserves the existing schematic positions",()=>{
   for(const focus of ["system","inner"])for(const body of solarLayout(focus)){
@@ -119,4 +119,51 @@ test("marker scale remains readable without growing excessively",()=>{
   const far=markerScale(200,800,48,5.5,32)
   assert.ok(Math.abs(far-2*near)<1e-10)
   assert.equal(markerScale(1e8,800,48,5.5,32),4)
+})
+
+test("pan translates the target without altering its height or orbit",()=>{
+  const target={x:12,y:5,z:-20},state={azimuth:.45,elevation:.66,distance:730}
+  const near=panOrrery(target,state,30,20,800)
+  const back=panOrrery(near,state,-30,-20,800)
+  assert.equal(near.y,target.y)
+  for(const axis of ["x","y","z"])assert.ok(Math.abs(back[axis]-target[axis])<1e-10)
+  const units=2*state.distance*Math.tan(48*Math.PI/360)/800
+  const dx=near.x-target.x,dz=near.z-target.z
+  assert.ok(Math.abs(dx*Math.cos(state.azimuth)-dz*Math.sin(state.azimuth)+30*units)<1e-10)
+  assert.ok(Math.abs((-dx*Math.sin(state.azimuth)-dz*Math.cos(state.azimuth))*Math.sin(state.elevation)-20*units)<1e-10)
+  assert.deepEqual(panOrrery(target,state,20,20,0),target)
+  assert.deepEqual(target,{x:12,y:5,z:-20})
+  assert.deepEqual(state,{azimuth:.45,elevation:.66,distance:730})
+})
+
+test("left drag pans without selecting; ordinary clicks and middle rotation still work",()=>{
+  const listeners=new Map(),captures=[]
+  const host={dataset:{},addEventListener:(type,fn)=>listeners.set(type,fn),setPointerCapture:id=>captures.push(id)}
+  let selections=0,focuses=0,renders=0
+  const target={x:0,y:0,z:0,set(x,y,z){Object.assign(this,{x,y,z})},copy(){focuses++}}
+  const orrery={host,active:true,ready:true,height:800,camera:{fov:48},
+    canvas:{addEventListener(){}},glCanvas:{addEventListener(){}},
+    cameraState:{azimuth:.45,elevation:.66,distance:730},target,
+    hit:()=>({kind:"body",id:"earth"}),entryForEvent:()=>({mesh:{position:{}},radius:10}),
+    actions:{select:()=>selections++},render:()=>renders++}
+  SolarOrrery.prototype.bind.call(orrery)
+  const event=(type,props={})=>listeners.get(type)({type,button:0,pointerId:1,clientX:100,clientY:100,
+    target:host,detail:1,preventDefault(){},...props})
+  event("pointerdown");event("pointermove",{clientX:102});event("pointerup");event("click")
+  assert.equal(selections,1);assert.equal(captures.length,0);assert.equal(renders,0)
+  event("pointerdown");event("pointermove",{clientX:125,clientY:120})
+  assert.equal(host.dataset.dragging,"pan");assert.notEqual(target.x,0)
+  assert.equal(orrery.cameraState.azimuth,.45);assert.equal(orrery.cameraState.distance,730)
+  event("pointerup");event("click");event("dblclick",{detail:2})
+  assert.equal(selections,1);assert.equal(focuses,0);assert.equal(host.dataset.dragging,undefined)
+  event("pointerdown");event("pointerup");event("click")
+  assert.equal(selections,2)
+  const x=target.x
+  event("pointerdown",{button:1});event("pointermove",{button:-1,clientX:120})
+  assert.notEqual(orrery.cameraState.azimuth,.45);assert.equal(target.x,x)
+  event("pointercancel");assert.equal(host.dataset.dragging,undefined)
+  event("pointerdown");event("pointermove",{clientX:120});event("lostpointercapture")
+  assert.equal(host.dataset.dragging,undefined)
+  event("pointerdown");event("pointerup");event("click")
+  assert.equal(selections,3)
 })

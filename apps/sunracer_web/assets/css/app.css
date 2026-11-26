@@ -2170,3 +2170,8 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 .comms-context {display:flex;flex-wrap:wrap;gap:.3rem;align-items:center;padding:.35rem;border:1px solid #28596d;background:#0c1828;border-radius:.25rem;}
 .comms-context span {color:#a5e7f5;font-weight:700;flex-basis:100%;overflow-wrap:anywhere;}
 .comms-context button {border:1px solid #28596d;border-radius:.2rem;padding:.2rem .4rem;cursor:pointer;}
+/* Drag the strategic map without selecting a destination. */
+.orrery-canvas {cursor:grab;}
+#nav-orrery {touch-action:none;user-select:none;}
+#nav-orrery[data-dragging] .orrery-canvas,
+#nav-orrery[data-dragging] .orrery-label {cursor:grabbing;}
