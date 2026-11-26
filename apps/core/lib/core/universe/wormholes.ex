@@ -19,17 +19,20 @@ defmodule Core.Universe.Wormholes do
       ]
     },
     %{
-      id: "alpha_tau",
+      id: "alpha_barnard",
       mouths: [
-        %{id: "alpha_tau_mouth", system_id: "alpha_centauri",
+        %{id: "alpha_barnard_mouth", system_id: "alpha_centauri",
           position_km: %{x: 45_000_000.0, y: -25_000_000.0, z: 0.0}},
-        %{id: "tau_alpha_mouth", system_id: "tau_ceti",
+        %{id: "barnard_alpha_mouth", system_id: "barnard",
           position_km: %{x: 25_000_000.0, y: -42_000_000.0, z: 0.0}}
       ]
     }
   ]
 
   def all, do: @links
+
+  @doc "All planned campaign edges, including those without physical mouths yet."
+  def campaign_links, do: Core.Universe.StarSystems.campaign_links()
 
   def mouths(system_id) do
     @links

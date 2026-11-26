@@ -2292,3 +2292,6 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 .galaxy-console .nav-button {width:100%;margin:12px 0;}
 .galaxy-console .nav-button:disabled {opacity:.55;cursor:not-allowed;}
 @media(max-width:790px) {.galaxy-map-frame{inset:65px 0 180px 44px}.galaxy-console{top:auto;bottom:46px;left:50px;right:8px;width:auto;max-height:135px;padding:8px}.galaxy-console .nav-metrics{display:flex;gap:8px}.galaxy-caption{font-size:9px;padding:5px}.galaxy-caption h3{font-size:12px}.galaxy-legend{display:none}}
+
+.galaxy-legend i.galaxy-road-next,.galaxy-legend i.galaxy-road-locked {width:15px;height:0;border:0;border-top:2px dashed #ffd06b;border-radius:0;vertical-align:middle;}
+.galaxy-legend i.galaxy-road-locked {border-top-color:#ba9cff;}

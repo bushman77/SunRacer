@@ -24,6 +24,25 @@ defmodule Core.Universe.InterstellarCatalogTest do
     assert :error = StarSystems.bodies("unknown")
   end
 
+  test "campaign is one ordered chain from SOL through every charted system" do
+    systems = StarSystems.all()
+    assert Enum.map(systems, & &1.campaign_phase) == Enum.to_list(1..length(systems))
+    assert Enum.take(Enum.map(systems, & &1.id), 6) ==
+             ["sol", "alpha_centauri", "barnard", "sirius", "epsilon_eridani", "tau_ceti"]
+    links = Wormholes.campaign_links()
+    assert length(links) == length(systems) - 1
+
+    for {[from, to], link} <- Enum.zip(Enum.chunk_every(systems, 2, 1, :discard), links) do
+      assert link == %{from_system_id: from.id, to_system_id: to.id,
+        unlock_after_phase: from.campaign_phase}
+    end
+
+    for %{mouths: [from, to]} <- Wormholes.all() do
+      assert Enum.any?(links, &(&1.from_system_id == from.system_id and
+        &1.to_system_id == to.system_id))
+    end
+  end
+
   test "mouths are unique, connected to known systems and reciprocal" do
     mouths = Enum.flat_map(Wormholes.all(), & &1.mouths)
     ids = Enum.map(mouths, & &1.id)

@@ -19,6 +19,46 @@ export function validSystems(catalog){
     return true
   })
 }
+// Only consecutive phases can be connected. Never bridge an absent or
+// ambiguous phase in a malformed or partially received catalogue.
+export function campaignEdges(systems){
+  const phases=new Map()
+  for(const s of systems||[]){
+    if(!Number.isInteger(s.campaign_phase)||s.campaign_phase<1)continue
+    phases.set(s.campaign_phase,phases.has(s.campaign_phase)?null:s)
+  }
+  if(phases.get(1)?.id!=="sol")return []
+  const edges=[]
+  for(let phase=1;phase<phases.size;phase++){
+    const from=phases.get(phase),to=phases.get(phase+1)
+    if(!from||!to)break
+    edges.push({from,to})
+  }
+  return edges
+}
+
+export function drawCampaignRoad(layer,systems){
+  const road=add(layer,"g",{"data-campaign-road":"true","pointer-events":"none","aria-hidden":"true"})
+  const edges=campaignEdges(systems)
+  // Draw all casings first so the route is readable against bright nebulae.
+  for(const {from,to} of edges){
+    add(road,"line",{x1:from.atlas_x,y1:from.atlas_y,x2:to.atlas_x,y2:to.atlas_y,
+      stroke:"#07101e","stroke-width":6,"stroke-linecap":"round",opacity:.85})
+  }
+  for(const {from,to} of edges){
+    const x1=from.atlas_x,y1=from.atlas_y,x2=to.atlas_x,y2=to.atlas_y
+    const first=from.campaign_phase===1,color=first?"#ffd06b":"#ba9cff"
+    add(road,"line",{x1,y1,x2,y2,stroke:color,"stroke-width":first?2.8:1.9,
+      "stroke-dasharray":first?"7 4":"5 5","stroke-linecap":"round",opacity:first?1:.86,
+      "data-route-from":from.id,"data-route-to":to.id})
+    const angle=Math.atan2(y2-y1,x2-x1)*180/Math.PI
+    const x=x1+(x2-x1)*.61,y=y1+(y2-y1)*.61
+    add(road,"path",{d:"M -5 -4 L 2 0 L -5 4",fill:"none",stroke:color,
+      "stroke-width":2,"stroke-linecap":"round","stroke-linejoin":"round",
+      transform:`translate(${x} ${y}) rotate(${angle})`})
+  }
+}
+
 export const canEnterSystem=system=>system?.id==="sol"&&system["provisional?"]===false
 // The approved photographic-style artwork is a local game asset. It is
 // embedded in the same SVG coordinate space as the interactive markers,
@@ -92,12 +132,13 @@ export class GalaxyAtlas{
   render(){
     if(!this.layer)return
     this.layer.replaceChildren()
+    drawCampaignRoad(this.layer,this.systems)
     const selected=this.systems.find(s=>s.id===this.selected)
     for(const s of this.systems){
       const x=s.atlas_x,y=s.atlas_y,current=s.id==="sol",active=s.id===this.selected
       const color=current?"#ffd06b":"#83dfef"
       const node=add(this.layer,"g",{"data-galaxy-id":s.id,role:"button",tabindex:0,
-        "aria-label":s.name+(current?" · current system":" · expansion locked"),
+        "aria-label":(s.campaign_phase?`Phase ${s.campaign_phase} · `:"")+s.name+(current?" · current system":" · expansion locked"),
         "aria-pressed":String(active)})
       add(node,"circle",{cx:x,cy:y,r:12,fill:"transparent"})
       add(node,"circle",{cx:x,cy:y,r:current?12:8,fill:color,opacity:.15})
@@ -107,14 +148,22 @@ export class GalaxyAtlas{
       const labelLeft=x>820
       add(node,"text",{x:x+(labelLeft?-10:10),y:y+4,fill:color,"font-size":12,
         "font-weight":active?"bold":"normal","text-anchor":labelLeft?"end":"start",
-        "paint-order":"stroke",stroke:"#030914","stroke-width":3},s.name)
+        "paint-order":"stroke",stroke:"#030914","stroke-width":3},
+        Number.isInteger(s.campaign_phase)?String(s.campaign_phase).padStart(2,"0")+" · "+s.name:s.name)
     }
     const set=(id,value)=>{const n=this.root.querySelector(id);if(n)n.textContent=value}
     set("#nav-galaxy-count",String(this.systems.length))
+    set("#nav-galaxy-phase",Number.isInteger(selected?.campaign_phase)?
+      `Phase ${selected.campaign_phase} / ${this.systems.length}`:"—")
+    const edges=campaignEdges(this.systems)
+    const previous=edges.find(e=>e.to.id===selected?.id)?.from
+    const next=edges.find(e=>e.from.id===selected?.id)?.to
+    set("#nav-galaxy-previous",previous?.name||"—")
+    set("#nav-galaxy-next",next?.name||"—")
     set("#nav-galaxy-name",selected?.name||"Awaiting catalogue")
     set("#nav-galaxy-status",selected?(canEnterSystem(selected)?"ACTIVE · HOME":"CHARTED · LOCKED"):"CONNECTING")
     set("#nav-galaxy-distance",Number.isFinite(selected?.distance_from_sol_ly)?selected.distance_from_sol_ly+" ly":"Not catalogued")
-    set("#nav-galaxy-description",canEnterSystem(selected)?"Orion Spur · approximately 26,000 ly from the galactic centre.":"Future expansion system. No playable planets or travel route yet.")
+    set("#nav-galaxy-description",canEnterSystem(selected)?"Orion Spur · approximately 26,000 ly from the galactic centre.":"Future expansion campaign. Its planned wormhole links remain locked.")
     const button=this.root.querySelector("#nav-galaxy-enter")
     if(button){button.disabled=!canEnterSystem(selected);button.textContent=button.disabled?"Interstellar travel locked":"Enter solar system"}
   }
