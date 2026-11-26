@@ -1694,3 +1694,8 @@ Removed the top-right RX/TX bandwidth card from both headset eyes and its once-p
 
 - Optional first-person Sunracer cabin with bridge, crew quarters and engineering during active uninterrupted autopilot transit. Local bounded walking pose; existing server cruise and station movement authority remain unchanged. Return to cockpit automatically on arrival, encounter, Atlas, loss of session or SBS/headset activation. RMB cannot interrupt cruise while walking. Procedural interior is provisional, not a ship-specific GLB or shared multiplayer interior; SBS walk presentation remains future work.
 - Added movement/eligibility tests. CI and live transit verification pending; no release deployment performed.
+
+
+### Native station GLB texture decoding
+
+- Permit local blob URLs in native WebView image and fetch CSP directives for Three.js embedded GLB texture decoding. Script and object restrictions unchanged. Added CSP regression test and GLB metadata audit command (`node clients/tauri/scripts/audit-station-textures.mjs`). Actual installed model appearance and binary asset metadata still need verification; no model files changed.

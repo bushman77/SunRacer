@@ -90,3 +90,12 @@ test("manual update uses the same native check and local-only IPC", () => {
   assert.match(rustSource, /receive\.await\.unwrap_or\(false\)/)
   assert.doesNotMatch(rustSource, /danger_accept_invalid_certs|ignore_certificate_errors/)
 })
+
+test("native CSP permits embedded GLB image decoding without granting blob script execution", () => {
+  const directives = new Map(config.app.security.csp.split(";").map(s => s.trim()).filter(Boolean)
+    .map(s => {const [name, ...sources] = s.split(/\s+/); return [name, sources]}))
+  assert.ok(directives.get("img-src").includes("blob:"))
+  assert.ok(directives.get("connect-src").includes("blob:"))
+  assert.deepEqual(directives.get("script-src"), ["'self'"])
+  assert.deepEqual(directives.get("object-src"), ["'none'"])
+})
