@@ -1205,10 +1205,27 @@
       </header>
       <nav class="comms-tabs" aria-label="Communication channels">
         <button type="button" data-chat-tab="global" aria-pressed="true">Global <span data-chat-unread="global" hidden></span></button>
-        <button type="button" data-chat-tab="party" aria-pressed="false">Party</button>
+        <button type="button" data-chat-tab="party" aria-pressed="false">Party <span data-chat-unread="party" hidden></span></button>
         <button type="button" data-chat-tab="guild" aria-pressed="false">Guild</button>
         <button type="button" data-chat-tab="tells" aria-pressed="false">Tells <span data-chat-unread="tells" hidden></span></button>
       </nav>
+      <button type="button" id="chat-directory-toggle" class="comms-directory-toggle">Online pilots (0)</button>
+      <div id="chat-directory" hidden class="comms-social">
+        <div id="chat-directory-list" aria-label="Online pilots"></div>
+      </div>
+      <div id="chat-party-invitation" class="comms-social" hidden>
+        <span id="chat-party-inviter"></span>
+        <button type="button" id="chat-party-accept">Accept</button>
+        <button type="button" id="chat-party-decline">Decline</button>
+      </div>
+      <div id="chat-party-controls" class="comms-social" hidden>
+        <div class="comms-party-heading"><span id="chat-party-count">No active party</span><button type="button" id="chat-party-leave" hidden>Leave</button></div>
+        <div id="chat-party-roster" aria-label="Party members"></div>
+        <div class="comms-party-invite">
+          <input id="chat-party-recipient" type="text" maxlength="20" aria-label="Pilot to invite" placeholder="Exact pilot name" autocomplete="off" />
+          <button type="button" id="chat-party-invite">Invite</button>
+        </div>
+      </div>
       <div id="chat-recipient-row" hidden>
         <label for="chat-recipient">To</label>
         <input id="chat-recipient" type="text" maxlength="20" autocomplete="off" placeholder="Exact pilot name" />
@@ -1217,6 +1234,7 @@
         <span id="chat-context-name"></span>
         <button type="button" id="chat-context-tell">Direct tell</button>
         <button type="button" id="chat-context-ignore">Ignore</button>
+        <button type="button" id="chat-context-invite">Invite to party</button>
         <button type="button" id="chat-context-close" aria-label="Close pilot actions">×</button>
       </div>
       <div id="global-chat-log" role="log" aria-label="Channel messages" aria-live="polite" tabindex="0"></div>

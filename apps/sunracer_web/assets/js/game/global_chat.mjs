@@ -1,4 +1,4 @@
-// One global and one private subscription per authenticated game socket.
+// Global, direct and private party communications on one authenticated socket.
 export const CHAT_LIMIT = 100
 const TABS = ["global", "party", "guild", "tells"]
 
@@ -15,10 +15,10 @@ export function parseChatCommand(raw, tab, recipient, lastTell) {
     return rest ? {tab:next,text:rest} : {error:"Enter a message"}
   }
   if (command === "r") return lastTell && rest ? {tab:"tells",recipient:lastTell,text:rest} : {error:"No received tell to reply to, or message is empty"}
-  if (["tell","ignore","unignore"].includes(command)) {
+  if (["invite","tell","ignore","unignore"].includes(command)) {
     if (command !== "tell") {
       const name = rest.startsWith('"') && rest.endsWith('"') ? rest.slice(1,-1) : rest
-      return name ? {ignore:command === "ignore",recipient:name} : {error:"Enter a pilot name"}
+      return name ? (command==="invite"?{invite:true,recipient:name}:{ignore:command === "ignore",recipient:name}) : {error:"Enter a pilot name"}
     }
     const args = rest.match(/^(?:"([^"]+)"|(\S+))\s+([\s\S]+)$/)
     return args ? {tab:"tells",recipient:args[1] || args[2],text:args[3]} : {error:'Use /tell Pilot message or /tell "Pilot Name" message'}
@@ -27,7 +27,7 @@ export function parseChatCommand(raw, tab, recipient, lastTell) {
 }
 
 export class GlobalChat {
-  constructor({root, socket, canOpen = () => true, releaseInput = () => {}}) {
+  constructor({root, socket, Presence, canOpen = () => true, releaseInput = () => {}}) {
     this.root=root;this.socket=socket;this.canOpen=canOpen;this.releaseInput=releaseInput
     const get=id=>root.querySelector(id)
     this.panel=get("#global-chat-panel");this.toggle=get("#global-chat-toggle")
@@ -39,6 +39,7 @@ export class GlobalChat {
     this.counts={global:0,party:0,guild:0,tells:0}
     this.ignored=new Set();this.lastTell=null;this.contextPilot=null
     this.online=false;this.directOnline=false;this.pending=false
+    this.Presence=Presence;this.partyOnline=false;this.party=null;this.invitation=null;this.directory=[]
   }
 
   start() {
@@ -59,6 +60,26 @@ export class GlobalChat {
       this.context.hidden=true
     })
     this.root.querySelector("#chat-context-close")?.addEventListener("click",()=>{this.context.hidden=true})
+    this.root.querySelector("#chat-context-invite")?.addEventListener("click",()=>{
+      if(this.contextPilot)this.partyAction("invite",{pilot_name:this.contextPilot.name})
+      this.context.hidden=true
+    })
+    this.root.querySelector("#chat-directory-toggle")?.addEventListener("click",()=>{
+      const directory=this.root.querySelector("#chat-directory")
+      directory.hidden=!directory.hidden
+      this.renderParty()
+    })
+    this.root.querySelector("#chat-party-invite")?.addEventListener("click",()=>{
+      const field=this.root.querySelector("#chat-party-recipient")
+      const name=field.value.trim()
+      if(name)this.partyAction("invite",{pilot_name:name},()=>{field.value=""})
+    })
+    this.root.querySelector("#chat-party-leave")?.addEventListener("click",()=>this.partyAction("leave",{}))
+    for(const action of ["accept","decline"]){
+      this.root.querySelector("#chat-party-"+action)?.addEventListener("click",()=>{
+        if(this.invitation)this.partyAction(action,{invitation_id:this.invitation.id})
+      })
+    }
     this.channel=this.socket.channel("chat:global",{})
     this.channel.on("chat_message",message=>this.append(message,"global"))
     this.channel.onError(()=>{this.online=false;this.refresh()})
@@ -72,13 +93,100 @@ export class GlobalChat {
     this.direct.onClose(()=>{this.directOnline=false;this.refresh()})
     this.direct.join().receive("ok",reply=>{this.directOnline=true;this.applyIgnored(reply.ignored_ids);this.refresh()})
       .receive("error",()=>{this.directOnline=false;this.refresh()}).receive("timeout",()=>{this.directOnline=false;this.refresh()})
+    this.partyChannel=this.socket.channel("chat:party",{})
+    this.partyChannel.on("party_state",snapshot=>this.applyParty(snapshot))
+    this.partyChannel.on("party_message",message=>{
+      if(this.party&&message.party_id===this.party.id)this.append(message,"party")
+    })
+    this.partyChannel.onError(()=>this.partyConnection(false))
+    this.partyChannel.onClose(()=>this.partyConnection(false))
+    if(this.Presence){
+      this.presence=new this.Presence(this.partyChannel)
+      this.presence.onSync(()=>{
+        this.directory=this.presence.list((id,{metas})=>({id:Number(id),name:metas[0]?.pilot_name}))
+          .filter(p=>p.name).sort((a,b)=>a.name.localeCompare(b.name))
+        this.renderParty()
+      })
+    }
+    this.partyChannel.join().receive("ok",snapshot=>{this.partyConnection(true);this.applyParty(snapshot)})
+      .receive("error",()=>this.partyConnection(false)).receive("timeout",()=>this.partyConnection(false))
     this.refresh()
     return this
   }
 
-  ready(tab=this.tab) {return tab==="global"?this.online:tab==="tells"?this.directOnline:false}
+  partyConnection(online){
+    this.partyOnline=online
+    if(!online)this.directory=[]
+    this.renderParty();this.refresh()
+  }
+
+  applyParty(snapshot){
+    const next=snapshot?.party||null
+    if(this.party?.id!==next?.id){
+      this.history.party=[];this.counts.party=0
+      if(this.tab==="party")this.renderHistory()
+    }
+    this.party=next
+    this.invitation=snapshot?.invitation||null
+    this.renderParty();this.updateUnread();this.refresh()
+  }
+
+  renderParty(){
+    const get=id=>this.root.querySelector(id)
+    const controls=get("#chat-party-controls"),roster=get("#chat-party-roster"),directory=get("#chat-directory-list")
+    if(!controls||!roster||!directory)return
+    const leader=this.party&&String(this.party.leader_id)===this.selfId
+    controls.hidden=this.tab!=="party"
+    get("#chat-party-leave").hidden=!this.party
+    get("#chat-party-leave").disabled=!this.partyOnline
+    get("#chat-party-invite").disabled=!this.partyOnline||Boolean(this.party&&!leader)||Boolean(this.party?.members.length>=6)
+    get("#chat-party-recipient").disabled=get("#chat-party-invite").disabled
+    get("#chat-party-count").textContent=this.party?this.party.members.length+"/6 pilots":"No active party"
+    const invite=get("#chat-party-invitation")
+    invite.hidden=!this.invitation
+    get("#chat-party-inviter").textContent=this.invitation?this.invitation.inviter_name+" invites you to a party":""
+    for(const action of ["accept","decline"])get("#chat-party-"+action).disabled=!this.partyOnline
+    roster.replaceChildren()
+    for(const pilot of this.party?.members||[]){
+      const row=document.createElement("div"),name=document.createElement("button")
+      name.type="button";name.textContent=(pilot.pilot_id===this.party.leader_id?"★ ":"")+pilot.pilot_name+(pilot.online?"":" · offline")
+      name.addEventListener("click",()=>this.showContext(pilot,"party"))
+      row.append(name)
+      if(leader&&String(pilot.pilot_id)!==this.selfId){
+        for(const [action,label] of [["transfer","Lead"],["remove","Remove"]]){
+          const button=document.createElement("button");button.type="button";button.textContent=label
+          button.disabled=!this.partyOnline||(action==="transfer"&&!pilot.online)
+          button.addEventListener("click",()=>this.partyAction(action,{pilot_id:pilot.pilot_id}))
+          row.append(button)
+        }
+      }
+      roster.append(row)
+    }
+    get("#chat-directory-toggle").textContent="Online pilots ("+this.directory.length+")"
+    directory.replaceChildren()
+    for(const pilot of this.directory){
+      if(String(pilot.id)===this.selfId||this.ignored.has(String(pilot.id)))continue
+      const button=document.createElement("button");button.type="button";button.textContent=pilot.name
+      button.addEventListener("click",()=>this.showContext({pilot_id:pilot.id,pilot_name:pilot.name},"global"))
+      directory.append(button)
+    }
+  }
+
+  partyAction(event,payload,onOk=()=>{}){
+    if(!this.partyOnline||this.pending){this.refresh("Party service unavailable");return}
+    this.pending=true;this.refresh()
+    const finish=label=>{this.pending=false;this.refresh(label)}
+    this.partyChannel.push(event,payload,5000)
+      .receive("ok",()=>{onOk();finish(event==="invite"?"Invitation sent":"Party updated")})
+      .receive("error",r=>finish(({party_full:"Party is full or seats are reserved",leader_required:"Only the leader can do that",
+        invitation_unavailable:"Invitation expired or unavailable",recipient_unavailable:"Pilot unavailable",
+        rate_limited:"Slow down · 4 actions per 10 seconds"})[r.reason]||"Party action rejected"))
+      .receive("timeout",()=>finish("Party action unconfirmed"))
+  }
+
+  ready(tab=this.tab) {return tab==="global"?this.online:tab==="tells"?this.directOnline:tab==="party"?this.partyOnline&&Boolean(this.party):false}
   refresh(label=null) {
-    if(this.status)this.status.textContent=label || (this.tab==="party"?"Party membership coming next":
+    if(this.status)this.status.textContent=label || (this.tab==="party"?(!this.partyOnline?"Party service offline":this.party?"Party connected":"Invite an online pilot to form a party"):
       this.tab==="guild"?"Guild membership coming next":this.ready()?"Connected":"Channel offline or unavailable")
     if(this.send)this.send.disabled=!this.ready()||this.pending
     if(this.input)this.input.disabled=!this.ready()
@@ -93,7 +201,7 @@ export class GlobalChat {
     if(this.input)this.input.placeholder=tab==="tells"?"Send a direct tell…":"Transmit to "+tab+"…"
     for(const button of this.root.querySelectorAll("[data-chat-tab]"))
       button.setAttribute("aria-pressed",String(button.dataset.chatTab===tab))
-    this.renderHistory();this.updateUnread();this.refresh()
+    this.renderHistory();this.renderParty();this.updateUnread();this.refresh()
   }
 
   open() {
@@ -124,10 +232,10 @@ export class GlobalChat {
   }
 
   updateUnread(){
-    const total=Object.values(this.counts).reduce((a,b)=>a+b,0)
+    const total=Object.values(this.counts).reduce((a,b)=>a+b,0)+(this.invitation?1:0)
     if(this.unread){this.unread.hidden=!total;this.unread.textContent=total>99?"99+":String(total)}
     for(const node of this.root.querySelectorAll?.("[data-chat-unread]")||[]){
-      const n=this.counts[node.dataset.chatUnread]||0
+      const n=(this.counts[node.dataset.chatUnread]||0)+(node.dataset.chatUnread==="party"&&this.invitation?1:0)
       node.hidden=!n;node.textContent=n>99?"99+":String(n)
     }
   }
@@ -135,7 +243,7 @@ export class GlobalChat {
   applyIgnored(ids) {
     this.ignored=new Set((Array.isArray(ids)?ids:[]).map(String))
     for(const tab of TABS)this.history[tab]=this.history[tab].filter(m=>!this.ignored.has(String(m.pilot_id)))
-    this.renderHistory()
+    this.renderHistory();this.renderParty()
   }
 
   showContext(message,tab) {
@@ -146,6 +254,8 @@ export class GlobalChat {
     this.contextPilot={name,id}
     this.root.querySelector("#chat-context-name").textContent=name
     this.root.querySelector("#chat-context-ignore").textContent=this.ignored.has(id)?"Unignore":"Ignore"
+    const invite=this.root.querySelector("#chat-context-invite")
+    if(invite)invite.disabled=!this.partyOnline||Boolean(this.party&&String(this.party.leader_id)!==this.selfId)||Boolean(this.party?.members.length>=6)
     this.context.hidden=false
   }
 
@@ -203,6 +313,7 @@ export class GlobalChat {
     const command=parseChatCommand(raw,this.tab,this.recipient?.value.trim(),this.lastTell)
     if(!command)return
     if(command.error){this.refresh(command.error);return}
+    if(command.invite){this.partyAction("invite",{pilot_name:command.recipient},()=>{if(this.input.value.trim()===raw)this.input.value=""});return}
     if("ignore" in command){this.setIgnore(command.recipient,command.ignore,raw);return}
     const {tab,recipient,text}=command
     if(!this.ready(tab)){this.refresh("Channel unavailable");return}
@@ -211,7 +322,7 @@ export class GlobalChat {
     if(tab==="tells")this.recipient.value=recipient
     this.pending=true;this.refresh()
     const finish=label=>{this.pending=false;this.refresh(label)}
-    const channel=tab==="tells"?this.direct:this.channel
+    const channel=tab==="tells"?this.direct:tab==="party"?this.partyChannel:this.channel
     const payload=tab==="tells"?{recipient,text}:{text}
     channel.push(tab==="tells"?"send_tell":"send_message",payload,5000)
       .receive("ok",()=>{

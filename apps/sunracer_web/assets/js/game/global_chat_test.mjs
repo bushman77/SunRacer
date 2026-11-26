@@ -45,7 +45,7 @@ test("commands route global, group and quoted direct tells without guessing reci
   assert.ok(parseChatCommand("/r yes","global",null,null).error)
   assert.deepEqual(parseChatCommand("/p go","global",null,null),{tab:"party",text:"go"})
   assert.deepEqual(parseChatCommand("/ignore Pilot Name","global",null,null),{ignore:true,recipient:"Pilot Name"})
-  assert.ok(parseChatCommand("/invite Pilot","global",null,null).error)
+  assert.deepEqual(parseChatCommand("/invite Pilot","global",null,null),{invite:true,recipient:"Pilot"})
 })
 test("private messages never enter global history and ignored pilots are filtered",()=>{
   const node=()=>({children:[],textContent:"",hidden:false,scrollHeight:0,scrollTop:0,clientHeight:0,
@@ -61,4 +61,18 @@ test("private messages never enter global history and ignored pilots are filtere
   assert.equal(chat.history.tells.length,1)
   assert.equal(chat.lastTell,"Other")
   assert.equal(chat.counts.tells,1)
+})
+
+test("party changes discard history and unread counters, but reconnect to same party keeps them",()=>{
+  const chat=new GlobalChat({root:{querySelector:()=>null},socket:null})
+  chat.partyOnline=true
+  chat.applyParty({party:{id:7,members:[]}})
+  chat.history.party.push({text:"secret"});chat.counts.party=1
+  chat.applyParty({party:{id:7,members:[]}})
+  assert.equal(chat.history.party.length,1)
+  assert.equal(chat.ready("party"),true)
+  chat.applyParty({party:null})
+  assert.equal(chat.history.party.length,0)
+  assert.equal(chat.counts.party,0)
+  assert.equal(chat.ready("party"),false)
 })

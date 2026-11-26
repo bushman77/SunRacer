@@ -12,6 +12,8 @@ defmodule SunracerWeb.Application do
       SunracerWeb.HelmetManager,
       SunracerWeb.NativeLoginLimiter,
       SunracerWeb.ChatLimiter,
+      SunracerWeb.PilotPresence,
+      SunracerWeb.PartyManager,
       # Start a worker by calling: SunracerWeb.Worker.start_link(arg)
       # {SunracerWeb.Worker, arg},
       # Start to serve requests, typically the last entry

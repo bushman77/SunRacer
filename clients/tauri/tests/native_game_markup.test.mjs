@@ -135,3 +135,8 @@ test("installed communications exposes four tabs and a private recipient field",
     assert.equal((document.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
   assert.match(document,/id="chat-recipient-row" hidden/)
 })
+
+test("native party controls and pilot directory are packaged",()=>{
+  for(const id of ["chat-directory-toggle","chat-directory-list","chat-party-controls","chat-party-roster","chat-party-invite","chat-party-accept","chat-party-decline","chat-context-invite"])
+    assert.equal((document.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
+})

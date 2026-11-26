@@ -2175,3 +2175,16 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 #nav-orrery {touch-action:none;user-select:none;}
 #nav-orrery[data-dragging] .orrery-canvas,
 #nav-orrery[data-dragging] .orrery-label {cursor:grabbing;}
+/* Pilot directory and six-seat party roster. */
+.comms-social {padding:.35rem;border:1px solid #28596d;border-radius:.25rem;margin:.3rem 0;color:#b3d4ce;}
+.comms-social button,.comms-directory-toggle {color:#6ef5a4;border:1px solid #28596d;border-radius:.2rem;padding:.15rem .35rem;cursor:pointer;}
+.comms-social button:disabled,.comms-context button:disabled {opacity:.4;cursor:default;}
+.comms-party-heading,.comms-party-invite,#chat-party-roster>div {display:flex;gap:.25rem;align-items:center;}
+.comms-party-heading {justify-content:space-between;}
+#chat-party-roster,#chat-directory-list {max-height:6rem;overflow:auto;}
+#chat-party-roster>div {margin:.2rem 0;}
+#chat-party-roster>div>button:first-child {flex:1;text-align:left;overflow-wrap:anywhere;}
+#chat-directory-list {display:flex;flex-wrap:wrap;gap:.3rem;}
+#chat-party-recipient {flex:1;min-width:0;background:#091827;border:1px solid #28596d;border-radius:.2rem;padding:.25rem;color:#edf7ff;}
+.global-chat-message[data-channel="party"] button {color:#6ef5a4;}
+.global-chat-panel {max-height:calc(100vh - 9rem);overflow:auto;}

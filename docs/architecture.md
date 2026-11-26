@@ -408,3 +408,7 @@ Communications availability is checked before desktop VR synchronization and int
 The Orrery left-button gesture pans the camera target parallel to the orbital plane, scaled by perspective distance and elevation. A five-pixel threshold preserves ordinary selection, and pointer capture suppresses clicks after a drag. Middle-button orbit and cursor-centred wheel zoom are unchanged; panning does not affect simulation or network state.
 
 Player laser reach is currently 1,080 world units, resolved by Core.Combat and replicated in the player snapshot. The local instant preview uses that value, with a matching fallback. The server still resolves each wing ray and validates locked shots; NPC range and cooldowns are unchanged.
+
+### Temporary pilot parties
+
+Phoenix Presence provides a public pilot-name directory on chat:party; all private party state and messages are sent directly to monitored authenticated channel processes by PartyManager. Membership is serialized, six seats maximum, invitation expiry 60 seconds, reconnect grace five minutes. Leader departure transfers leadership; server restart clears state. The current implementation is single-node, with no database tables, guilds or shared navigation markers. No world-channel dependency.

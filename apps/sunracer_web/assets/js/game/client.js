@@ -1,4 +1,4 @@
-import {Socket} from "phoenix"
+import {Socket, Presence} from "phoenix"
 import * as THREE from "three"
 import {SolarOrrery} from "./solar_orrery.mjs"
 import {GlobalChat} from "./global_chat.mjs"
@@ -575,7 +575,7 @@ class SpaceClient {
     this.socket.onClose(() => this.setConnection("Relay offline", "error"))
     this.socket.connect()
     this.globalChat = new GlobalChat({
-      root: this.root, socket: this.socket,
+      root: this.root, socket: this.socket, Presence,
       canOpen: () => !this.solarEncounter && !this.dispatchOfferOpen &&
         !this.stationNpcDialogOpen && !this.inventoryPanel?.opened &&
         !this.outfittingPanel?.opened && !this.tradePanel?.opened &&
