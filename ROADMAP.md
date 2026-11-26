@@ -1582,5 +1582,5 @@ docking, station walking and mission completion. Branch `story_line`.
 
 ### Desktop HUD window customization
 
-- Shared move, resize and reset controls for station, communications, inventory, story, network, tactical and Atlas panels; positions and sizes are stored locally per pilot. Existing cockpit lock and minimap controls remain unchanged.
+- Shared move, resize and reset controls for station, communications, inventory, story, network, tactical and Atlas panels; positions and sizes are stored locally per pilot. Existing cockpit lock and minimap controls remain unchanged; the unlocked ship status also gains width resizing. Station/dialogue delegated input remains intact.
 - Added viewport clamping and preference validation tests. CI and manual desktop/Windows/SBS verification pending; no live deployment performed.

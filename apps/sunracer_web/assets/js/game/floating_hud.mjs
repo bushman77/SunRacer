@@ -24,6 +24,7 @@ export function readHudRect(value) {
 
 // Full-screen station/modal wrappers stay intact; only their visible card moves.
 export const FLOATING_HUD_PANELS = Object.freeze({
+  shipStatus: "#cockpit-window-ship-status",
   station: "#starbase-docked-panel > div",
   attendant: "#station-npc-dialogue > div",
   outfitting: "#station-outfitting-panel > div",
@@ -44,8 +45,8 @@ export const FLOATING_HUD_PANELS = Object.freeze({
 
 export class FloatingHud {
   constructor({root, playerId, releaseInput = () => {}, windowTarget = globalThis.window,
-    storage, documentTarget = globalThis.document}) {
-    Object.assign(this, {root, releaseInput, windowTarget, documentTarget})
+    storage, documentTarget = globalThis.document, onShipResize = () => {}}) {
+    Object.assign(this, {root, releaseInput, windowTarget, documentTarget, onShipResize})
     try {this.storage = storage === undefined ? globalThis.localStorage : storage}
     catch {this.storage = null}
     this.key = "sunracer:floating-hud:v1:player:" + String(playerId || "guest")
@@ -71,6 +72,7 @@ export class FloatingHud {
       for (const [action, label, glyph] of [
         ["move", "Move window", "✥"], ["size", "Resize window", "⤡"], ["reset", "Reset window", "↺"]
       ]) {
+        if (id === "shipStatus" && action === "move") continue
         const handle = this.documentTarget.createElement("button")
         handle.type = "button"
         handle.textContent = glyph
@@ -93,9 +95,8 @@ export class FloatingHud {
       if (panel.tagName === "DETAILS") panel.querySelector("summary")?.after(toolbar)
       else panel.prepend(toolbar)
       panel.classList.add("floating-hud-panel")
-      panel.addEventListener("pointerdown", event => event.stopPropagation())
-      panel.addEventListener("click", event => event.stopPropagation())
-      panel.addEventListener("contextmenu", event => event.stopPropagation())
+      // Do not swallow panel clicks: station dialogue and trading controllers
+      // use delegated handlers on their enclosing elements.
       const saved = readHudRect(this.saved[id])
       if (saved) this.apply(id, saved)
     }
@@ -123,6 +124,12 @@ export class FloatingHud {
   apply(id, requested, {size = true} = {}) {
     const panel = this.panels.get(id)
     const rect = fitHudRect(requested, this.viewport())
+    if (id === "shipStatus") {
+      panel.classList.add("floating-hud-ship-sized")
+      panel.style.setProperty("--floating-hud-width", rect.width + "px")
+      this.onShipResize()
+      return rect
+    }
     panel.classList.add("floating-hud-positioned")
     panel.style.setProperty("--floating-hud-x", rect.x + "px")
     panel.style.setProperty("--floating-hud-y", rect.y + "px")
@@ -184,10 +191,11 @@ export class FloatingHud {
     const panel = this.panels.get(id)
     if (!panel) return
     if (this.drag?.id === id) this.finish()
-    panel.classList.remove("floating-hud-positioned")
+    panel.classList.remove("floating-hud-positioned", "floating-hud-ship-sized")
     for (const prop of ["x", "y", "width", "height"])
       panel.style.removeProperty("--floating-hud-" + prop)
     delete this.saved[id]
+    if (id === "shipStatus") this.onShipResize()
     this.persist()
   }
 

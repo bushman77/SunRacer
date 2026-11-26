@@ -17,6 +17,7 @@ test("invalid local preferences are ignored", () => {
     {x: 0,y: 2,width: 200,height: 100})
 })
 test("station and inventory move their card rather than the modal wrapper", () => {
+  assert.equal(FLOATING_HUD_PANELS.shipStatus, "#cockpit-window-ship-status")
   assert.equal(FLOATING_HUD_PANELS.station, "#starbase-docked-panel > div")
   assert.equal(FLOATING_HUD_PANELS.inventory, "#pilot-inventory-panel > div")
   assert.equal(FLOATING_HUD_PANELS.comms, "#global-chat-panel")

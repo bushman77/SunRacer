@@ -2229,3 +2229,14 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
   box-sizing:border-box; overflow:auto !important; overscroll-behavior:contain;
 }
 .floating-hud-panel.floating-hud-positioned:not([open]):is(details) {height:auto !important;}
+
+/* Keep the compact flight readout clean while locked. Its position is still
+   owned by CockpitWindowManager; only its width is customized here. */
+#cockpit-window-ship-status .floating-hud-tools {display:none;}
+.cockpit-interface.is-unlocked #cockpit-window-ship-status .floating-hud-tools {
+  display:flex; padding:.25rem .4rem 0;
+}
+#cockpit-window-ship-status.floating-hud-ship-sized {
+  width:var(--floating-hud-width) !important;
+  max-width:calc(100vw - 16px) !important;
+}

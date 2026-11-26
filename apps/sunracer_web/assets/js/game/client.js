@@ -219,6 +219,7 @@ class SpaceClient {
     this.floatingHud = new FloatingHud({
       root: this.root,
       playerId: this.root.dataset.layoutPlayerId,
+      onShipResize: () => this.cockpit.clampWindow("ship_status"),
       releaseInput: () => {
         this.stationWalking?.release()
         this.flightControls?.release()
