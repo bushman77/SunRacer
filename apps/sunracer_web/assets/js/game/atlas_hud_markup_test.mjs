@@ -81,18 +81,20 @@ test("docking approach has no redundant manual request panel",()=>{
   assert.match(client,/stationWarningView\(warning\)/)
 })
 
-test("ship status shows only hull, shield and actual speed while retaining HUD movement",()=>{
+test("ship status shows only hull and shield while retaining HUD movement",()=>{
   const panel=markup.slice(markup.indexOf('id="cockpit-window-ship-status"'),markup.indexOf('id="cockpit-window-minimap"'))
-  for(const id of ["hud-hp","hud-hp-bar","hud-shields","hud-shield-bar","hud-speed","ship-status-drag-handle"]){
+  for(const id of ["hud-hp","hud-hp-bar","hud-shields","hud-shield-bar","ship-status-drag-handle"]){
     assert.equal((panel.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
   }
-  assert.doesNotMatch(panel,/id="(?:hud-pilot|hud-ship|hud-config|hud-equipment|hud-coordinates|ship-status-hide|ship-status-collapse)"/)
+  assert.doesNotMatch(panel,/id="(?:hud-pilot|hud-ship|hud-config|hud-equipment|hud-coordinates|hud-speed|ship-status-hide|ship-status-collapse)"/)
   assert.doesNotMatch(panel,/Flight telemetry|Active pilot|<button/)
   assert.match(panel,/data-cockpit-fixed-expanded/)
   assert.match(panel,/data-cockpit-drag-handle/)
   assert.match(markup,/data-cockpit-visibility="ship_status"/)
   const client=readFileSync(new URL("./client.js",import.meta.url),"utf8")
-  assert.match(client,/const speed = `\$\{Math\.round\(Math\.hypot\(v\.x, v\.y, v\.z\)\)\} u\/s`/)
-  assert.match(client,/this\.text\("#hud-speed", speed\)/)
+  // Actual speed is covered by the dashboardModel behavioural tests.
+  const stereo=readFileSync(new URL("./stereo_view.js",import.meta.url),"utf8")
+  assert.doesNotMatch(client,/#hud-speed/)
+  assert.match(stereo,/ctx\.fillText\("VEL " \+ model\.speed \+ " u\/s"/)
   assert.match(css,/\.ship-status-track \{height: \.27rem/)
 })

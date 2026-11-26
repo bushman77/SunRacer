@@ -465,3 +465,7 @@ The existing server-owned SOL environmental profile is unchanged. The shared des
 
 - All 29 systems now have a server-owned campaign phase; the first six retain the agreed SOL → Alpha Centauri → Barnard's Star → Sirius → Epsilon Eridani → Tau Ceti order. Later phases are provisional and arranged to reduce crossings on the existing schematic map. The SVG draws 28 directed, dashed planned connections behind interactive markers, labels phases, and shows previous/next systems. First leg gold means next campaign, not available travel. Replaced the provisional Alpha Centauri–Tau Ceti mouth pair with Alpha Centauri–Barnard's Star to match the chain; remaining physical mouths and unlock/transit logic are not implemented. Artwork and all marker positions unchanged. Added catalogue and renderer tests. Full Mix/precommit and native visual verification pending.
 
+## 2026-11-26 — Release regression alignment
+
+- Updated the Atlas HUD markup regression to require only hull and shield in the movable floating ship-status panel, forbid the retired `hud-speed` element and client selector, and confirm the physical dashboard renders actual velocity. No runtime code or UI changes. Existing dashboard model tests cover velocity calculation. Full local release test rerun pending.
+
