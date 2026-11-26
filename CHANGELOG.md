@@ -1683,3 +1683,8 @@ Removed the top-right RX/TX bandwidth card from both headset eyes and its once-p
 
 - Shared move, resize and reset controls for station, communications, inventory, story, network, tactical and Atlas panels; positions and sizes are stored locally per pilot. Existing cockpit lock and minimap controls remain unchanged; the unlocked ship status also gains width resizing. Station/dialogue delegated input remains intact.
 - Added viewport clamping and preference validation tests. CI and manual desktop/Windows/SBS verification pending; no live deployment performed.
+
+
+### Native gameplay browser guard
+
+- Suppress WebView browser context menus and F5 / Ctrl+R / Cmd+R reload shortcuts during authenticated gameplay. Preserve custom Atlas menus, RMB firing, normal keyboard shortcuts, explicit logout and in-memory bearer credentials. Added native event regression tests; installed Linux and Windows WebView verification pending.

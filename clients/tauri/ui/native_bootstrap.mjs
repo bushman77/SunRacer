@@ -2,6 +2,7 @@
 // world-state and pilot commands cross the network; no remote HTML is loaded.
 import {DEFAULT_SERVER_URL, serverOrigin, passwordResetUrl} from "./server_url.mjs"
 import {nativePostJson, nativeErrorMessage} from "./native_transport.mjs"
+import {installGameplayBrowserGuard} from "./gameplay_browser_guard.mjs"
 
 const login = document.querySelector("#native-login")
 const form = document.querySelector("#native-login-form")
@@ -15,6 +16,8 @@ const fallbackStorageKey = "sbs-space-server-origin"
 let token = null
 let origin = DEFAULT_SERVER_URL
 let refreshTimer = null
+
+installGameplayBrowserGuard({active: () => !game.hidden && Boolean(token)})
 
 try {
   origin = serverOrigin(localStorage.getItem(fallbackStorageKey) ||
