@@ -449,3 +449,7 @@ The existing server-owned SOL environmental profile is unchanged. The shared des
 
 - Unified dashboard and mouse-capture pointer routing: unlocked physical dashboard clicks (including blank instrument surface) consume the event before steering capture, target selection or weapon handling. Escape or middle-click releases captured steering; clicking outside the dashboard resumes it. Pending native fallback requests are invalidated on release to prevent delayed recapture. Saved steering preference, throttle, keyboard flight and server authority unchanged. Added source-level routing regression coverage; packaged WebKit/desktop visual acceptance and full test suite pending.
 
+## 2026-11-26 — Green Starbase safe arrival
+
+- Reused cruise-to-station maps now reset the living undocked ship to a server-owned approach 2,000 local units from the hub, aligned with the open bay. An already embedded pose is recovered without additional damage; valid swept wall impacts retain damage and stopping behavior. Reject unsafe saved station poses while retaining valid docking checkpoints. Added pure, map transition and persistence regressions. No hull repair, quest reset, docking bypass or client change. Full compilation and live verification pending.
+

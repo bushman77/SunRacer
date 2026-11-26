@@ -22,6 +22,13 @@ defmodule Core.Universe.GreenStarbase do
   def local_site, do: @local_site
   def bay_mouth, do: @bay_mouth
 
+  @doc "Safe conventional arrival outside the open bay, facing the station."
+  def approach_position do
+    %{x: @local_site.x, y: @local_site.y - 2_000.0, z: @local_site.z}
+  end
+
+  def approach_attitude, do: %{yaw: :math.pi(), pitch: 0.0, roll: 0.0}
+
   @doc "Canonical cruise coordinate, independent of the cockpit's XYZ."
   def position_km do
     {:ok, earth} = Sol.game_position_km("earth")

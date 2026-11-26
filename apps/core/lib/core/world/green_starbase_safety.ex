@@ -17,7 +17,7 @@ defmodule Core.World.GreenStarbaseSafety do
 
   alias Core.Combat
   alias Core.Universe.GreenStarbase
-  alias Core.World.{Entity, Position}
+  alias Core.World.{Entity, Orientation, Position}
 
   @scale 0.06
   @collision_separation_scene 0.03
@@ -98,12 +98,34 @@ defmodule Core.World.GreenStarbaseSafety do
     end
   end
 
+  @doc "Relocate an invalid initial pose, not a legitimate swept impact."
+  def safe_arrival(%Entity{} = ship) do
+    attitude = GreenStarbase.approach_attitude()
+    %{ship |
+      position: struct!(Position, GreenStarbase.approach_position()),
+      attitude: attitude, orientation: Orientation.from_angles(attitude),
+      destination: nil, route_waypoints: [], navigation_mode: :manual,
+      throttle: 0.0, cruise_speed: 0.0, velocity: @zero_vector,
+      rotation_input: @zero_rotation, angular_velocity: @zero_rotation}
+  end
+
   def resolve(%Entity{} = _before, %Entity{} = moved, false, _elapsed), do: {:ok, moved}
   def resolve(%Entity{} = _before, %Entity{status: :destroyed} = moved, _active, _elapsed),
     do: {:ok, moved}
 
   def resolve(%Entity{} = before, %Entity{} = moved, true, dt)
       when is_number(dt) and dt > 0 do
+    if inside?(before.position) do
+      # An already embedded ship is not an impact. It may have been restored
+      # from an old checkpoint or surrounded by newly activated geometry.
+      # Never apply thrust damage or repeatedly expel it into another solid.
+      {:ok, safe_arrival(before)}
+    else
+      resolve_sweep(before, moved, dt)
+    end
+  end
+
+  defp resolve_sweep(before, moved, dt) do
     case first_contact(before.position, moved.position) do
       :clear ->
         {:ok, moved}

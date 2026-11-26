@@ -88,6 +88,18 @@ defmodule Core.World.GreenStarbaseSafetyTest do
     assert {:ok, ^moved} = GreenStarbaseSafety.resolve(before, moved, false, 1.0)
   end
 
+  test "already embedded ships recover to a clear aligned approach without damage" do
+    before = ship(at(0, 30, 0))
+    moved = %{before | throttle: 1.0, position: at(0, 30, 2)}
+    assert {:ok, recovered} = GreenStarbaseSafety.resolve(before, moved, true, 0.1)
+    assert recovered.hull == before.hull
+    assert recovered.throttle == 0.0
+    assert recovered.position == struct!(Position, GreenStarbase.approach_position())
+    assert recovered.attitude == GreenStarbase.approach_attitude()
+    refute GreenStarbaseSafety.inside?(recovered.position)
+    assert :clear == GreenStarbaseSafety.first_contact(recovered.position, recovered.position)
+  end
+
   test "direct fast transit into rear wall always registers impact" do
     before = ship(at(0, 0, -90))
     moved = %{before | position: at(0, 0, 90)}

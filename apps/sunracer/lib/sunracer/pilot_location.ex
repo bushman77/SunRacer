@@ -7,8 +7,8 @@ defmodule Sunracer.PilotLocation do
   physical ship, map, and voyage, never a subsequent visit to the same planet.
   """
   alias Core.Universe.Navigation.Checkpoint, as: VoyageCheckpoint
-  alias Core.Universe.{FreeFlightRegion, OrbitalEntry}
-  alias Core.World.{GreenStarbaseDocking, Movement, PlanetaryCollision, Position, StationSafety, StationInterior}
+  alias Core.Universe.{FreeFlightRegion, GreenStarbase, OrbitalEntry}
+  alias Core.World.{GreenStarbaseDocking, GreenStarbaseSafety, Movement, PlanetaryCollision, Position, StationSafety, StationInterior}
   alias Sunracer.PilotLocation.Checkpoint
   alias Sunracer.Repo
 
@@ -72,7 +72,8 @@ defmodule Sunracer.PilotLocation do
            ((status == :traveling and free_flight == true) or
               (status == :idle and is_nil(location_id))) do
     if map_id == FreeFlightRegion.map_id(player_id) and
-         valid_pose?(player_id, map_id, position, attitude) do
+         valid_pose?(player_id, map_id, position, attitude) and
+         not (GreenStarbase.nearby?(navigation) and GreenStarbaseSafety.inside?(position)) do
       save_pose_row(player_id, map_id, navigation, voyage_number, ship_id,
         position, attitude, Map.get(report, :docked, false) == true,
         Map.get(report, :station_position))
@@ -128,7 +129,9 @@ defmodule Sunracer.PilotLocation do
       } when map_id == entry.map_id ->
         case parse_pose(position_data, attitude) do
           {:ok, position, attitude} ->
-            if valid_pose?(player_id, map_id, position, attitude) do
+            if valid_pose?(player_id, map_id, position, attitude) and
+                 not (Map.get(entry, :green_starbase_approach, false) and
+                      GreenStarbaseSafety.inside?(position)) do
               updated = %{entry | position: position, attitude: attitude}
               if map_id == FreeFlightRegion.map_id(player_id) and
                    Map.get(position_data, "docked") == true and

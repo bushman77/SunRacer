@@ -1464,8 +1464,27 @@ defmodule Core.World.MapServer do
     next_tick = state.tick + 1
     distance_factor = state.tick_ms / 1_000
     old_green_active = state.green_starbase_active?
+    previously_checked = not is_nil(state.green_starbase_checked_tick)
     # Ask Navigation at most once per second, not every physics tick.
     state = refresh_green_starbase_presence(state, next_tick)
+
+    # Strategic arrival can reuse the exact same private map as cruise.
+    # Its previous local combat pose has no relationship to the new station.
+    # On a real inactive -> active transition, start at the aligned bay
+    # approach rather than materializing the station around the ship.
+    state =
+      if previously_checked and not old_green_active and state.green_starbase_active? do
+        entities = Map.new(state.entities, fn {id, ship} ->
+          if Combat.alive?(ship) and not ship.docked do
+            {id, GreenStarbaseSafety.safe_arrival(ship)}
+          else
+            {id, ship}
+          end
+        end)
+        %{state | entities: entities}
+      else
+        state
+      end
 
     # Apply one authoritative swept planet test after either manual thrust
     # OR plotted autopilot movement. Even a single fast tick that enters and

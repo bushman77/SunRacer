@@ -193,6 +193,25 @@ defmodule Sunracer.PilotLocationTest do
     assert after_launch.position == launch
   end
 
+  test "a legacy pose embedded in Green Starbase is not restored" do
+    account = player_account_fixture()
+    {:ok, ship} = Fleet.get_active_ship(account.id)
+    site = Core.Universe.GreenStarbase.local_site()
+    point = Core.Universe.GreenStarbase.position_km()
+    voyage = %{idle_at("earth") |
+      location_id: nil, origin_id: nil, arrival_origin_id: nil,
+      position_km: point, origin_position_km: point, voyage_number: 51}
+    assert :ok = PilotLocation.save_navigation(account.id, Navigation.Checkpoint.dump(voyage))
+    {:ok, entry} = Core.Universe.FreeFlightRegion.entry(account.id, voyage)
+    report = %{ship_instance_id: ship.id, position: entry.position, attitude: entry.attitude}
+    assert :ok = PilotLocation.save_pose(account.id, entry.map_id, voyage, report)
+
+    checkpoint = Repo.get_by!(Checkpoint, player_id: account.id)
+    embedded = %{"x" => site.x, "y" => site.y, "z" => site.z + 500.0}
+    checkpoint |> Ecto.Changeset.change(pose_position: embedded) |> Repo.update!()
+    assert PilotLocation.restore_entry(account.id, ship.id, entry, 51) == entry
+  end
+
   test "persisted navigation is keyed by pilot and retains transit checkpoints" do
     one = player_account_fixture()
     two = player_account_fixture()

@@ -48,12 +48,14 @@ defmodule Core.Universe.FreeFlightRegion do
 
   def entry(player_id, %{status: :idle, location_id: nil, position_km: position} = voyage)
       when is_integer(player_id) and player_id > 0 and is_map(position) do
-    # The station is physically south (+Y in game coordinates) of the normal
-    # private-map spawn. Face it on initial arrival, but preserve any
-    # previously saved pilot attitude through the existing restore layer.
-    yaw = if GreenStarbase.nearby?(voyage), do: :math.pi(), else: 0.0
-    {:ok, %{map_id: map_id(player_id), position: definition(player_id).spawn,
-      attitude: %{yaw: yaw, pitch: 0.0, roll: 0.0}}}
+    if GreenStarbase.nearby?(voyage) do
+      {:ok, %{map_id: map_id(player_id),
+        position: struct!(Position, GreenStarbase.approach_position()),
+        attitude: GreenStarbase.approach_attitude(), green_starbase_approach: true}}
+    else
+      {:ok, %{map_id: map_id(player_id), position: definition(player_id).spawn,
+        attitude: %{yaw: 0.0, pitch: 0.0, roll: 0.0}}}
+    end
   end
 
   def entry(_player_id, _navigation), do: {:error, :free_flight_unavailable}

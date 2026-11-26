@@ -100,6 +100,22 @@ defmodule Core.World.GreenStarbaseImpactIntegrationTest do
     assert state.station_warnings |> Enum.any?(&(&1.station_id == GreenStarbase.id()))
   end
 
+  test "arrival in reused cruise map places ship outside station without collision damage", ctx do
+    session = connect!(ctx, at(28, 0, 0))
+    before = tick!(ctx, 1)
+    assert pilot(before).hull == ctx.stats.hit_points
+    near_starbase!()
+    after_arrival = tick!(ctx, 11)
+    ship = pilot(after_arrival)
+    approach = GreenStarbase.approach_position()
+    assert_in_delta ship.position_3d.x, approach.x, 0.01
+    assert_in_delta ship.position_3d.y, approach.y, 0.01
+    assert_in_delta ship.position_3d.z, approach.z, 0.01
+    assert ship.hull == ctx.stats.hit_points
+    refute_receive {_, :station_collision, _}
+    assert {:ok, _} = World.move(session.id, Map.from_struct(at(0, 0, -10)), ctx.opts)
+  end
+
   test "a true open central approach remains clear and rear wall stops the ship", ctx do
     near_starbase!()
     session = connect!(ctx, at(0, 0, -45))

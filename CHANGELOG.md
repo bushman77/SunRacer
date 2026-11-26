@@ -1,3 +1,7 @@
+## 2026-11-26 — Green Starbase safe arrival
+
+- Reused cruise-to-station maps now reset the living undocked ship to a server-owned approach 2,000 local units from the hub, aligned with the open bay. An already embedded pose is recovered without additional damage; valid swept wall impacts retain damage and stopping behavior. Reject unsafe saved station poses while retaining valid docking checkpoints. Added pure, map transition and persistence regressions. No hull repair, quest reset, docking bypass or client change. Full compilation and live verification pending.
+
 ## 2026-11-26 — First Run orphaned rescue recovery
 
 - Reconcile stage 6 at authenticated join and verified respawn only, using a fresh server navigation snapshot and checking for pending tactical cleanup. Missing tactical and pending encounters return to stage 5, preserve earlier flags and cargo, and rearm on a new voyage. Ordinary navigation broadcasts cannot reset a fight mid-settlement. No DB reset or new client command. Added pure and channel regression coverage; compilation and live retry pending. A lost surrender with no durable story result must be replayed, not granted automatically.
