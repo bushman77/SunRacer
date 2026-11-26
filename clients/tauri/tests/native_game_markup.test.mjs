@@ -120,3 +120,11 @@ test("installed ship readout contains only essential flight instruments",()=>{
   assert.doesNotMatch(panel,/id="(?:hud-pilot|hud-ship|hud-config|hud-equipment|hud-coordinates|ship-status-hide|ship-status-collapse)"/)
   assert.doesNotMatch(panel,/<button/)
 })
+
+test("installed global chat is a closed disclosure with bounded text input",()=>{
+  for(const id of ["global-chat-toggle","global-chat-panel","global-chat-log","global-chat-form","global-chat-input","global-chat-send"]){
+    assert.equal((document.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
+  }
+  assert.match(document,/id="global-chat-panel" hidden/)
+  assert.match(document,/id="global-chat-input"[^>]*maxlength="280"/)
+})

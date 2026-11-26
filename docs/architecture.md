@@ -394,3 +394,7 @@ Green Starbase approach no longer displays a redundant manual docking popup. The
 The cockpit ship_status window is a compact hull/shield/actual velocity readout. The full readout acts as the unlocked drag handle, and the existing visibility menu remains authoritative for local HUD layout. Previously saved collapsed states are normalized without resetting placement or minimap preferences.
 
 The Orrery caches miniature models by contact ID/class/colour, reusing shared player, Scow and Dart geometry. Map course bearings and bounded visual scaling affect presentation only. The free waypoint is a yellow navigation peg; existing route coordinates and click/hail callbacks remain unchanged.
+
+### Global pilot communications
+
+The pilot socket joins chat:global independently of world:* and subscribes across region handoffs. GlobalChatChannel derives sender identity from verified socket assigns and uses a supervised, node-local ChatLimiter. Messages broadcast only to connected subscribers; no persistence or gameplay authority. The shared desktop HUD retains a bounded text-only log; chat keyboard capture precedes flight handlers and existing release methods clear held input. The phone and SBS view are excluded. Two-client acceptance and moderation features remain outstanding.

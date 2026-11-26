@@ -1,6 +1,7 @@
 import {Socket} from "phoenix"
 import * as THREE from "three"
 import {SolarOrrery} from "./solar_orrery.mjs"
+import {GlobalChat} from "./global_chat.mjs"
 import {
   applyAuthoritativeDamage,
   entityKey,
@@ -206,6 +207,9 @@ class SpaceClient {
       return
     }
 
+    for (const type of ["keydown", "keyup"]) {
+      window.addEventListener(type, event => this.globalChat?.captureKey(event), true)
+    }
     this.cockpit = new CockpitWindowManager({
       root: this.root.querySelector("#cockpit-interface"),
       playerId: this.root.dataset.layoutPlayerId,
@@ -221,14 +225,14 @@ class SpaceClient {
     this.stationWalking = new StationWalkingControls({
       active: () => this.docked && !this.navComputer?.isOpen &&
         !this.stationNpcDialogOpen && !this.dispatchOfferOpen &&
-        !this.inventoryPanel?.opened &&
+        !this.inventoryPanel?.opened && !this.globalChat?.editing &&
         this.channel?.state === "joined",
       canvas: this.canvas,
       sendWalk: input => this.channel?.push("station_walk", input),
       sendLook: input => this.channel?.push("station_look", input),
     }).start()
     this.flightControls = new FlightControls({
-      active: () => this.flightInputState() === "ready",
+      active: () => this.flightInputState() === "ready" && !this.globalChat?.editing,
       send: input => this.sendFlightControls(input),
     })
     this.setupMouseSteering()
@@ -570,6 +574,21 @@ class SpaceClient {
     this.socket.onError(() => this.setConnection("Relay interrupted", "error"))
     this.socket.onClose(() => this.setConnection("Relay offline", "error"))
     this.socket.connect()
+    this.globalChat = new GlobalChat({
+      root: this.root, socket: this.socket,
+      canOpen: () => !this.solarEncounter && !this.dispatchOfferOpen &&
+        !this.stationNpcDialogOpen && !this.inventoryPanel?.opened &&
+        !this.outfittingPanel?.opened && !this.tradePanel?.opened &&
+        !this.respawnPending && this.displayMode !== "sbs",
+      releaseInput: () => {
+        this.stationWalking?.release()
+        this.flightControls?.release()
+        this.exitMouseSteering()
+        this.helmetAlignmentKeys?.release()
+        this.manualLaserPointerHeld = false
+        this.spaceLaser?.release()
+      },
+    }).start()
     this.helmet = new HelmetControl({
       root: this.root,
       socket: this.socket,
@@ -2263,6 +2282,7 @@ class SpaceClient {
     // Suppress only laptop WebGL draws. Input, world prediction, physics
     // commands, LAN relay and the RAF simulation heartbeat keep running.
     this.syncDesktopVrOnly()
+    this.globalChat?.syncAvailability()
     this.interpolate(deltaSeconds)
     // Publish the same locally predicted cockpit pose that desktop draws.
     // Only the authenticated Rust LAN link receives it; Phoenix never does.

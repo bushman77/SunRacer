@@ -11,6 +11,7 @@ defmodule SunracerWeb.Application do
       SunracerWeb.Telemetry,
       SunracerWeb.HelmetManager,
       SunracerWeb.NativeLoginLimiter,
+      SunracerWeb.ChatLimiter,
       # Start a worker by calling: SunracerWeb.Worker.start_link(arg)
       # {SunracerWeb.Worker, arg},
       # Start to serve requests, typically the last entry

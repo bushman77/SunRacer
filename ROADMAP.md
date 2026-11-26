@@ -1,3 +1,9 @@
+## 2026-11-25 — Global pilot communications v1
+
+- Added an authenticated, region-independent Phoenix chat:global channel on the existing socket. Sender names come from verified socket assigns; only pilot credentials may join. Single-line 280-character/1120-byte cap, control-character rejection, four messages per rolling ten seconds per pilot on the server node, no DB migration. Text is rendered literally. No server history or offline delivery; each client retains at most 100 received messages in memory.
+- Shared desktop/browser collapsible midnight-blue chat, unread count and connection status. Keyboard capture and release of held movement/manual weapon inputs on focus prevent chat typing from becoming flight commands; hidden during blocking interactions and SBS rendering. No phone chat, private messaging, moderation/reporting, or cluster-wide rate limit in v1. Requires updated server as well as client; no EC2 deployment or release bump.
+- Added channel, JS and native markup regression tests. Full compilation, mix precommit and two-pilot installed-client acceptance pending.
+
 ## 2026-11-25 — Orrery miniature spacecraft and destination beacon
 
 - Reused the current player exterior mesh via shared sunracer_model.mjs; Scow and Dart strategic contacts use their existing geometry selected from authoritative ship_class. Neutral ships are silver, own ship cyan, hostiles red. Free waypoint is a yellow peg with a matching ring/label. Models remain schematic; course-aligned bearings are visual only. Cached miniature groups are resized to bounded screen size and disposed on departure; ray picking traverses their child meshes. Unknown contacts retain a generic marker. No transport, server, physics, or SBS changes.

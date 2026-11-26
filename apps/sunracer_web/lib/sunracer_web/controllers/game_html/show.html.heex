@@ -1188,6 +1188,31 @@
     W/S pitch · A/D yaw · optional mouse-look (Atlas setting) · Ctrl+wheel roll · wheel throttle · Q/E roll · RMB laser · T target · M atlas
   </div>
 
+  <%!-- Global radio is independent of the current tactical/strategic view. --%>
+  <div id="global-chat" class="global-chat">
+    <button id="global-chat-toggle" type="button" aria-expanded="false"
+            aria-controls="global-chat-panel" class="global-chat-toggle">
+      <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+           stroke-width="1.6" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 4h16v12H9l-5 4zM8 8h8M8 12h5" />
+      </svg>
+      GLOBAL <span id="global-chat-unread" hidden></span>
+    </button>
+    <section id="global-chat-panel" hidden class="global-chat-panel" aria-label="Global chat">
+      <header class="global-chat-header">
+        <span>GLOBAL COMMS</span>
+        <button id="global-chat-close" type="button" aria-label="Close global chat">×</button>
+      </header>
+      <div id="global-chat-log" role="log" aria-label="Global messages" aria-live="polite" tabindex="0"></div>
+      <p id="global-chat-status" role="status">Connecting…</p>
+      <form id="global-chat-form">
+        <input id="global-chat-input" type="text" aria-label="Global message" placeholder="Transmit message…"
+               maxlength="280" autocomplete="off" />
+        <button id="global-chat-send" type="submit" disabled>Send</button>
+      </form>
+    </section>
+  </div>
+
   <div
     id="game-error"
     class="pointer-events-none absolute left-1/2 top-24 z-[70] hidden -translate-x-1/2 rounded-xl border border-rose-400/25 bg-rose-950/85 px-5 py-3 text-sm text-rose-100 shadow-xl backdrop-blur"

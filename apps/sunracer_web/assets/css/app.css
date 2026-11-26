@@ -2133,3 +2133,23 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 /* Orrery navigation beacons and contacts have distinct semantic colours. */
 .orrery-label[data-kind="waypoint"] {color:#ffdb57;}
 .orrery-label[data-kind="contact"][data-hostile="true"] {color:var(--nova-hostile,#fb7185);}
+/* One compact communications disclosure shared by Atlas and desktop flight. */
+.global-chat {position:absolute;left:12px;bottom:6.1rem;z-index:95;font: .75rem/1.4 ui-monospace,monospace;color:#d9e5f2;}
+.global-chat [hidden] {display:none!important;}
+.global-chat-toggle {display:flex;align-items:center;gap:.4rem;padding:.35rem .55rem;background:#030914d9;border:1px solid #347d9d;border-radius:.3rem;color:#a5e7f5;letter-spacing:.06em;cursor:pointer;}
+.global-chat-toggle:hover,.global-chat-toggle[aria-expanded="true"] {border-color:#23dfff;color:#23dfff;}
+#global-chat-unread {background:#0c2544;color:#23dfff;padding:0 .25rem;border-radius:.2rem;}
+.global-chat-panel {position:absolute;bottom:calc(100% + .4rem);left:0;width:min(24rem,calc(100vw - 24px));background:rgb(3 9 20 / 92%);border:1px solid #347d9d;border-radius:.4rem;box-shadow:0 8px 24px #0008;padding:.55rem;backdrop-filter:blur(5px);}
+.global-chat-header {display:flex;justify-content:space-between;align-items:center;color:#a5e7f5;letter-spacing:.12em;border-bottom:1px solid #25495c;padding-bottom:.35rem;}
+.global-chat-header button {padding:0 .4rem;font-size:1.2rem;cursor:pointer;}
+#global-chat-log {height:min(11rem,26vh);overflow:auto;padding:.4rem 0;overscroll-behavior:contain;}
+.global-chat-message {display:flex;flex-wrap:wrap;gap:.1rem .5rem;padding:.2rem 0;overflow-wrap:anywhere;white-space:pre-wrap;}
+.global-chat-message strong {color:#67e8f9;max-width:100%;}
+.global-chat-message span {min-width:0;max-width:100%;}
+#global-chat-status {color:#a4bdcc;font-size:.62rem;margin:.3rem 0;}
+#global-chat-form {display:flex;gap:.35rem;}
+#global-chat-input {flex:1;min-width:0;border:1px solid #28596d;background:#091827;border-radius:.25rem;padding:.45rem;color:#edf7ff;}
+#global-chat-send {border:1px solid #347d9d;border-radius:.25rem;background:#0c2544;padding:.4rem .65rem;color:#a5e7f5;cursor:pointer;}
+#global-chat-send:disabled {opacity:.45;cursor:default;}
+.global-chat button:focus-visible,#global-chat-input:focus-visible,#global-chat-log:focus-visible {outline:1px solid #23dfff;outline-offset:1px;}
+#game-client[data-display-mode="sbs"] #global-chat {display:none;}
