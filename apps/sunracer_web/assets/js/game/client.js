@@ -67,7 +67,7 @@ import {nearestStationAttendant} from "./station_attendants.mjs"
 import {StationOutfittingPanel} from "./station_outfitting_panel.mjs"
 import {StationTradePanel} from "./station_trade_panel.mjs"
 import {validOrbitalMapId, shouldEnterOrbitalRegion} from "./orbital_regions.mjs"
-import {tacticalEncounterAction} from "./solar_encounter_actions.mjs"
+import {tacticalEncounterAction, encounterContinueLabel} from "./solar_encounter_actions.mjs"
 
 const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), maximum)
 const validDestination = (destination, boundaries) =>
@@ -133,6 +133,7 @@ class SpaceClient {
     this.stationWarningLevel = "clear"
     this.solarEncounter = null
     this.encounterDisplayedId = null
+    this.hailedEncounterId = null
     this.encounterResolving = false
     this.tacticalRetreating = false
     this.player = null
@@ -370,8 +371,10 @@ class SpaceClient {
             communication.transcript.length
             ? communication.transcript.map(line => line.speaker + ": " + line.text).join("\n\n")
             : String(communication.message || "Communications established.")
+          this.hailedEncounterId = encounter.id
           this.encounterMessage(transcript +
             (manifest ? "\nManifest: " + manifest : ""))
+          this.showSolarEncounter()
         })
       } else if (choice === "engage") {
         this.encounterResolving = true
@@ -1400,6 +1403,7 @@ class SpaceClient {
     const nextId = typeof encounter?.id === "string" ? encounter.id : null
     if (nextId !== this.encounterDisplayedId) {
       this.encounterDisplayedId = nextId
+      this.hailedEncounterId = null
       this.encounterResolving = false
       if (nextId) {
         const description = encounter.classification === "hostile_contact"
@@ -1455,6 +1459,8 @@ class SpaceClient {
       if (button.dataset.encounterAction === "engage") {
         button.hidden = !tacticalAction.visible
         button.textContent = tacticalAction.label
+      } else if (button.dataset.encounterAction === "continue") {
+        button.textContent = encounterContinueLabel(encounter.id, this.hailedEncounterId)
       }
       button.disabled = this.encounterResolving
     }

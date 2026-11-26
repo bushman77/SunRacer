@@ -84,7 +84,7 @@ all nine beats have been human-play-tested.
 - [ ] Complete throttle and steering checks. One Ross objective advances.
 - [ ] Open Ross's NPC comms; decline the contract once. Verify step 2 and zero new medical crates. Contact him again and accept.
 - [ ] Verify the hold contains exactly three medical crates. Repeated acceptance must not grant more.
-- [ ] Plot Mars in Atlas. Hail Vesper-02. Read the warning transcript.
+- [ ] Plot Mars in Atlas. Hail Vesper-02. Read the warning transcript. Verify the continue button changes from "Ignore / Resume course" to "Resume course" only after a successful hail, then resume. A new encounter resets the wording.
 - [ ] On the distress call, engage the private Corsair-17. Hail to hear its threat if desired.
 - [ ] Damage Corsair to its 50% surrender threshold. Verify the plea appears once while the enemy is in surrendered state.
 - [ ] Accept surrender; choose whether to seize freight only if capacity allows. Verify rescue success irrespective of optional cargo.

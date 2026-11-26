@@ -1,3 +1,7 @@
+## 2026-11-26 — Encounter continuation wording
+
+- After a successful hail, both encounter panels show "Resume course" instead of "Ignore / Resume course". Hail status is local to the displayed encounter and resets when it changes or closes; failed hails do not mark a new encounter as hailed. No navigation commands, encounter permissions, story logic or server payloads changed. Added focused label regression coverage and updated the First Run manual checklist. Automated execution and installed-client verification pending.
+
 ## 2026-11-26 — Shared SpaceNova account theme
 
 - Login, registration, success, verification, resend and both password recovery views now use one `Layouts.auth` component, the existing SpaceNova title artwork, wordmark and palette. Preserve existing form IDs, routes, authentication, registration gates and token handling; browser title/description now match public branding. Internal Sunracer namespaces, deployment, ship name and mail transport are unchanged. Added controller markup regression coverage; source reviewed, compilation, Mix precommit, controller tests and desktop/mobile visual checks pending.
