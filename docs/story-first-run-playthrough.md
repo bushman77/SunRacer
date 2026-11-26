@@ -100,3 +100,8 @@ The SOL workflow runs the pure story, persistence, authenticated world-channel,
 private-contact, cockpit radio and scene tests before broader helmet tests.
 A full manual run remains necessary for in-cockpit readability, timing,
 headset comfort and the end-to-end combat difficulty of the Corsair encounter.
+
+## 2026-11-26 — First Run orphaned rescue recovery
+
+- Reconcile stage 6 at authenticated join and verified respawn only, using a fresh server navigation snapshot and checking for pending tactical cleanup. Missing tactical and pending encounters return to stage 5, preserve earlier flags and cargo, and rearm on a new voyage. Ordinary navigation broadcasts cannot reset a fight mid-settlement. No DB reset or new client command. Added pure and channel regression coverage; compilation and live retry pending. A lost surrender with no durable story result must be replayed, not granted automatically.
+

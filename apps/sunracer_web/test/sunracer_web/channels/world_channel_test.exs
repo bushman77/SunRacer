@@ -1517,6 +1517,31 @@ defmodule SunracerWeb.WorldChannelTest do
     assert %{step: 5} = Sunracer.Story.snapshot(account.id)
   end
 
+  test "joining with orphaned First Run stage six restores the rescue objective" do
+    account = verified_player_account_fixture()
+    id = account.id
+    # Seed only the durable story state to emulate a lost runtime encounter.
+    # The actual authenticated channel join must perform reconciliation.
+    for event <- [
+      {:flight_controls, %{throttle: true, rotation: true}},
+      :accept_consignment,
+      {:navigation, %{status: :traveling, destination_id: "mars"}},
+      {:hail, Core.Universe.StoryTraffic.contact_id(id, :vesper_pass)},
+      {:tactical_started, Core.Universe.StoryTraffic.contact_id(id, :corsair_raid)}
+    ] do
+      assert {:ok, _} = Sunracer.Story.record(id, event)
+    end
+
+    assert %{step: 6} = Sunracer.Story.snapshot(id)
+    {:ok, auth} = authenticated_socket(account)
+    {:ok, _response, _cockpit} = subscribe_and_join(auth, WorldChannel, "world:1-1")
+    assert_push "story_updated", %{step: 5,
+      prompt: %{objective: "Cruise past the Green Starbase to retry the rescue"}}
+    assert %{step: 5, flags: %{"rescue_failed" => "encounter_lost"}} =
+      Sunracer.Story.progress(id)
+    assert Map.get(Sunracer.Inventory.cargo_manifest(id), "medical_supplies") == 3
+  end
+
   defp tick_until_story_hold(solar, player_id, contact_id, remaining \\ 400)
 
   defp tick_until_story_hold(_solar, _player_id, contact_id, 0),

@@ -1,3 +1,7 @@
+## 2026-11-26 — First Run orphaned rescue recovery
+
+- Reconcile stage 6 at authenticated join and verified respawn only, using a fresh server navigation snapshot and checking for pending tactical cleanup. Missing tactical and pending encounters return to stage 5, preserve earlier flags and cargo, and rearm on a new voyage. Ordinary navigation broadcasts cannot reset a fight mid-settlement. No DB reset or new client command. Added pure and channel regression coverage; compilation and live retry pending. A lost surrender with no durable story result must be replayed, not granted automatically.
+
 ## 2026-11-26 — Cockpit pointer ownership
 
 - Unified dashboard and mouse-capture pointer routing: unlocked physical dashboard clicks (including blank instrument surface) consume the event before steering capture, target selection or weapon handling. Escape or middle-click releases captured steering; clicking outside the dashboard resumes it. Pending native fallback requests are invalidated on release to prevent delayed recapture. Saved steering preference, throttle, keyboard flight and server authority unchanged. Added source-level routing regression coverage; packaged WebKit/desktop visual acceptance and full test suite pending.

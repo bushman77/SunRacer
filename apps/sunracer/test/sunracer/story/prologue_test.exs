@@ -112,6 +112,31 @@ defmodule Sunracer.Story.PrologueTest do
              Prologue.apply(fighting, {:tactical_finished, @corsair, :surrender, 2})
   end
 
+  test "orphaned rescue recovers only at a lifecycle reconciliation" do
+    p = at(6, %{"consignment" => true, "varga_hailed" => true})
+    lost = nav(%{status: :idle, voyage_number: 4})
+    assert :ignore = Prologue.apply(p, {:navigation, lost})
+    assert :ignore = Prologue.apply(p, {:rescue_recovery,
+      %{lost | tactical_encounter: %{id: @corsair}}})
+    assert :ignore = Prologue.apply(p, {:rescue_recovery,
+      %{lost | pending_encounter: %{id: @corsair}}})
+    assert :ignore = Prologue.apply(p, {:rescue_recovery, %{voyage_number: 4}})
+
+    assert {:ok, %{step: 5, flags: flags} = recovered, [:clear_story_contacts]} =
+      Prologue.apply(p, {:rescue_recovery, lost})
+    assert flags["rescue_failed"] == "encounter_lost"
+    assert flags["rescue_failed_voyage"] == 4
+    assert flags["consignment"] and flags["varga_hailed"]
+    assert :ignore = Prologue.apply(recovered, {:rescue_recovery, lost})
+    assert :ignore = Prologue.apply(at(7, %{"data_chip" => true}), {:rescue_recovery, lost})
+    assert :ignore = Prologue.apply(%{p | skipped: true}, {:rescue_recovery, lost})
+
+    near = nav(%{position_km: GreenStarbase.position_km(), voyage_number: 4})
+    assert :ignore = Prologue.apply(recovered, {:navigation, near})
+    assert {:ok, _, [{:stage, :corsair_raid}]} =
+      Prologue.apply(recovered, {:navigation, %{near | voyage_number: 5}})
+  end
+
   test "docking, then both station conversations; Mara patches the hull once" do
     assert {:ok, %{step: 8} = docked, []} =
       Prologue.apply(at(7, %{"data_chip" => true}), :docked_starbase)

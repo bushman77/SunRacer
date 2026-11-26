@@ -731,6 +731,24 @@ defmodule SunracerWeb.WorldChannel do
   end
 
   def handle_info({:story_join_check, navigation}, socket) do
+    # Join occurs after prepared departure recovery. Reconcile orphaned
+    # story combat before applying ordinary navigation/docking checks.
+    socket =
+      if match?(%{step: 6, skipped: false}, socket.assigns[:story_progress]) do
+        case World.recover_story_encounter(socket.assigns.world_session_id) do
+          {:ok, %{progress: progress}} -> assign(socket, :story_progress, progress)
+          _ -> socket
+        end
+      else
+        socket
+      end
+
+    navigation =
+      case World.solar_snapshot(socket.assigns.world_session_id) do
+        {:ok, fresh} -> fresh
+        _ -> navigation
+      end
+
     socket = story_navigation(socket, navigation)
 
     socket =

@@ -158,6 +158,16 @@ defmodule Sunracer.Story.Prologue do
     end
   end
 
+  # Reconnect/respawn reconciliation is a separate server-only event. A
+  # normal navigation broadcast can precede tactical settlement, so it
+  # must never be used as evidence that an encounter was lost.
+  def apply(%{step: 6} = progress,
+            {:rescue_recovery, %{tactical_encounter: nil, pending_encounter: nil,
+              voyage_number: voyage}}, _facts)
+      when is_integer(voyage) and voyage >= 0 do
+    rescue_failed(progress, voyage, "encounter_lost")
+  end
+
   def apply(%{step: 7} = progress, :docked_starbase, _facts),
     do: {:ok, advance(progress, 8, progress.flags), []}
 

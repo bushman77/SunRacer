@@ -378,6 +378,23 @@ defmodule Sunracer.World do
   Report a server-confirmed event to the story engine on behalf of the
   authenticated session. Story failures never fail the underlying action.
   """
+  @doc """
+  Recover an orphaned First Run rescue at a session lifecycle boundary only.
+  Read the current authoritative navigation and ensure no map settlement
+  is awaiting cleanup. Do not infer failure from a queued navigation event.
+  """
+  def recover_story_encounter(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         %{step: 6, skipped: false} <- Story.progress(session.player_id),
+         {:ok, nil} <- Simulation.pending_tactical_cleanup(session_id),
+         {:ok, %{tactical_encounter: nil, pending_encounter: nil} = navigation} <-
+           Simulation.solar_snapshot(session_id) do
+      story_record(session.player_id, {:rescue_recovery, navigation}, session_id)
+    else
+      _ -> :ignored
+    end
+  end
+
   def story_event(session_id, event) do
     case SessionManager.fetch(SessionManager, session_id) do
       {:ok, session} -> story_record(session.player_id, event, session_id)
@@ -537,6 +554,7 @@ defmodule Sunracer.World do
          {:ok, stats} <- ShipStats.calculate(session.player_id,
            session.ship_instance_id, active_configuration(session.player_id)),
          :ok <- settle_respawn_encounter(session_id),
+         :ok <- reconcile_respawn_story(session_id),
          :ok <- ShipCondition.save_verified(session.player_id,
            session.ship_instance_id, report.combat),
          {:ok, _navigation} <- SolarNavigation.respawn_at_earth(server, session.player_id),
@@ -548,6 +566,13 @@ defmodule Sunracer.World do
     else
       :error -> {:error, :session_not_found}
       {:error, _} = error -> error
+    end
+  end
+
+  defp reconcile_respawn_story(session_id) do
+    case recover_story_encounter(session_id) do
+      {:error, _} = error -> error
+      _ -> :ok
     end
   end
 
