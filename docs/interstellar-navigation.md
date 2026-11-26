@@ -13,8 +13,7 @@ travel endpoint is added by this milestone.
 * Tactical maps remain independent local XYZ simulation regions.
 * Interstellar routes are paired wormhole mouth IDs, not a straight line
   drawn between unrelated system coordinates.
-* The provisional development graph is SOL ↔ Aster Reach ↔ Nacre. Names,
-  planets and mouth positions are editable proposals, not final story canon.
+* The provisional development graph is SOL ↔ Alpha Centauri ↔ Tau Ceti. Links and mouth positions are fictional proposals; real stellar names are retained. Expansion systems have no playable planets.
 * The existing SOL catalogue and its coordinates are unchanged.
 
 ## Intended physical transit

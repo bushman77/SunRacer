@@ -396,6 +396,41 @@
   <section id="navigation-computer" class="navigation-computer" role="dialog" aria-modal="true" aria-labelledby="nav-title">
     <div class="nav-shell atlas-hud-shell">
       <%!-- The map is the viewport. All instruments overlay it rather than taking grid space. --%>
+      <section id="nav-galaxy-view" role="tabpanel" aria-labelledby="nav-view-galaxy" hidden>
+        <div class="galaxy-map-frame">
+          <svg id="nav-galaxy-chart" viewBox="0 0 1000 600" role="group" aria-label="Schematic Milky Way galaxy with selectable star systems">
+            <g id="nav-galaxy-art"></g>
+            <g id="nav-galaxy-stars"></g>
+          </svg>
+          <div class="galaxy-caption">
+            <h3>THE MILKY WAY</h3>
+            <p>Barred spiral galaxy · ~100,000 ly across</p>
+            <p>Orion Spur · SOL ~26,000 ly from core</p>
+            <small>SCHEMATIC STAR MARKERS · NOT TO SCALE</small>
+          </div>
+          <div class="galaxy-legend">
+            <p><i class="galaxy-current"></i> Current system</p>
+            <p><i></i> Charted system · locked</p>
+          </div>
+          <div class="galaxy-zoom">
+            <button id="nav-galaxy-zoom-in" type="button" aria-label="Zoom galaxy in">+</button>
+            <button id="nav-galaxy-zoom-out" type="button" aria-label="Zoom galaxy out">−</button>
+            <button id="nav-galaxy-reset" type="button">Reset</button>
+          </div>
+        </div>
+        <aside class="galaxy-console">
+          <p class="nav-eyebrow">GALACTIC COMPUTER / NAV-02</p>
+          <h3 id="nav-galaxy-name">SOL</h3>
+          <dl class="nav-metrics">
+            <div><dt>STATUS</dt><dd id="nav-galaxy-status">Synchronizing</dd></div>
+            <div><dt>DISTANCE FROM SOL</dt><dd id="nav-galaxy-distance">—</dd></div>
+            <div><dt>CHARTED SYSTEMS</dt><dd id="nav-galaxy-count">—</dd></div>
+          </dl>
+          <p id="nav-galaxy-description">Choose a star to inspect its expansion status.</p>
+          <button id="nav-galaxy-enter" type="button" class="nav-button" disabled>Enter solar system</button>
+          <p class="galaxy-lock-note">Wormhole travel requires future campaign unlocks. Map selection never changes propulsion.</p>
+        </aside>
+      </section>
       <section id="nav-solar-view" class="solar-atlas-layout" role="tabpanel"
         aria-labelledby="nav-view-system">
         <div class="solar-atlas-frame">
@@ -618,13 +653,17 @@
         <h2 id="nav-title">Solar System Atlas</h2>
         <p id="nav-subtitle" class="sr-only">One star system · choose a planet or chart waypoint; cockpit and propulsion are independent.</p>
         <div class="atlas-view-tabs" role="tablist" aria-label="Atlas navigation level">
+          <button id="nav-view-galaxy" class="atlas-view-tab" type="button"
+            role="tab" aria-selected="false" aria-controls="nav-galaxy-view">
+            <.icon name="hero-globe-alt" class="inline size-4" /> Galaxy
+          </button>
           <button id="nav-view-system" class="atlas-view-tab is-active" type="button"
             role="tab" aria-selected="true" aria-controls="nav-solar-view">
-            <.icon name="hero-globe-alt" class="inline size-4" /> Solar System
+            <.icon name="hero-globe-alt" class="inline size-4" /> Star System
           </button>
           <button id="nav-view-sector" class="atlas-view-tab" type="button"
             role="tab" aria-selected="false" aria-controls="nav-sector-view">
-            <.icon name="hero-map" class="inline size-4" /> Sector 1-1
+            <.icon name="hero-map" class="inline size-4" /> Local Space
           </button>
         </div>
         <span id="atlas-connection-status" class="atlas-connection" data-state="connecting" role="status">Connecting</span>

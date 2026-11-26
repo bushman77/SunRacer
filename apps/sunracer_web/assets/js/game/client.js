@@ -1039,6 +1039,7 @@ class SpaceClient {
     this.volume = response.map.volume || this.volume
     this.worldTick = response.map.tick
     this.tickMs = response.map.tick_ms
+    this.navComputer?.setGalaxyCatalog(response.galaxy_catalog)
     this.navComputer?.setRegion(response.map.region_name, response.map.map_id)
     const minimap = this.root.querySelector("#minimap-title")
     if (minimap) minimap.textContent = response.map.region_name || "Sector Minimap"

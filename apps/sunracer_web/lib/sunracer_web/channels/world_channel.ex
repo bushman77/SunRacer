@@ -810,6 +810,7 @@ defmodule SunracerWeb.WorldChannel do
         response = %{
           map: snapshot,
           solar_navigation: solar_navigation,
+          galaxy_catalog: Core.Universe.StarSystems.all(),
           player: status,
           hotbar: World.action_hotbar(),
           pilots: World.player_summaries(player_ids),

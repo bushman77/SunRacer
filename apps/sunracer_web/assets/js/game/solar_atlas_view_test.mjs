@@ -17,6 +17,7 @@ const fakeRoot=()=>{
     return node
   }
   for(const id of [
+    "#nav-galaxy-view","#nav-view-galaxy",
     "#nav-solar-view","#nav-sector-view","#nav-view-system",
     "#nav-view-sector","#nav-title","#nav-subtitle",
   ])element(id)
@@ -257,4 +258,20 @@ test("unmarked Atlas destination is transmitted as an actual SOL waypoint",()=>{
   nav.engageSolarCourse()
   assert.deepEqual(requests,[point])
   assert.equal(nodes.get("#nav-solar-route").textContent,"Earth → Free waypoint")
+})
+
+test("galaxy tab preserves local draft and solar selection",()=>{
+  const {nodes,root}=fakeRoot()
+  const nav=new NavigationComputer({root,getEntities:()=>new Map(),getSelfId:()=>null,
+    getBoundaries:()=>({width:20000,height:12000}),isConnected:()=>false,engage:()=>{},halt:()=>{}})
+  nav.draft=[{x:100,y:200,z:0}]
+  nav.setView("galaxy")
+  assert.equal(nodes.get("#nav-galaxy-view").hidden,false)
+  assert.equal(nodes.get("#nav-solar-view").hidden,true)
+  assert.equal(nodes.get("#nav-sector-view").hidden,true)
+  assert.equal(nodes.get("#nav-view-galaxy").attrs["aria-selected"],"true")
+  nav.setView("system")
+  assert.equal(nodes.get("#nav-galaxy-view").hidden,true)
+  assert.deepEqual(nav.draft,[{x:100,y:200,z:0}])
+  assert.equal(nav.solarSelection,"earth")
 })

@@ -5,25 +5,25 @@ defmodule Core.Universe.Wormholes do
   Pure topology only: resolving a paired mouth is not permission to jump.
   Live transit must separately enforce campaign unlocks, proximity, ship
   state and successful physical tunnel traversal before moving the pilot.
-  Coordinates and expansion names are provisional development content.
+  Mouth coordinates and links are fictional, provisional development content.
   """
 
   @links [
     %{
-      id: "sol_aster",
+      id: "sol_alpha",
       mouths: [
-        %{id: "sol_aster_mouth", system_id: "sol",
+        %{id: "sol_alpha_mouth", system_id: "sol",
           position_km: %{x: 80_000_000.0, y: 42_000_000.0, z: 0.0}},
-        %{id: "aster_sol_mouth", system_id: "aster_reach",
+        %{id: "alpha_sol_mouth", system_id: "alpha_centauri",
           position_km: %{x: -36_000_000.0, y: 18_000_000.0, z: 0.0}}
       ]
     },
     %{
-      id: "aster_nacre",
+      id: "alpha_tau",
       mouths: [
-        %{id: "aster_nacre_mouth", system_id: "aster_reach",
+        %{id: "alpha_tau_mouth", system_id: "alpha_centauri",
           position_km: %{x: 45_000_000.0, y: -25_000_000.0, z: 0.0}},
-        %{id: "nacre_aster_mouth", system_id: "nacre",
+        %{id: "tau_alpha_mouth", system_id: "tau_ceti",
           position_km: %{x: 25_000_000.0, y: -42_000_000.0, z: 0.0}}
       ]
     }

@@ -6,6 +6,7 @@ import {findSolarBody, SOLAR_FOCUSES, solarChartToPosition} from "./solar_system
 import {drawSolarAtlas, renderSolarDetails} from "./solar_atlas.mjs"
 import {solarMenuTarget,canNavigateSolar} from "./solar_context_menu.mjs"
 import {setupAtlasHudDrag} from "./atlas_hud_layout.mjs"
+import {GalaxyAtlas} from "./galaxy_atlas.mjs"
 
 const NS = "http://www.w3.org/2000/svg"
 const number = value => Math.round(value).toLocaleString("en-US")
@@ -73,6 +74,8 @@ export class NavigationComputer {
   }
 
   start() {
+    this.galaxy = new GalaxyAtlas(this.root, () => this.setView("system"))
+    this.root.querySelector("#nav-view-galaxy")?.addEventListener("click", () => this.setView("galaxy"))
     this.solarSvg = this.root.querySelector("#nav-solar-chart")
     this.orreryHost = this.root.querySelector("#nav-orrery")
     this.root.querySelector("#nav-orrery-mode")?.addEventListener("click",()=>this.setSolarPresentation("orrery"))
@@ -261,7 +264,10 @@ export class NavigationComputer {
     this.regionMapId = mapId || "1-1"
     this.draft = []
     const regionTab = this.root.querySelector("#nav-view-sector")
-    if (regionTab) regionTab.textContent = this.regionName
+    if (regionTab) {
+      regionTab.textContent = "Local Space"
+      regionTab.title = this.regionName
+    }
     const caption = this.root.querySelector("#nav-sector-view .nav-map-caption span")
     if (caption) caption.textContent = this.regionName.toUpperCase() + " // XY PROJECTION"
     const bounds = this.getBoundaries()
@@ -279,22 +285,33 @@ export class NavigationComputer {
     this.setView(this.view)
   }
 
+  setGalaxyCatalog(catalog) {
+    this.galaxy?.setCatalog(catalog)
+  }
+
   setView(view) {
-    if(view!=="system"&&view!=="sector")return
+    if(!["galaxy","system","sector"].includes(view))return
     this.closeSolarContextMenu()
     this.view=view
     const system=view==="system"
-    this.root.querySelector("#nav-solar-view").hidden=!system
-    this.root.querySelector("#nav-sector-view").hidden=system
+    for (const [mode, panel, tab] of [
+      ["galaxy", "#nav-galaxy-view", "#nav-view-galaxy"],
+      ["system", "#nav-solar-view", "#nav-view-system"],
+      ["sector", "#nav-sector-view", "#nav-view-sector"]
+    ]) {
+      const selected = view === mode
+      const section = this.root.querySelector(panel)
+      const button = this.root.querySelector(tab)
+      if(section)section.hidden = !selected
+      button?.setAttribute("aria-selected", String(selected))
+      button?.classList.toggle("is-active", selected)
+    }
     if(!system)this.orrery?.setActive(false)
-    this.root.querySelector("#nav-view-system").setAttribute("aria-selected",String(system))
-    this.root.querySelector("#nav-view-sector").setAttribute("aria-selected",String(!system))
-    this.root.querySelector("#nav-view-system").classList.toggle("is-active",system)
-    this.root.querySelector("#nav-view-sector").classList.toggle("is-active",!system)
     this.root.querySelector("#nav-title").textContent=system?
-      "Solar System Atlas":(this.regionName || "Sector 1-1") + " Navigation"
+      "Solar System Atlas":view==="galaxy"?"Galactic Atlas":(this.regionName || "Sector 1-1") + " Navigation"
     this.root.querySelector("#nav-subtitle").textContent=system?
       "Select planets or a free SOL waypoint; cockpit view does not change propulsion" :
+      view==="galaxy"?"Milky Way schematic · charted expansion systems · travel locked":
       "Local XY tactical chart · plot waypoints with independent Z altitude"
     if(this.isOpen&&system&&this.preferOrrery){this.preferOrrery=false;this.setSolarPresentation("orrery")}
     if(this.isOpen)this.draw(0,true)
@@ -867,6 +884,10 @@ export class NavigationComputer {
   draw(time, force = false) {
     if (!this.isOpen || (!force && time - this.lastDrawAt < 100)) return
     this.lastDrawAt = time
+    if(this.view==="galaxy"){
+      if(force)this.galaxy?.render()
+      return
+    }
     if(this.view==="system"){
       // No fake realtime planet positions; render only on explicit selection,
       // zoom or view changes. The live sector chart keeps refreshing normally.
