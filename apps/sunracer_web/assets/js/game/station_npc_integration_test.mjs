@@ -25,7 +25,7 @@ test("desktop NPC conversation is keyboard accessible and server authorized", ()
 })
 
 test("the paired SBS viewer renders the same server-owned kiosk staff without commands", () => {
-  assert.match(stereo, /this\.hangar\.update\(client\.stationPosition, time, client\.stationAttendants\)/)
+  assert.match(stereo, /this\.hangar\.update\(client\.stationPosition, time, client\.stationAttendants,\s*client\.stationPilots \|\| \[\], client\.selfId\)/)
   assert.match(helmet, /this\.stationAttendants = Array\.isArray\(map\.station_attendants\)/)
   assert.doesNotMatch(helmet, /channel\.push\("station_talk"/)
 })
