@@ -40,6 +40,7 @@ export class GlobalChat {
     this.ignored=new Set();this.lastTell=null;this.contextPilot=null
     this.online=false;this.directOnline=false;this.pending=false
     this.Presence=Presence;this.partyOnline=false;this.party=null;this.invitation=null;this.directory=[]
+    this.guildOnline=false;this.guild=null;this.guildInvitation=null
   }
 
   start() {
@@ -80,6 +81,24 @@ export class GlobalChat {
         if(this.invitation)this.partyAction(action,{invitation_id:this.invitation.id})
       })
     }
+    this.root.querySelector("#chat-context-guild-invite")?.addEventListener("click",()=>{
+      if(this.contextPilot)this.guildAction("invite",{pilot_name:this.contextPilot.name})
+      this.context.hidden=true
+    })
+    for(const [action,field,key] of [["create","name","name"],["invite","recipient","pilot_name"]]){
+      this.root.querySelector("#chat-guild-"+action)?.addEventListener("click",()=>{
+        const input=this.root.querySelector("#chat-guild-"+field)
+        if(input.value.trim())this.guildAction(action,{[key]:input.value.trim()},()=>{input.value=""})
+      })
+    }
+    this.root.querySelector("#chat-guild-leave")?.addEventListener("click",()=>{
+      if(this.guild&&confirm(this.guild.members.length===1&&this.guild.rank==="leader"?"Disband this guild permanently?":"Leave this guild?"))this.guildAction("leave",{})
+    })
+    for(const action of ["accept","decline"]){
+      this.root.querySelector("#chat-guild-"+action)?.addEventListener("click",()=>{
+        if(this.guildInvitation)this.guildAction(action,{invitation_id:this.guildInvitation.id})
+      })
+    }
     this.channel=this.socket.channel("chat:global",{})
     this.channel.on("chat_message",message=>this.append(message,"global"))
     this.channel.onError(()=>{this.online=false;this.refresh()})
@@ -110,8 +129,83 @@ export class GlobalChat {
     }
     this.partyChannel.join().receive("ok",snapshot=>{this.partyConnection(true);this.applyParty(snapshot)})
       .receive("error",()=>this.partyConnection(false)).receive("timeout",()=>this.partyConnection(false))
+    this.guildChannel=this.socket.channel("chat:guild",{})
+    this.guildChannel.on("guild_state",snapshot=>this.applyGuild(snapshot))
+    this.guildChannel.on("guild_message",message=>{
+      if(this.guildOnline&&this.guild&&message.guild_id===this.guild.id)this.append(message,"guild")
+    })
+    const guildOffline=()=>{this.guildOnline=false;this.renderGuild();this.refresh()}
+    this.guildChannel.onError(guildOffline)
+    this.guildChannel.onClose(guildOffline)
+    this.guildChannel.join().receive("ok",snapshot=>{this.guildOnline=true;this.applyGuild(snapshot)})
+      .receive("error",guildOffline).receive("timeout",guildOffline)
     this.refresh()
     return this
+  }
+
+  applyGuild(snapshot){
+    const next=snapshot?.guild||null
+    if(this.guild?.id!==next?.id){
+      this.history.guild=[];this.counts.guild=0
+      if(this.tab==="guild")this.renderHistory()
+    }
+    this.guild=next;this.guildInvitation=snapshot?.invitation||null
+    this.renderGuild();this.updateUnread();this.refresh()
+  }
+
+  renderGuild(){
+    const get=id=>this.root.querySelector(id)
+    const controls=get("#chat-guild-controls"),roster=get("#chat-guild-roster")
+    if(!controls||!roster)return
+    const guild=this.guild,leader=guild?.rank==="leader",recruiter=leader||guild?.rank==="officer"
+    controls.hidden=this.tab!=="guild"
+    get("#chat-guild-title").textContent=guild?guild.name+" · "+guild.rank+" · "+guild.members.length+"/50":"No guild membership"
+    get("#chat-guild-create-row").hidden=Boolean(guild)
+    get("#chat-guild-create").disabled=!this.guildOnline
+    get("#chat-guild-name").disabled=!this.guildOnline
+    get("#chat-guild-invite-row").hidden=!recruiter
+    get("#chat-guild-invite").disabled=!this.guildOnline
+    get("#chat-guild-recipient").disabled=!this.guildOnline
+    get("#chat-guild-leave").hidden=!guild
+    get("#chat-guild-leave").disabled=!this.guildOnline||(leader&&guild.members.length>1)
+    get("#chat-guild-leave").textContent=leader&&guild.members.length===1?"Disband":"Leave"
+    get("#chat-guild-invitation").hidden=!this.guildInvitation
+    get("#chat-guild-inviter").textContent=this.guildInvitation?this.guildInvitation.inviter_name+" invites you to "+this.guildInvitation.guild_name:""
+    for(const action of ["accept","decline"])get("#chat-guild-"+action).disabled=!this.guildOnline
+    roster.replaceChildren()
+    for(const pilot of guild?.members||[]){
+      const row=document.createElement("div"),name=document.createElement("button")
+      name.type="button";name.textContent=pilot.pilot_name+" · "+pilot.rank
+      name.addEventListener("click",()=>this.showContext(pilot,"guild"))
+      row.append(name)
+      const add=(label,event,payload,question=null)=>{
+        const button=document.createElement("button");button.type="button";button.textContent=label;button.disabled=!this.guildOnline
+        button.addEventListener("click",()=>{if(!question||confirm(question))this.guildAction(event,payload)})
+        row.append(button)
+      }
+      if(String(pilot.pilot_id)!==this.selfId&&pilot.rank!=="leader"){
+        if(leader){
+          add(pilot.rank==="officer"?"Demote":"Promote","rank",{pilot_id:pilot.pilot_id,rank:pilot.rank==="officer"?"member":"officer"})
+          add("Lead","transfer",{pilot_id:pilot.pilot_id},"Transfer guild leadership to "+pilot.pilot_name+"?")
+        }
+        if(leader||(recruiter&&pilot.rank==="member"))add("Remove","remove",{pilot_id:pilot.pilot_id},"Remove "+pilot.pilot_name+" from the guild?")
+      }
+      roster.append(row)
+    }
+  }
+
+  guildAction(event,payload,onOk=()=>{}){
+    if(!this.guildOnline||this.pending){this.refresh("Guild service unavailable");return}
+    this.pending=true;this.refresh()
+    const finish=label=>{this.pending=false;this.refresh(label)}
+    this.guildChannel.push(event,payload,5000)
+      .receive("ok",snapshot=>{this.applyGuild(snapshot);onOk();finish(event==="invite"?"Guild invitation sent":"Guild updated")})
+      .receive("error",r=>finish(({guild_name_taken:"Guild name taken",invalid_guild_name:"Use 3–32 letters, digits, spaces, _ or -",
+        guild_full:"Guild is full or seats are reserved",leader_required:"Only the guild leader can do that",
+        officer_required:"Officer or leader required",transfer_leadership_first:"Transfer leadership before leaving",
+        invitation_unavailable:"Invitation expired or unavailable",recipient_unavailable:"Pilot unavailable",
+        already_in_guild:"Already in a guild",rate_limited:"Slow down · 4 actions per 10 seconds"})[r.reason]||"Guild action rejected"))
+      .receive("timeout",()=>finish("Guild action unconfirmed"))
   }
 
   partyConnection(online){
@@ -184,10 +278,10 @@ export class GlobalChat {
       .receive("timeout",()=>finish("Party action unconfirmed"))
   }
 
-  ready(tab=this.tab) {return tab==="global"?this.online:tab==="tells"?this.directOnline:tab==="party"?this.partyOnline&&Boolean(this.party):false}
+  ready(tab=this.tab) {return tab==="global"?this.online:tab==="tells"?this.directOnline:tab==="party"?this.partyOnline&&Boolean(this.party):tab==="guild"?this.guildOnline&&Boolean(this.guild):false}
   refresh(label=null) {
     if(this.status)this.status.textContent=label || (this.tab==="party"?(!this.partyOnline?"Party service offline":this.party?"Party connected":"Invite an online pilot to form a party"):
-      this.tab==="guild"?"Guild membership coming next":this.ready()?"Connected":"Channel offline or unavailable")
+      this.tab==="guild"?(!this.guildOnline?"Guild service offline":this.guild?"Guild connected":"Create a guild or accept an invitation"):this.ready()?"Connected":"Channel offline or unavailable")
     if(this.send)this.send.disabled=!this.ready()||this.pending
     if(this.input)this.input.disabled=!this.ready()
     if(this.recipient)this.recipient.disabled=!this.directOnline
@@ -201,13 +295,14 @@ export class GlobalChat {
     if(this.input)this.input.placeholder=tab==="tells"?"Send a direct tell…":"Transmit to "+tab+"…"
     for(const button of this.root.querySelectorAll("[data-chat-tab]"))
       button.setAttribute("aria-pressed",String(button.dataset.chatTab===tab))
-    this.renderHistory();this.renderParty();this.updateUnread();this.refresh()
+    this.renderHistory();this.renderParty();this.renderGuild();this.updateUnread();this.refresh()
   }
 
   open() {
     if(!this.canOpen()||!this.panel)return
     this.releaseInput();this.panel.hidden=false;this.toggle.setAttribute("aria-expanded","true")
     this.counts[this.tab]=0;this.updateUnread()
+    if(this.guildOnline)this.guildChannel.push("refresh",{},5000).receive("ok",snapshot=>this.applyGuild(snapshot))
     this.log.scrollTop=this.log.scrollHeight
     this.input.focus({preventScroll:true})
   }
@@ -232,10 +327,10 @@ export class GlobalChat {
   }
 
   updateUnread(){
-    const total=Object.values(this.counts).reduce((a,b)=>a+b,0)+(this.invitation?1:0)
+    const total=Object.values(this.counts).reduce((a,b)=>a+b,0)+(this.invitation?1:0)+(this.guildInvitation?1:0)
     if(this.unread){this.unread.hidden=!total;this.unread.textContent=total>99?"99+":String(total)}
     for(const node of this.root.querySelectorAll?.("[data-chat-unread]")||[]){
-      const n=(this.counts[node.dataset.chatUnread]||0)+(node.dataset.chatUnread==="party"&&this.invitation?1:0)
+      const n=(this.counts[node.dataset.chatUnread]||0)+(node.dataset.chatUnread==="party"&&this.invitation?1:0)+(node.dataset.chatUnread==="guild"&&this.guildInvitation?1:0)
       node.hidden=!n;node.textContent=n>99?"99+":String(n)
     }
   }
@@ -256,6 +351,8 @@ export class GlobalChat {
     this.root.querySelector("#chat-context-ignore").textContent=this.ignored.has(id)?"Unignore":"Ignore"
     const invite=this.root.querySelector("#chat-context-invite")
     if(invite)invite.disabled=!this.partyOnline||Boolean(this.party&&String(this.party.leader_id)!==this.selfId)||Boolean(this.party?.members.length>=6)
+    const guildInvite=this.root.querySelector("#chat-context-guild-invite")
+    if(guildInvite)guildInvite.disabled=!this.guildOnline||!["leader","officer"].includes(this.guild?.rank)
     this.context.hidden=false
   }
 
@@ -322,7 +419,7 @@ export class GlobalChat {
     if(tab==="tells")this.recipient.value=recipient
     this.pending=true;this.refresh()
     const finish=label=>{this.pending=false;this.refresh(label)}
-    const channel=tab==="tells"?this.direct:tab==="party"?this.partyChannel:this.channel
+    const channel=tab==="tells"?this.direct:tab==="party"?this.partyChannel:tab==="guild"?this.guildChannel:this.channel
     const payload=tab==="tells"?{recipient,text}:{text}
     channel.push(tab==="tells"?"send_tell":"send_message",payload,5000)
       .receive("ok",()=>{

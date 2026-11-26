@@ -140,3 +140,8 @@ test("native party controls and pilot directory are packaged",()=>{
   for(const id of ["chat-directory-toggle","chat-directory-list","chat-party-controls","chat-party-roster","chat-party-invite","chat-party-accept","chat-party-decline","chat-context-invite"])
     assert.equal((document.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
 })
+
+test("native guild controls are packaged",()=>{
+  for(const id of ["chat-guild-controls","chat-guild-roster","chat-guild-create","chat-guild-invite","chat-guild-accept","chat-guild-decline","chat-context-guild-invite"])
+    assert.equal((document.match(new RegExp('id="'+id+'"',"g"))||[]).length,1,id)
+})

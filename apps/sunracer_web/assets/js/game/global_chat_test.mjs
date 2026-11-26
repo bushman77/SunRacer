@@ -76,3 +76,17 @@ test("party changes discard history and unread counters, but reconnect to same p
   assert.equal(chat.counts.party,0)
   assert.equal(chat.ready("party"),false)
 })
+
+test("guild membership enables guild chat and clears old guild history on removal",()=>{
+  const chat=new GlobalChat({root:{querySelector:()=>null},socket:null})
+  chat.guildOnline=true
+  chat.applyGuild({guild:{id:17,rank:"leader",members:[]}})
+  assert.equal(chat.ready("guild"),true)
+  chat.history.guild.push({text:"private"})
+  chat.applyGuild({guild:{id:17,rank:"officer",members:[]}})
+  assert.equal(chat.history.guild.length,1)
+  chat.applyGuild({guild:null})
+  assert.equal(chat.ready("guild"),false)
+  assert.equal(chat.history.guild.length,0)
+  assert.deepEqual(parseChatCommand("/guild ready","global",null,null),{tab:"guild",text:"ready"})
+})

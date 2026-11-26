@@ -1206,7 +1206,7 @@
       <nav class="comms-tabs" aria-label="Communication channels">
         <button type="button" data-chat-tab="global" aria-pressed="true">Global <span data-chat-unread="global" hidden></span></button>
         <button type="button" data-chat-tab="party" aria-pressed="false">Party <span data-chat-unread="party" hidden></span></button>
-        <button type="button" data-chat-tab="guild" aria-pressed="false">Guild</button>
+        <button type="button" data-chat-tab="guild" aria-pressed="false">Guild <span data-chat-unread="guild" hidden></span></button>
         <button type="button" data-chat-tab="tells" aria-pressed="false">Tells <span data-chat-unread="tells" hidden></span></button>
       </nav>
       <button type="button" id="chat-directory-toggle" class="comms-directory-toggle">Online pilots (0)</button>
@@ -1226,6 +1226,23 @@
           <button type="button" id="chat-party-invite">Invite</button>
         </div>
       </div>
+      <div id="chat-guild-invitation" class="comms-social comms-guild" hidden>
+        <span id="chat-guild-inviter"></span>
+        <button type="button" id="chat-guild-accept">Accept</button>
+        <button type="button" id="chat-guild-decline">Decline</button>
+      </div>
+      <div id="chat-guild-controls" class="comms-social comms-guild" hidden>
+        <div class="comms-party-heading"><span id="chat-guild-title">No guild membership</span><button type="button" id="chat-guild-leave" hidden>Leave</button></div>
+        <div id="chat-guild-roster" aria-label="Guild members"></div>
+        <div id="chat-guild-create-row" class="comms-party-invite">
+          <input id="chat-guild-name" type="text" maxlength="32" aria-label="Guild name" placeholder="Guild name" autocomplete="off" />
+          <button type="button" id="chat-guild-create">Found guild</button>
+        </div>
+        <div id="chat-guild-invite-row" class="comms-party-invite" hidden>
+          <input id="chat-guild-recipient" type="text" maxlength="20" aria-label="Pilot to invite to guild" placeholder="Exact pilot name" autocomplete="off" />
+          <button type="button" id="chat-guild-invite">Invite</button>
+        </div>
+      </div>
       <div id="chat-recipient-row" hidden>
         <label for="chat-recipient">To</label>
         <input id="chat-recipient" type="text" maxlength="20" autocomplete="off" placeholder="Exact pilot name" />
@@ -1235,6 +1252,7 @@
         <button type="button" id="chat-context-tell">Direct tell</button>
         <button type="button" id="chat-context-ignore">Ignore</button>
         <button type="button" id="chat-context-invite">Invite to party</button>
+        <button type="button" id="chat-context-guild-invite">Invite to guild</button>
         <button type="button" id="chat-context-close" aria-label="Close pilot actions">×</button>
       </div>
       <div id="global-chat-log" role="log" aria-label="Channel messages" aria-live="polite" tabindex="0"></div>

@@ -9,6 +9,7 @@ defmodule SunracerWeb.UserSocket do
   channel "chat:global", SunracerWeb.GlobalChatChannel
   channel "chat:direct", SunracerWeb.DirectChatChannel
   channel "chat:party", SunracerWeb.PartyChatChannel
+  channel "chat:guild", SunracerWeb.GuildChatChannel
 
   @impl true
   def connect(%{"token" => token}, socket, _connect_info) do

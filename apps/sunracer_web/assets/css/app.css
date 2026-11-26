@@ -2188,3 +2188,11 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 #chat-party-recipient {flex:1;min-width:0;background:#091827;border:1px solid #28596d;border-radius:.2rem;padding:.25rem;color:#edf7ff;}
 .global-chat-message[data-channel="party"] button {color:#6ef5a4;}
 .global-chat-panel {max-height:calc(100vh - 9rem);overflow:auto;}
+/* Guild roster and controls use violet, independently of green parties. */
+.comms-guild {border-color:#674565;color:#d9c6f5;}
+.comms-guild button {color:#c4a0ff;}
+#chat-guild-roster {max-height:8rem;overflow:auto;}
+#chat-guild-roster>div {display:flex;gap:.25rem;align-items:center;margin:.2rem 0;}
+#chat-guild-roster>div>button:first-child {flex:1;text-align:left;overflow-wrap:anywhere;}
+#chat-guild-name,#chat-guild-recipient {flex:1;min-width:0;background:#091827;border:1px solid #674565;border-radius:.2rem;padding:.25rem;color:#edf7ff;}
+.global-chat-message[data-channel="guild"] button {color:#c4a0ff;}

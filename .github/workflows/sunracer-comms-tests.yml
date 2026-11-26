@@ -10,6 +10,7 @@ on:
       - "apps/sunracer_web/mix.exs"
       - "apps/sunracer/lib/**"
       - "apps/sunracer/test/support/**"
+      - "apps/sunracer/test/sunracer/guilds_test.exs"
       - "apps/sunracer/priv/repo/migrations/**"
       - "apps/sunracer/mix.exs"
       - "config/**"
@@ -55,7 +56,9 @@ jobs:
         run: mix compile --warnings-as-errors
       - name: Verify authenticated communications and party membership
         run: |
+          mix test apps/sunracer/test/sunracer/guilds_test.exs
           mix test \
+            apps/sunracer_web/test/sunracer_web/channels/guild_chat_channel_test.exs \
             apps/sunracer_web/test/sunracer_web/party_manager_test.exs \
             apps/sunracer_web/test/sunracer_web/channels/party_chat_channel_test.exs \
             apps/sunracer_web/test/sunracer_web/channels/direct_chat_channel_test.exs \

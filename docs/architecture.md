@@ -416,3 +416,7 @@ Phoenix Presence provides a public pilot-name directory on chat:party; all priva
 PartyChatChannel uses a private `action_reply/2` helper to translate manager results into channel callback tuples, avoiding the imported Phoenix.Channel.reply/2 API.
 
 Communications CI explicitly checks global and direct channel authorization, reconnect rate limiting, party membership and client routing. The reconnect test observes the deliberate channel shutdown before joining again.
+
+### Persistent guilds
+
+Guilds, membership and invitations live in PostgreSQL, independent of ephemeral PartyManager and NPC factions. Transaction-scoped advisory lock serializes mutations; unique pilot and name constraints backstop invariants. Guild chat uses private per-pilot PubSub inboxes and exact membership ID checks at delivery; no client-selected guild topic. Ranks leader/officer/member, 50 seats, seven-day invitation expiry, no persistent message history. A leader must transfer before leaving unless alone; last leader departure disbands. Deleting a leader account cascades guild deletion. No treasury, guild bases, territory or shared missions yet.
