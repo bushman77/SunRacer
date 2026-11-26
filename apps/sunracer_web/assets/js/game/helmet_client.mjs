@@ -95,6 +95,7 @@ export class HelmetClient {
     this.mapId = null
     this.docked = false
     this.stationPosition = null
+    this.stationPilots = []
     this.stationAttendants = []
     this.stationDockingHold = null
     this.stationDockingSeconds = null
@@ -753,6 +754,7 @@ export class HelmetClient {
     this.mapId = null
     this.docked = false
     this.stationPosition = null
+    this.stationPilots = []
     this.stationAttendants = []
     this.stationDockingHold = null
     this.stationDockingSeconds = null
@@ -872,6 +874,7 @@ syncStationState(map) {
   this.stationPosition = this.docked
     ? map.station_avatars?.find(avatar => key(avatar.player_id) === this.selfId) || null
     : null
+  this.stationPilots = this.docked && Array.isArray(map.station_pilots) ? map.station_pilots : []
   this.stationAttendants = Array.isArray(map.station_attendants)
     ? map.station_attendants : []
   this.orbitalBase = map.orbital_base || null

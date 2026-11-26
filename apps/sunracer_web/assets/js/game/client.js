@@ -163,6 +163,7 @@ class SpaceClient {
     })
     this.docked = false
     this.stationPosition = null
+    this.stationPilots = []
     this.stationAttendants = []
     this.stationNpcDialogOpen = false
     this.outfittingPanel = null
@@ -748,6 +749,9 @@ class SpaceClient {
     const channel = this.socket.channel(`world:${mapId}`, {stream: "delta_v1"})
     this.channel = channel
     this.atlasPilotRequest = null
+    this.stationPilotRequest = null
+    this.lastStationPilotPoll = -Infinity
+    this.stationPilots = []
     this.lastAtlasPilotPoll = -Infinity
     this.navComputer?.setAtlasPilots([])
     channel.on("world_state", state => {
@@ -1019,7 +1023,7 @@ class SpaceClient {
   }
 
   applyWorldState(state) {
-    this.sbsRelayWorld.publish(state)
+    this.sbsRelayWorld.publish({...state, station_pilots: this.stationPilots})
     this.orbitalBase = state.orbital_base || null
     this.boundaries = state.boundaries || this.boundaries
     this.volume = state.volume || this.volume
@@ -1220,6 +1224,28 @@ class SpaceClient {
       })
       .receive("error", response => this.showError(`Flight controls rejected: ${response.reason}`))
       .receive("timeout", () => this.showError("Flight control link timed out."))
+  }
+
+  refreshStationPilots(time) {
+    const channel = this.channel
+    if (!this.docked || channel?.state !== "joined") {
+      this.stationPilots = []
+      this.stationPilotRequest = null
+      return
+    }
+    if (this.stationPilotRequest || time - (this.lastStationPilotPoll ?? -Infinity) < 500) return
+    this.lastStationPilotPoll = time
+    const token = {}
+    this.stationPilotRequest = token
+    const finish = avatars => {
+      if (this.channel !== channel || this.stationPilotRequest !== token || !this.docked) return
+      this.stationPilotRequest = null
+      this.stationPilots = Array.isArray(avatars) ? avatars : []
+    }
+    channel.push("station_pilots", {}, 3000)
+      .receive("ok", response => finish(response.avatars))
+      .receive("error", () => finish([]))
+      .receive("timeout", () => finish([]))
   }
 
   refreshAtlasPilots(time) {
@@ -1895,7 +1921,12 @@ class SpaceClient {
     if (wasDocked && !docked) this.stationWalking?.release()
     this.docked = Boolean(docked)
     if (this.docked) this.clientLedCamera.reset()
-    if (!this.docked) this.stationPosition = null
+    if (!this.docked) {
+      this.stationPosition = null
+      this.stationPilots = []
+      this.stationPilotRequest = null
+      this.lastStationPilotPoll = -Infinity
+    }
     if (this.docked) this.clearDockingCountdown()
     const panel = this.root.querySelector("#starbase-docked-panel")
     if (panel) panel.style.display = this.docked ? "grid" : "none"
@@ -2322,6 +2353,7 @@ class SpaceClient {
     this.spaceLaser?.update(time)
     this.draw(time)
     this.minimap?.draw(time)
+    this.refreshStationPilots(time)
     this.refreshAtlasPilots(time)
     this.navComputer?.draw(time)
     this.updateCoordinates()

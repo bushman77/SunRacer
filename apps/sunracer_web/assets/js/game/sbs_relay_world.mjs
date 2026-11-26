@@ -123,6 +123,10 @@ export function projectSbsRelayWorld(map, visualPose = null) {
       return row
     })
   }
+  if (Array.isArray(map.station_pilots)) {
+    result.station_pilots = map.station_pilots.slice(0, 64)
+      .map(pilot => object(pilot, ["player_id","pilot_name","room_id","x","z","yaw"]) || {})
+  }
   if (Array.isArray(map.station_attendants)) {
     result.station_attendants = map.station_attendants.slice(0, 64)
       .map(npc => object(npc, ["id","name","display_name","room_id",

@@ -278,6 +278,9 @@ defmodule SunracerWeb.WorldChannelTest do
     })
     assert_reply ref, :error, %{reason: "not_docked"}
 
+    roster = push(joined, "station_pilots", %{"player_id" => account.id, "docked" => true})
+    assert_reply roster, :error, %{reason: "not_docked"}
+
     look = push(joined, "station_look", %{"delta_yaw" => 0.1})
     assert_reply look, :error, %{reason: "not_docked"}
 

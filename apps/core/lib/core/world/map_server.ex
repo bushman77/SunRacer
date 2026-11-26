@@ -115,6 +115,10 @@ defmodule Core.World.MapServer do
   def station_patch_hull(registry, map_id, session_id, entity_id),
     do: call_map(registry, map_id, {:station_patch_hull, session_id, entity_id})
 
+  @doc "Server-only station pose; a live, parked ship must own the session."
+  def station_pose(registry, map_id, session_id, entity_id),
+    do: call_map(registry, map_id, {:station_pose, session_id, entity_id})
+
   @doc "Server-only restore from the previously validated durable dock record."
   def restore_station_position(registry, map_id, session_id, entity_id, pose),
     do: call_map(registry, map_id,
@@ -439,6 +443,18 @@ defmodule Core.World.MapServer do
 
   # Only a parked ship in its own authenticated session can walk. Client
   # commands supply axes, never an absolute pose or a chosen station.
+  def handle_call({:station_pose, session_id, entity_id}, _from, state) do
+    result =
+      with {:ok, _ship} <- parked_station_ship(state, session_id, entity_id),
+           %{room_id: _, x: _, z: _, yaw: _} = pose <- Map.get(state.station_avatars, entity_id),
+           true <- StationInterior.valid_pose?(pose) do
+        {:ok, Map.take(pose, [:room_id, :x, :z, :yaw])}
+      else
+        _ -> {:error, :not_docked}
+      end
+    {:reply, result, state}
+  end
+
   def handle_call({:station_walk, session_id, entity_id, input}, _from, state) do
     with {:ok, _ship} <- parked_station_ship(state, session_id, entity_id),
          {:ok, axes} <- StationInterior.controls(input) do

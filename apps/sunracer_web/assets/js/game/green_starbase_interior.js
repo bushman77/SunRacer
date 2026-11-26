@@ -1,3 +1,4 @@
+import {StationPilotModels} from "./station_pilot_models.mjs"
 import {greenStarbaseInteriorVisible} from "./green_starbase_interior_state.mjs"
 import {buildGreenStarbaseArt} from "./green_starbase_art.mjs"
 import {
@@ -31,6 +32,7 @@ export class GreenStarbaseInterior {
     this.attendantsLoaded = false
     this.signTexts = []
     this.build()
+    this.remotePilots = new StationPilotModels(THREE, this.node)
   }
 
   build() {
@@ -401,15 +403,15 @@ export class GreenStarbaseInterior {
   }
 
   // Door movement and NPCs remain presentation-only, never authoritative.
-  update(pose, time, attendants = []) {
+  update(pose, time, attendants = [], pilots = [], selfId = null) {
     this.buildAttendants(attendants)
     this.requestCharacterModel(attendants)
-    const near = pose && Number.isFinite(pose.x) &&
-      Number.isFinite(pose.z) && Math.abs(pose.x) <= 14 &&
-      pose.z < -69 && pose.z > -111
+    const near = [pose, ...pilots].some(p => p && Number.isFinite(p.x) &&
+      Number.isFinite(p.z) && Math.abs(p.x) <= 14 && p.z < -69 && p.z > -111)
     const delta = this.lastUpdatedAt == null ? 0 :
       Math.min(0.1, Math.max(0, (time - this.lastUpdatedAt) / 1000))
     this.lastUpdatedAt = time
+    this.remotePilots.update(pilots, selfId, delta)
     for (const animator of this.characterAnimators) animator.update(delta)
     this.doorOpen += (Number(Boolean(near)) - this.doorOpen) *
       Math.min(1, delta * 12)
@@ -419,6 +421,7 @@ export class GreenStarbaseInterior {
 
   dispose() {
     this.disposed = true
+    this.remotePilots.dispose()
     this.characterAnimators.forEach(animator => animator.dispose())
     this.characterAnimators = []
     this.importedCharacters.forEach(disposeStationCharacter)

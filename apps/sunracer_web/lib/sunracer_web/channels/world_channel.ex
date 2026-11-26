@@ -207,6 +207,23 @@ defmodule SunracerWeb.WorldChannel do
 
   # Movement intents belong to the authenticated world session, never to
   # a caller-supplied player ID, room, destination or absolute position.
+  def handle_in("station_pilots", _payload, socket) do
+    now = System.monotonic_time(:millisecond)
+    last = socket.assigns[:station_pilots_at]
+    if is_integer(last) and now - last < 350 do
+      {:reply, {:error, %{reason: "rate_limited"}}, socket}
+    else
+      socket = assign(socket, :station_pilots_at, now)
+      case SunracerWeb.StationPilots.snapshot(socket.assigns.current_player_id,
+             socket.assigns.world_session_id, socket.assigns[:station_pilot_names] || %{}) do
+        {:ok, avatars, names} ->
+          {:reply, {:ok, %{avatars: avatars}}, assign(socket, :station_pilot_names, names)}
+        {:error, reason} ->
+          {:reply, {:error, %{reason: reason}}, assign(socket, :station_pilot_names, %{})}
+      end
+    end
+  end
+
   def handle_in("station_walk", input, socket) when is_map(input) do
     case World.station_walk(socket.assigns.world_session_id, input) do
       {:ok, accepted} -> {:reply, {:ok, accepted}, socket}

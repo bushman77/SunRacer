@@ -8,6 +8,9 @@ on:
       - "apps/sunracer_web/test/**"
       - "apps/sunracer_web/assets/js/game/global_chat*.mjs"
       - "apps/sunracer_web/assets/js/game/atlas_pilot_markers*.mjs"
+      - "apps/sunracer_web/assets/js/game/station_pilot_models*.mjs"
+      - "apps/core/lib/core/world/map_server.ex"
+      - "apps/core/lib/core/world/session_manager.ex"
       - "apps/core/lib/core/universe/navigation.ex"
       - "apps/core/test/core/universe/navigation_test.exs"
       - "apps/sunracer_web/mix.exs"
@@ -69,4 +72,4 @@ jobs:
             apps/sunracer_web/test/sunracer_web/channels/direct_chat_channel_test.exs \
             apps/sunracer_web/test/sunracer_web/channels/global_chat_channel_test.exs
       - name: Verify communications client routing and history
-        run: node --test apps/sunracer_web/assets/js/game/global_chat_test.mjs apps/sunracer_web/assets/js/game/atlas_pilot_markers_test.mjs
+        run: node --test apps/sunracer_web/assets/js/game/global_chat_test.mjs apps/sunracer_web/assets/js/game/atlas_pilot_markers_test.mjs apps/sunracer_web/assets/js/game/station_pilot_models_test.mjs

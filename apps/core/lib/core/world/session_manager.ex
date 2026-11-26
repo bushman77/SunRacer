@@ -26,6 +26,9 @@ defmodule Core.World.SessionManager do
   @spec fetch_player(GenServer.server(), term()) :: {:ok, Session.t()} | :error
   def fetch_player(server, player_id), do: GenServer.call(server, {:fetch_player, player_id})
 
+  @doc "Server-only snapshot of active sessions, not persisted accounts."
+  def active_sessions(server), do: GenServer.call(server, :active_sessions)
+
   @spec close(GenServer.server(), pos_integer()) :: {:ok, Session.t()} | :error
   def close(server, session_id), do: GenServer.call(server, {:close, session_id})
 
@@ -68,6 +71,8 @@ defmodule Core.World.SessionManager do
 
     {:reply, result, state}
   end
+
+  def handle_call(:active_sessions, _from, state), do: {:reply, Map.values(state.by_id), state}
 
   def handle_call({:close, session_id}, _from, state) do
     case Map.pop(state.by_id, session_id) do
