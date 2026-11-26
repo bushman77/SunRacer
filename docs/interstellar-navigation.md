@@ -39,3 +39,8 @@ Added pure server-side catalogue and reciprocal mouth lookup with regression
 tests. No runtime integration, migrations, Atlas changes, tunnel renderer,
 new combat tuning, or production unlock yet. Elixir compilation and test
 execution pending.
+
+## 2026-11-26 — Galactic Atlas artwork
+
+- Replaced schematic spiral strokes with a local, photographic-style galaxy art layer inside the interactive SVG. Guide rings, system marker coordinates, labels, selection and zoom remain independent of the image. The approved mockup's clean artwork derivative is supplied separately as `spacenova-galaxy-assets.zip`; extract at repository root and commit `apps/sunracer_web/priv/static/images/game/galaxy/milky-way.webp` before publishing a release. Existing native staging recursively copies game images. A missing asset displays a visible warning without disabling marker interaction. No live travel or catalogue changes. Focused renderer test added; native visual acceptance pending.
+

@@ -20,49 +20,31 @@ export function validSystems(catalog){
   })
 }
 export const canEnterSystem=system=>system?.id==="sol"&&system["provisional?"]===false
-// Deterministic SVG art: no raster assets, external requests or per-frame updates.
-function drawGalaxy(layer){
-  const defs=add(layer,"defs")
-  const glow=(id,stops)=>{
-    const g=add(defs,"radialGradient",{id})
-    stops.forEach(([offset,color,opacity])=>add(g,"stop",{offset,"stop-color":color,"stop-opacity":opacity}))
-  }
-  glow("galaxy-halo",[[0,"#afc7ff",.18],[.45,"#557bc7",.12],[1,"#030814",0]])
-  glow("galaxy-core",[[0,"#fffadf",1],[.14,"#ffe2a1",.85],[.44,"#d4975e",.26],[1,"#cc9250",0]])
+// The approved photographic-style artwork is a local game asset. It is
+// embedded in the same SVG coordinate space as the interactive markers,
+// so zoom and reset always transform both layers together.
+export const GALAXY_ART_PATH="/images/game/galaxy/milky-way.webp"
+
+export function drawGalaxy(layer){
+  layer.replaceChildren()
   add(layer,"rect",{width:W,height:H,fill:"#030914"})
-  add(layer,"ellipse",{cx:center.x,cy:center.y,rx:475,ry:285,fill:"url(#galaxy-halo)"})
-  let seed=92819
-  const rnd=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296}
-  for(let i=0;i<370;i++)add(layer,"circle",{cx:rnd()*W,cy:rnd()*H,r:.2+rnd()*.75,fill:"#c3d8ee",opacity:.12+rnd()*.42})
-  // Four loosely logarithmic arms, with diffuse vector dust and luminous knots.
-  const arms=add(layer,"g",{"aria-hidden":"true"})
-  for(let arm=0;arm<4;arm++){
-    const curve=[]
-    for(let j=0;j<=160;j++){
-      const t=j/160,r=25+405*t,angle=arm*Math.PI/2+4.1*t-1.25
-      curve.push([center.x+r*Math.cos(angle),center.y+r*.58*Math.sin(angle)])
-    }
-    const d=curve.map(([x,y],i)=>(i?"L":"M")+x.toFixed(2)+" "+y.toFixed(2)).join(" ")
-    for(const [width,color,opacity] of [[65,"#233a75",.10],[35,"#4263ab",.12],[15,"#587ab9",.16],[3,"#91aee8",.19]])
-      add(arms,"path",{d,fill:"none",stroke:color,"stroke-width":width,"stroke-linecap":"round",opacity})
-    for(let j=0;j<830;j++){
-      const t=rnd(),r=25+405*t,angle=arm*Math.PI/2+4.1*t-1.25+(rnd()-.5)*.31
-      const spread=(rnd()+rnd()+rnd()-1.5)*42
-      const x=center.x+(r+spread)*Math.cos(angle),y=center.y+(r+spread)*.58*Math.sin(angle)
-      add(arms,"circle",{cx:x.toFixed(2),cy:y.toFixed(2),r:(.24+rnd()**3*1.8).toFixed(2),
-        fill:["#94b4ff","#d4dfff","#507cc8","#ef9acb","#718fe4"][Math.floor(rnd()*5)],opacity:(.12+rnd()*.65).toFixed(2)})
-    }
-  }
-  // Orion Spur is a short local branch between major arms, not a fifth
-  // galaxy-spanning arm. SOL is at ~26 kly on a 50 kly radius ellipse.
-  const spur="M 332 379 Q 380 408 425 412 Q 475 418 515 402"
-  for(const [width,opacity] of [[24,.15],[10,.28],[2,.4]])
-    add(layer,"path",{d:spur,fill:"none",stroke:"#91c6ee","stroke-width":width,"stroke-linecap":"round",opacity})
-  add(layer,"ellipse",{cx:center.x,cy:center.y,rx:126,ry:73,fill:"url(#galaxy-core)",transform:"rotate(-26 525 300)"})
-  add(layer,"ellipse",{cx:center.x,cy:center.y,rx:62,ry:16,fill:"url(#galaxy-core)",transform:"rotate(-26 525 300)"})
-  for(const r of [105,210,315,420])add(layer,"ellipse",{cx:center.x,cy:center.y,rx:r,ry:r*.58,stroke:"#5c9cb7","stroke-dasharray":"3 7",fill:"none",opacity:.19})
-  for(const [x,y,name] of [[525,320,"GALACTIC CENTRE"],[470,405,"ORION SPUR"],[450,78,"PERSEUS ARM"],[310,255,"SAGITTARIUS–CARINA"],[660,523,"SCUTUM–CENTAURUS"]])
-    add(layer,"text",{x,y,fill:"#a4b8d1","font-size":10,"letter-spacing":2,"text-anchor":"middle",opacity:.78},name)
+  const art=add(layer,"image",{href:GALAXY_ART_PATH,x:0,y:0,width:W,height:H,
+    preserveAspectRatio:"xMidYMid meet","pointer-events":"none"})
+  const guides=add(layer,"g",{"aria-hidden":"true","pointer-events":"none"})
+  for(const r of [105,210,315,420])add(guides,"ellipse",{cx:center.x,cy:center.y,rx:r,ry:r*.58,
+    stroke:"#8fbde0","stroke-dasharray":"3 7",fill:"none",opacity:.24})
+  add(guides,"path",{d:"M 525 16 V 584 M 30 300 H 970",fill:"none",stroke:"#86bbd7",opacity:.23,"stroke-width":.8})
+  for(const [x,y,name] of [[525,18,"0°"],[525,584,"180°"],[35,294,"270°"],[965,294,"90°"],
+      [525,320,"GALACTIC CENTRE"],[470,405,"ORION SPUR"],[450,78,"PERSEUS ARM"],[310,255,"SAGITTARIUS–CARINA"],[660,523,"SCUTUM–CENTAURUS"]])
+    add(guides,"text",{x,y,fill:"#b2cde3","font-size":10,"letter-spacing":1.7,
+      "text-anchor":"middle","paint-order":"stroke",stroke:"#030914","stroke-width":2,opacity:.8},name)
+  // A missing local asset must be visible rather than silently showing a
+  // different design. Star selection still works on the dark chart.
+  art.addEventListener("error",()=>{
+    art.remove()
+    add(layer,"text",{x:500,y:562,fill:"#ffc27a","font-size":12,"text-anchor":"middle"},
+      "GALAXY ART MISSING · INSTALL MILKY-WAY.WEBP")
+  },{once:true})
 }
 export class GalaxyAtlas{
   constructor(root,enter){
