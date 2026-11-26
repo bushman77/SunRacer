@@ -120,6 +120,8 @@ class SpaceClient {
     this.mouseTimingProbe = new DesktopMouseTimingProbe()
     this.lastMouseTimingReport = -Infinity
     this.mouseCaptureLost = false
+    this.mouseCaptureAttempt = 0
+    this.mouseCaptureRequested = false
     this.mouseFallback = false
     this.mouseFallbackPoint = null
     this.helmetAlignmentKeys = new HelmetAlignmentKeyGate()
@@ -536,19 +538,6 @@ class SpaceClient {
     // Capture before ordinary gameplay handlers or browser reload behavior.
     window.addEventListener("keydown", event => this.handleHelmetAlignmentKey(event), true)
     if (!this.setDisplayMode("3d")) return
-    this.canvas.addEventListener("pointerdown", event => {
-      // Consume physical dashboard clicks before pointer-lock capture or
-      // target selection. Esc releases captured steering to use the computer.
-      if (event.button !== 0 || document.pointerLockElement === this.canvas ||
-          this.navComputer?.isOpen || this.inventoryPanel?.opened ||
-          this.docked || this.shipWalkPose || this.solarEncounter ||
-          this.dispatchOfferOpen || this.respawnPending || this.desktopVrOnlyActive) return
-      const action = this.stereoView?.dashboardAction(event, this.canvas.getBoundingClientRect())
-      if (!action) return
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      this.dashboardCommand(action)
-    }, true)
     this.canvas.addEventListener("pointerdown", () => this.canvas.focus({preventScroll: true}))
     window.addEventListener("resize", () => this.resize())
     this.navigation = new PointerNavigation({
@@ -2963,8 +2952,10 @@ class SpaceClient {
     stop?.setAttribute("stop-opacity", vector.opacity.toFixed(3))
   }
 
-  enableNativeMouseFallback() {
-    if (this.root.dataset.nativeClient !== "true" ||
+  enableNativeMouseFallback(attempt = this.mouseCaptureAttempt) {
+    if (attempt !== this.mouseCaptureAttempt || !this.mouseCaptureRequested ||
+        document.pointerLockElement === this.canvas ||
+        this.root.dataset.nativeClient !== "true" ||
         !this.mouseSteeringEnabled || !this.flightControls?.active()) return false
     this.mouseFallback = true
     this.mouseFallbackPoint = null
@@ -3031,40 +3022,64 @@ class SpaceClient {
       this.updateMouseSteeringStatus()
     })
 
+    // One capture-phase router owns dashboard interaction and steering capture.
+    // Registering independent capture listeners let the earlier steering
+    // listener swallow the dashboard click with stopImmediatePropagation().
     this.canvas.addEventListener("pointerdown", event => {
-      if (!this.mouseSteeringEnabled || event.button !== 0 ||
-          document.pointerLockElement === this.canvas ||
-          this.navComputer?.isOpen || this.inSystemCruise() ||
-          !this.flightControls.active()) return
+      const locked = document.pointerLockElement === this.canvas
+      const cockpit = !this.navComputer?.isOpen && !this.inventoryPanel?.opened &&
+        !this.docked && !this.shipWalkPose && !this.solarEncounter &&
+        !this.dispatchOfferOpen && !this.respawnPending
+      const consume = () => {
+        event.preventDefault()
+        event.stopImmediatePropagation()
+      }
 
-      // A direct cockpit click is required by the browser for pointer lock.
-      // Consume this FIRST click so it never selects a target accidentally.
-      event.preventDefault()
-      event.stopImmediatePropagation()
-      this.canvas.focus({preventScroll: true})
-      if (!this.canvas.requestPointerLock) {
-        if (!this.enableNativeMouseFallback()) {
-          this.mouseSteeringMessage("Pointer lock unavailable; keyboard steering remains active.")
+      // Pointer lock hides the cursor and freezes absolute coordinates.
+      // Middle click (or Escape below) gives the pilot a free cursor without
+      // changing the saved mouse-steering preference or the ship throttle.
+      if (cockpit && event.button === 1 && (locked || this.mouseFallback)) {
+        consume()
+        this.exitMouseSteering()
+        return
+      }
+
+      if (cockpit && event.button === 0 && !locked && !this.desktopVrOnlyActive) {
+        const hit = this.stereoView?.dashboardPointer(event, this.canvas.getBoundingClientRect())
+        if (hit) {
+          consume()
+          this.exitMouseSteering()
+          if (hit.action) this.dashboardCommand(hit.action)
+          return
         }
+      }
+
+      if (!cockpit || !this.mouseSteeringEnabled || event.button !== 0 ||
+          locked || this.inSystemCruise() || !this.flightControls.active()) return
+
+      // Only a deliberate click outside the dashboard requests capture.
+      consume()
+      this.canvas.focus({preventScroll: true})
+      const attempt = ++this.mouseCaptureAttempt
+      this.mouseCaptureRequested = true
+      const current = () => this.mouseCaptureRequested && attempt === this.mouseCaptureAttempt
+      const fallback = message => {
+        if (!current() || document.pointerLockElement === this.canvas) return
+        if (!this.enableNativeMouseFallback(attempt) && message) this.mouseSteeringMessage(message)
+      }
+      if (!this.canvas.requestPointerLock) {
+        fallback("Pointer lock unavailable; keyboard steering remains active.")
         return
       }
       try {
         this.mouseCaptureLost = false
         const request = this.canvas.requestPointerLock()
-        request?.catch?.(() => {
-          if (!this.enableNativeMouseFallback()) {
-            this.mouseSteeringMessage("Mouse capture was denied. Click the cockpit to retry.")
-          }
-        })
-        // Some Linux webviews neither reject nor dispatch pointerlockerror.
-        // Fall back to bounded hover deltas only in the native client.
-        window.setTimeout(() => {
-          if (document.pointerLockElement !== this.canvas) this.enableNativeMouseFallback()
-        }, 450)
+        request?.catch?.(() => fallback("Mouse capture was denied. Click space to retry."))
+        // Delayed WebKit fallback must not reacquire after dashboard use or
+        // an explicit release, even if the original request has not settled.
+        window.setTimeout(() => fallback(), 450)
       } catch (_error) {
-        if (!this.enableNativeMouseFallback()) {
-          this.mouseSteeringMessage("Mouse capture unavailable; keyboard steering remains active.")
-        }
+        fallback("Mouse capture unavailable; keyboard steering remains active.")
       }
     }, true)
 
@@ -3107,6 +3122,10 @@ class SpaceClient {
     document.addEventListener("pointerlockchange", () => {
       const pointerLocked = this.mouseSteeringEnabled &&
         document.pointerLockElement === this.canvas
+      if (pointerLocked && !this.mouseCaptureRequested && !this.docked && !this.shipWalkPose) {
+        document.exitPointerLock?.()
+        return
+      }
       if (pointerLocked) {
         this.mouseFallback = false
         this.mouseFallbackPoint = null
@@ -3119,6 +3138,8 @@ class SpaceClient {
         // A lost pointer lock is an actual input pause, not a lost setting.
         // The browser requires another physical click before recapturing.
         this.mouseCaptureLost = true
+        this.mouseCaptureRequested = false
+        this.mouseCaptureAttempt++
       }
       // Use the faster mouse-only angular rate profile on the server ONLY
       // during pointer capture, reverting when the cursor is released.
@@ -3134,6 +3155,7 @@ class SpaceClient {
       this.updateMouseSteeringStatus()
     })
     document.addEventListener("pointerlockerror", () => {
+      if (!this.mouseCaptureRequested) return
       if (!this.enableNativeMouseFallback()) {
         this.mouseSteeringMessage("Mouse capture failed. Try clicking the cockpit again.")
       }
@@ -3143,7 +3165,8 @@ class SpaceClient {
     // combat; M still opens Atlas, which releases the mouse automatically.
     window.addEventListener("keydown", event => {
       if (event.code !== "Escape" ||
-          (document.pointerLockElement !== this.canvas && !this.mouseFallback)) return
+          (document.pointerLockElement !== this.canvas && !this.mouseFallback &&
+           !this.mouseCaptureRequested)) return
       event.preventDefault()
       event.stopImmediatePropagation()
       this.exitMouseSteering()
@@ -3200,15 +3223,17 @@ class SpaceClient {
         : this.helmet?.status?.rendering ? " · SBS STICK NOT SENT"
           : " · SBS HEADSET NOT RENDERING"
     node.textContent = this.mouseFallback
-      ? "MOUSE STEERING ACTIVE · NATIVE FALLBACK · ESC RELEASES" + sbs
+      ? "MOUSE STEERING ACTIVE · NATIVE FALLBACK · ESC / MIDDLE CLICK RELEASES" + sbs
       : captured
-        ? "MOUSE STEERING ACTIVE · MOVE TO PITCH/YAW · ESC RELEASES" + sbs
+        ? "MOUSE STEERING ACTIVE · MOVE TO PITCH/YAW · ESC / MIDDLE CLICK RELEASES" + sbs
       : this.mouseCaptureLost
-        ? "MOUSE STEERING PAUSED · CLICK COCKPIT TO RESUME"
-        : "MOUSE STEERING ENABLED · CLICK COCKPIT TO CAPTURE"
+        ? "MOUSE STEERING PAUSED · CLICK SPACE TO RESUME · DASHBOARD INTERACTIVE"
+        : "MOUSE STEERING ENABLED · CLICK SPACE TO CAPTURE · DASHBOARD INTERACTIVE"
   }
 
   exitMouseSteering({silent = false} = {}) {
+    this.mouseCaptureRequested = false
+    this.mouseCaptureAttempt++
     this.clientLedCamera.reset()
     this.mouseFrameSampler.clear()
     this.mouseFallback = false

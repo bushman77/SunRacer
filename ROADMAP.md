@@ -1,3 +1,7 @@
+## 2026-11-26 — Cockpit pointer ownership
+
+- Unified dashboard and mouse-capture pointer routing: unlocked physical dashboard clicks (including blank instrument surface) consume the event before steering capture, target selection or weapon handling. Escape or middle-click releases captured steering; clicking outside the dashboard resumes it. Pending native fallback requests are invalidated on release to prevent delayed recapture. Saved steering preference, throttle, keyboard flight and server authority unchanged. Added source-level routing regression coverage; packaged WebKit/desktop visual acceptance and full test suite pending.
+
 ## 2026-11-26 — Interstellar catalogue foundation
 
 - Added `Core.Universe.StarSystems` and `Core.Universe.Wormholes`: unchanged SOL catalogue, two provisional expansion systems, reciprocal system-local wormhole mouths. Added focused tests and `docs/interstellar-navigation.md`. This is an unwired foundation; existing SOL campaign, NPC balance, saved voyages and live navigation unchanged. Compilation/tests pending.

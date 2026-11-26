@@ -1014,12 +1014,14 @@ export class StereoSpaceView {
     this.hudTexture.needsUpdate = true
   }
 
-  dashboardAction(pointer, rect) {
+  dashboardPointer(pointer, rect) {
     if (this.interiorActive || !this.hudPanel?.visible ||
         !this.dashboardModel || !this.rayFromPointer(pointer, rect)) return null
     this.cockpitFraming.updateMatrixWorld(true)
     const hit = this.raycaster.intersectObject(this.hudPanel, false)[0]
-    return dashboardHit(this.dashboardModel, hit?.uv)
+    // The whole physical instrument reserves pointer interaction, not just
+    // its active buttons. Empty space on the display must never lock the mouse.
+    return hit ? {action: dashboardHit(this.dashboardModel, hit.uv)} : null
   }
 
   updateSteeringLine(steering) {
