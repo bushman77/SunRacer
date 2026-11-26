@@ -436,3 +436,8 @@ The existing server-owned SOL environmental profile is unchanged. The shared des
 ## Public account theme
 
 `SunracerWeb.Layouts.auth/1` provides the common SpaceNova account view shell for login, registration, verification, resend and password recovery. It uses the title screen's existing artwork, CSS palette and wordmark, while each view retains its own form and route. Public branding is independent of internal OTP application and deployment names. Controller markup tests cover the common shell and protected token pages; visual acceptance and full compilation remain pending.
+
+## 2026-11-26 — Cockpit computer and tactical decisions
+
+- Removed duplicate speed from the floating hull/shield window. Physical dashboard now shows velocity, throttle, context-sensitive target/range or objective and tactical/comms/Atlas/cargo controls. Desktop pointer clicks raycast the physical panel before mouse capture; existing authenticated tactical buttons/commands remain the fallback and share the same request state. Fixed Dart surrender eligibility (formerly Scow-only). Existing headset gaze surrender and flight status remain available; new dashboard tabs are desktop-interactive only in this pass. Own surrender, combat rebalance and full VR tab interaction are separate work. Regression tests added; installed-client and full Mix verification pending.
+

@@ -1,3 +1,7 @@
+## 2026-11-26 — Cockpit computer and tactical decisions
+
+- Removed duplicate speed from the floating hull/shield window. Physical dashboard now shows velocity, throttle, context-sensitive target/range or objective and tactical/comms/Atlas/cargo controls. Desktop pointer clicks raycast the physical panel before mouse capture; existing authenticated tactical buttons/commands remain the fallback and share the same request state. Fixed Dart surrender eligibility (formerly Scow-only). Existing headset gaze surrender and flight status remain available; new dashboard tabs are desktop-interactive only in this pass. Own surrender, combat rebalance and full VR tab interaction are separate work. Regression tests added; installed-client and full Mix verification pending.
+
 ## 2026-11-26 — Encounter continuation wording
 
 - After a successful hail, both encounter panels show "Resume course" instead of "Ignore / Resume course". Hail status is local to the displayed encounter and resets when it changes or closes; failed hails do not mark a new encounter as hailed. No navigation commands, encounter permissions, story logic or server payloads changed. Added focused label regression coverage and updated the First Run manual checklist. Automated execution and installed-client verification pending.

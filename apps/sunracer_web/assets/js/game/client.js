@@ -68,6 +68,7 @@ import {StationOutfittingPanel} from "./station_outfitting_panel.mjs"
 import {StationTradePanel} from "./station_trade_panel.mjs"
 import {validOrbitalMapId, shouldEnterOrbitalRegion} from "./orbital_regions.mjs"
 import {tacticalEncounterAction, encounterContinueLabel} from "./solar_encounter_actions.mjs"
+import {tacticalOpponent} from "./cockpit_dashboard.mjs"
 
 const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), maximum)
 const validDestination = (destination, boundaries) =>
@@ -136,6 +137,8 @@ class SpaceClient {
     this.hailedEncounterId = null
     this.encounterResolving = false
     this.tacticalRetreating = false
+    this.dashboardPage = "tactical"
+    this.dashboardError = null
     this.player = null
     this.commandDestination = null
     this.selectedTargetId = null
@@ -420,6 +423,7 @@ class SpaceClient {
       const tactical = this.navComputer?.solarNavigation?.tactical_encounter
       if (!tactical?.id) return
       this.tacticalRetreating = true
+      this.dashboardError = null
       const message = tacticalPanel.querySelector("[data-solar-tactical-message]")
       if (message) message.textContent = seize
         ? "Seizing permitted cargo under inventory lock…"
@@ -442,8 +446,9 @@ class SpaceClient {
               " · " + claim.faction_id + " standing " + claim.standing
             : accept ? "Merchant released. SOL voyage resumed."
             : "Interception ended. SOL voyage resumed.")
-        } else if (message) {
-          message.textContent = "Decision unavailable: " + (reason || "relay error")
+        } else {
+          this.dashboardError = "Decision unavailable: " + (reason || "relay error")
+          if (message) message.textContent = this.dashboardError
         }
         this.showSolarTactical()
       })
@@ -531,6 +536,19 @@ class SpaceClient {
     // Capture before ordinary gameplay handlers or browser reload behavior.
     window.addEventListener("keydown", event => this.handleHelmetAlignmentKey(event), true)
     if (!this.setDisplayMode("3d")) return
+    this.canvas.addEventListener("pointerdown", event => {
+      // Consume physical dashboard clicks before pointer-lock capture or
+      // target selection. Esc releases captured steering to use the computer.
+      if (event.button !== 0 || document.pointerLockElement === this.canvas ||
+          this.navComputer?.isOpen || this.inventoryPanel?.opened ||
+          this.docked || this.shipWalkPose || this.solarEncounter ||
+          this.dispatchOfferOpen || this.respawnPending || this.desktopVrOnlyActive) return
+      const action = this.stereoView?.dashboardAction(event, this.canvas.getBoundingClientRect())
+      if (!action) return
+      event.preventDefault()
+      event.stopImmediatePropagation()
+      this.dashboardCommand(action)
+    }, true)
     this.canvas.addEventListener("pointerdown", () => this.canvas.focus({preventScroll: true}))
     window.addEventListener("resize", () => this.resize())
     this.navigation = new PointerNavigation({
@@ -1473,6 +1491,25 @@ class SpaceClient {
     }
   }
 
+  dashboardCommand(action) {
+    if (action === "tactical" || action === "comms") {
+      this.dashboardPage = action
+      if (action === "comms" && this.storyHud?.model?.visible) {
+        this.storyHud.collapsed = false
+        this.storyHud.render()
+      }
+      return
+    }
+    if (action === "navigation") return this.navComputer?.open()
+    if (action === "cargo") return this.togglePilotInventory()
+    const selector = {accept: "[data-solar-tactical-surrender]",
+      seize: "[data-solar-tactical-seize]", retreat: "[data-solar-tactical-retreat]"}[action]
+    if (!selector || this.tacticalRetreating ||
+        !this.navComputer?.solarNavigation?.tactical_encounter?.id) return
+    const button = this.root.querySelector(selector)
+    if (button && !button.hidden && !button.disabled) button.click()
+  }
+
   showSolarTactical() {
     const panel = this.root.querySelector("#solar-tactical-panel")
     if (!panel) return
@@ -1480,6 +1517,7 @@ class SpaceClient {
     panel.hidden = !tactical
     if (!tactical) {
       this.tacticalRetreating = false
+      this.dashboardError = null
       return
     }
     const label = panel.querySelector("[data-solar-tactical-name]")
@@ -1488,10 +1526,7 @@ class SpaceClient {
     const button = panel.querySelector("[data-solar-tactical-retreat]")
     if (button) button.disabled = this.tacticalRetreating
 
-    const surrendered = [...this.entities.values()].some(entity =>
-      entity.kind === "npc" &&
-      entity.state === "surrendered" &&
-      entity.npcTypeId === "solar-scow-" + this.player?.pilot?.id)
+    const surrendered = tacticalOpponent(this)?.state === "surrendered"
     const accept = panel.querySelector("[data-solar-tactical-surrender]")
     const seize = panel.querySelector("[data-solar-tactical-seize]")
     // Only the authoritative world entity's surrender state opens this line.
@@ -2733,7 +2768,6 @@ class SpaceClient {
     this.text("#atlas-pilot-config", `C-${configuration.number}`)
     this.text("#hud-hp", `${number(stats.hit_points)} / ${number(stats.hit_points)}`)
     this.text("#hud-shields", `${number(stats.shields)} / ${number(stats.shields)}`)
-    this.text("#hud-speed", "—")
     this.root.querySelector("#hud-hp-bar").style.width = "100%"
     this.root.querySelector("#hud-shield-bar").style.width = stats.shields > 0 ? "100%" : "0%"
 
@@ -2782,7 +2816,6 @@ class SpaceClient {
     this.text("#hud-throttle", `${Math.round((ownShip.throttle || 0) * 100)}%`)
     const v = ownShip.velocity || {x: 0, y: 0, z: 0}
     const speed = `${Math.round(Math.hypot(v.x, v.y, v.z))} u/s`
-    this.text("#hud-speed", speed)
     this.text("#hud-actual-speed", speed)
     const a = orientationTelemetry(
       ownShip.orientation, ownShip.attitude || {yaw: 0, pitch: 0, roll: 0}

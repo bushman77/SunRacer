@@ -8,16 +8,15 @@ import {createLaserCrosshairGeometry, placeGazeCursor} from "./cockpit_reticles.
 import {stereoViewports, applyTransientStereoOffset, inwardStereoProjectionOffset} from "./stereo_viewport.mjs"
 import {LensDistortionPass, lensCenterU} from "./lens_distortion.mjs"
 import {cockpitHudFit, HUD_GEOMETRY} from "./stereo_layout.mjs"
-import {flightBasis, degrees} from "./flight_basis.mjs"
-import {orientationTelemetry} from "./orientation_interpolation.mjs"
+import {flightBasis} from "./flight_basis.mjs"
 import {cockpitDestinationCamera} from "./cockpit_camera_source.mjs"
 import {steeringLineTip, COCKPIT_VERTICAL_FOV_DEG} from "./mouse_steering.mjs"
-import {targetRange, LASER_FEEDBACK_MS} from "./laser_feedback.mjs"
+import {LASER_FEEDBACK_MS} from "./laser_feedback.mjs"
+import {dashboardModel, dashboardHit} from "./cockpit_dashboard.mjs"
 import {createDartModel, dartHeadingRotation} from "./dart_model.mjs"
 import {createScowModel} from "./scow_model.mjs"
 import {createSunracerModel} from "./sunracer_model.mjs"
 import {npcVisualClass} from "./ship_model_selection.mjs"
-import {surrenderedHudLabel} from "./target_hud_status.mjs"
 import {PlanetaryBody} from "./planetary_body.js"
 import {SpaceBaseVisual} from "./space_base_visual.js"
 import {AmbientRefineryTraffic} from "./ambient_refinery_traffic.mjs"
@@ -979,76 +978,48 @@ export class StereoSpaceView {
   updateHud(client, time) {
     if (time - this.lastHudAt < 100) return
     this.lastHudAt = time
-    const own = client.entities.get(client.selfId)
-    const selected = client.entities.get(client.selectedTargetId)
-    const surrenderLabel = surrenderedHudLabel(client)
+    const model = dashboardModel(client, client.dashboardPage, time)
+    this.dashboardModel = model
     const ctx = this.hudCanvas.getContext("2d")
     ctx.fillStyle = "#071b2c"
     ctx.fillRect(0, 0, 1024, 256)
     ctx.strokeStyle = "#36c4de"
-    ctx.lineWidth = 5
-    ctx.strokeRect(8, 8, 1008, 240)
+    ctx.lineWidth = 4
+    ctx.strokeRect(5, 5, 1014, 246)
+    const button = (b, active = false) => {
+      ctx.fillStyle = active ? "#17495d" : "#102c3d"
+      ctx.fillRect(b.x, b.y, b.w, b.h)
+      ctx.strokeStyle = active ? "#81f0ff" : "#33778e"
+      ctx.strokeRect(b.x, b.y, b.w, b.h)
+      ctx.fillStyle = "#d6f8ff"
+      ctx.font = "bold 26px monospace"
+      ctx.textAlign = "center"
+      ctx.fillText(b.label, b.x + b.w / 2, b.y + b.h / 2 + 9, b.w - 12)
+    }
+    for (const tab of model.tabs) button(tab, tab.id === model.page)
+    ctx.textAlign = "left"
     ctx.fillStyle = "#aaf6ff"
-    ctx.font = "bold 36px monospace"
-    const altitude = Math.round(own?.render?.z || 0)
-    const speed = own?.velocity ? Math.round(Math.hypot(own.velocity.x, own.velocity.y,
-      own.velocity.z)) : 0
-    const throttle = Math.round((own?.throttle || 0) * 100)
-    const mode = own?.flightMode === "newtonian" ? "NF" : "CF"
-    ctx.fillText("ALT " + (altitude >= 0 ? "+" : "") + altitude + "   " +
-      mode + "   THR " + throttle + "%", 30, 65)
-    ctx.font = "30px monospace"
-    const hp = own ? Math.round(100 * (own.hull || 0) / Math.max(own.maxHull || 1, 1)) : 0
-    const shield = own ? Math.round(100 * (own.shields || 0) / Math.max(own.maxShields || 1, 1)) : 0
-    const attitude = orientationTelemetry(
-      own?.orientation, own?.attitude || {yaw:0, pitch:0, roll:0}
-    )
-    const rates = own?.angularVelocity || {yaw:0, pitch:0, roll:0}
-    const hdg = ((degrees(attitude.yaw) % 360) + 360) % 360
-    ctx.fillText("HDG " + hdg + "  PITCH " + degrees(attitude.pitch) +
-      "  ROLL " + degrees(attitude.roll) + "  V " + speed, 30, 135)
-    const feedback = client.lastLaserFeedback
-    const recent = feedback && time - feedback.at < LASER_FEEDBACK_MS
-    ctx.fillStyle = surrenderLabel ? "#81ffaf" : recent ? (feedback.hit ? "#81ffaf" : "#ff9a99") :
-      selected ? "#ffbe89" : "#7aa9cb"
-    ctx.font = (surrenderLabel || recent) ? "bold 36px monospace" : "30px monospace"
-    ctx.fillText(surrenderLabel ? surrenderLabel : recent ? feedback.label :
-      selected ? "TARGET " +
-        (npcVisualClass(selected.npcTypeId, selected.shipClass) === "generic"
-          ? "" : npcVisualClass(selected.npcTypeId, selected.shipClass).toUpperCase() + " ") +
-        (selected.displayName || "CONTACT").slice(0, 19) :
-      "P/Y/R  " + Math.abs(degrees(rates.pitch)) + " / " +
-      Math.abs(degrees(rates.yaw)) + " / " + Math.abs(degrees(rates.roll)) +
-      " deg/s", 30, 194)
-    const range = targetRange(own, selected)
-    const nav = client.navComputer?.solarNavigation
-    const flyby = nav?.tactical_encounter ? null : nav?.encounter
-    const planetWarning = client.planetaryWarningDisplay
-    const hold = client.encounterHold
-    const story = client.storyHud?.stereoLine
-    // This canvas is a stereo-correct 3D HUD surface shared by both SBS
-    // eyes. Render the hazard inside the instrument rather than a flat
-    // non-stereoscopic banner that would be uncomfortable in a headset.
-    ctx.fillStyle = planetWarning
-      ? planetWarning.level === "critical" ? "#ff8f90" : "#ffcf7a"
-      : surrenderLabel ? "#81ffaf"
-      : hold ? "#fcd34d"
-      : flyby ? "#7eead6"
-      : range?.inRange === false ? "#ff9b96"
-      : !range && story ? "#fcd889" : "#9fc7df"
-    ctx.font = "bold 22px monospace"
-    ctx.fillText(planetWarning
-      ? planetWarning.level.toUpperCase() + " · " + planetWarning.detail
-      : surrenderLabel ? "SURRENDER OFFER · ACCEPT OR RETREAT ON LAPTOP"
-      : hold ? "CRUISE PAUSED · " + String(hold.call_sign).slice(0, 20) +
-        " · HAIL OR RESUME ON LAPTOP"
-      : flyby ? "CLOSE PASS · " + String(flyby.call_sign).slice(0, 24) +
-        " · HAIL VIA ATLAS"
-      : range ? range.label
-      : story ? story :
-        "LASER " + Math.round(own?.attackRange || 0) + "u  ·  RMB FIRE  ·  T TARGET",
-      30, 234)
+    ctx.font = "bold 37px monospace"
+    ctx.fillText("VEL " + model.speed + " u/s", 22, 100, 480)
+    ctx.textAlign = "right"
+    ctx.fillText("THR " + model.throttle + "%", 1002, 100, 480)
+    ctx.textAlign = "left"
+    ctx.fillStyle = model.surrendered ? "#81ffaf" : model.active ? "#ffbe89" : "#b7e4f5"
+    ctx.font = "bold 30px monospace"
+    ctx.fillText(model.line, 22, 143, 980)
+    ctx.fillStyle = model.danger ? "#ff9b96" : "#a8c9dc"
+    ctx.font = "25px monospace"
+    ctx.fillText(model.detail, 22, 177, 980)
+    for (const action of model.actions) button(action, action.id === "accept")
     this.hudTexture.needsUpdate = true
+  }
+
+  dashboardAction(pointer, rect) {
+    if (this.interiorActive || !this.hudPanel?.visible ||
+        !this.dashboardModel || !this.rayFromPointer(pointer, rect)) return null
+    this.cockpitFraming.updateMatrixWorld(true)
+    const hit = this.raycaster.intersectObject(this.hudPanel, false)[0]
+    return dashboardHit(this.dashboardModel, hit?.uv)
   }
 
   updateSteeringLine(steering) {
