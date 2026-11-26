@@ -502,7 +502,7 @@ defmodule Core.WorldTest do
     # The extended-range emitter remains a server-owned player weapon.
     assert {:ok, selection_snapshot} = World.snapshot("1-1", context.world_options)
     pilot = Enum.find(selection_snapshot.entities, &(&1.id == :combat_pilot))
-    assert pilot.attack_range == 540.0
+    assert pilot.attack_range == 1_080.0
     assert pilot.next_attack_tick == 0
 
     assert {:ok, %{target: %{id: near_id}}} =
@@ -529,15 +529,15 @@ defmodule Core.WorldTest do
     assert {:ok, session} = World.connect(:long_range_pilot, context.stats, opts)
     npc_id = "npc:1-1:dart:1"
 
-    # Place the existing NPC down the ship's +Y axis at 500 units: inside
-    # the 540-unit beam range, outside the Dart's own 420-unit laser.
+    # Place the NPC 1,000 units down the ship's +Y axis: beyond the old
+    # 540-unit cap, inside the new 1,080-unit range and beyond Dart range.
     [{pid, _}] = Registry.lookup(@registry, {:world_map, "1-1"})
     :sys.replace_state(pid, fn state ->
       npc = Map.fetch!(state.npcs, npc_id)
       # On the pilot's sight line: the cockpit eye sits 2.75 scene units
       # (45.8 world units) above ship centre, and the wing lasers converge
       # on what lies under the sight (LineOfFire.trace_pair/4).
-      at_distance = %{npc | position: %Core.World.Position{x: 1_000.0, y: 1_500.0,
+      at_distance = %{npc | position: %Core.World.Position{x: 1_000.0, y: 2_000.0,
                                                             z: 2.75 / 0.06}}
       pilot = Map.fetch!(state.entities, :long_range_pilot)
       pilot = %{pilot | orientation: Orientation.from_angles(%{

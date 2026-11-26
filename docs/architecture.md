@@ -406,3 +406,5 @@ Global and direct chat use separate Phoenix channel subscriptions on the same so
 Communications availability is checked before desktop VR synchronization and interpolation, preserving the original rendering-loop adjacency contract.
 
 The Orrery left-button gesture pans the camera target parallel to the orbital plane, scaled by perspective distance and elevation. A five-pixel threshold preserves ordinary selection, and pointer capture suppresses clicks after a drag. Middle-button orbit and cursor-centred wheel zoom are unchanged; panning does not affect simulation or network state.
+
+Player laser reach is currently 1,080 world units, resolved by Core.Combat and replicated in the player snapshot. The local instant preview uses that value, with a matching fallback. The server still resolves each wing ray and validates locked shots; NPC range and cooldowns are unchanged.

@@ -22,7 +22,7 @@ export function instantLaserPreview(ship, now) {
       !["x","y","z","w"].every(k=>Number.isFinite(pose[k]))) return []
   const q=normalizeOrientation(pose)
   const distance=Number.isFinite(ship.attackRange) && ship.attackRange>0
-    ? Math.min(ship.attackRange,10000) : 540
+    ? Math.min(ship.attackRange,10000) : 1080
   // Pilot eye is (0,2.75,0) in ship-local scene units.
   const target=toWorld(pos,q,{x:0,y:2.75,z:-distance*LASER_SCENE_SCALE})
   return [-1,1].map((sign,i)=>({

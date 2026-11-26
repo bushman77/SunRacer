@@ -337,12 +337,12 @@ defmodule Sunracer.Story.Prologue do
     line(
       @kade,
       "Green Starbase communications",
-      "Corsair-17's guns reach 420; your beam reaches 540. Live in that gap and it " <>
+      "Corsair-17's guns reach 420; your beam reaches #{round(Core.Combat.player_attack_range())}. Live in that gap and it " <>
         "can't answer you. Your retros are far too weak to hold it astern, so cut the " <>
         "assist with Ctrl+E, run up to speed, then spin to face the raider and coast " <>
         "away nose-on. Drift inside 420 and it will gut you. Accept its surrender if " <>
         "it offers, and seize its hold if you have the room.",
-      "Hold Corsair-17 between 420 and 540 until it surrenders"
+      "Hold Corsair-17 between 420 and #{round(Core.Combat.player_attack_range())} until it surrenders"
     )
   end
 

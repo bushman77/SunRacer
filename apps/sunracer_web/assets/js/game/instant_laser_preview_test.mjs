@@ -7,7 +7,7 @@ import {instantLaserPreview,takePreviewForConfirmedShot,
   from "./instant_laser_preview.mjs"
 
 const ship=(renderOrientation=fromAngles({}))=>({
-  render:{x:1000,y:1000,z:10},renderOrientation,attackRange:540,
+  render:{x:1000,y:1000,z:10},renderOrientation,attackRange:1080,
 })
 const read=p=>readFileSync(new URL(p,import.meta.url),"utf8")
 
@@ -18,7 +18,7 @@ test("wing rays originate at rotating muzzles and converge on sight",()=>{
   assert.ok(rays[0].from.x<1000 && rays[1].from.x>1000)
   assert.equal(rays[0].from.y,rays[1].from.y)
   assert.ok(Math.abs(rays[0].to.x-1000)<1e-8)
-  assert.ok(Math.abs(rays[0].to.y-460)<1e-8)
+  assert.ok(Math.abs(rays[0].to.y+80)<1e-8)
   assert.ok(Math.abs(rays[0].to.z-(10+2.75/LASER_SCENE_SCALE))<1e-8)
   assert.equal(rays[0].expiresAt,1000+LOCAL_LASER_PREVIEW_MS)
   assert.ok(LOCAL_LASER_PREVIEW_MS<REMOTE_LASER_DISPLAY_MS)
@@ -58,4 +58,14 @@ test("server owns weapon, damage and hit confirmation",()=>{
   assert.match(source,/applyLaserBurstDamage\(this\.entities, attack\)/)
   assert.match(source,/this\.lastLaserFeedback = laserFeedback\(attack, this\.entities, startedAt\)/)
   assert.match(source,/this\.beams = this\.beams\.filter\(/)
+})
+
+test("preview follows server supplied range, and fallback matches new player reach",()=>{
+  for(const attackRange of [540,1080,undefined]){
+    const own={...ship(),attackRange}
+    const rays=instantLaserPreview(own,1000)
+    const expected=attackRange??1080
+    assert.ok(rays.every(r=>Math.abs(r.to.y-(1000-expected))<1e-8))
+    assert.ok(rays.every(r=>!r.hit))
+  }
 })

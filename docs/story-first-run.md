@@ -175,3 +175,6 @@ a Dart kills the pilot in 10.8 s. Corsair-17 surrenders at 50% hull, so the
 tutorial fight is roughly half that, but it is still a long first engagement
 and worth re-checking once the raider can break off and re-approach.
 
+### 2026-11-25 range playtest update
+
+The earlier 420–540 band described above is historical. Current player beam range is 1,080; Corsair-17 remains at 420. The wider 660-unit standoff band is a deliberate playtest adjustment. The Newtonian retreat manoeuvre remains useful, but the timing and difficulty of the encounter need a fresh playthrough.

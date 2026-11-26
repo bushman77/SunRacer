@@ -1,3 +1,7 @@
+## 2026-11-25 — Longer player laser reach (playtest)
+
+- Double server-authoritative player beam range from 540 to 1,080 world units (64.8 scene units). Both manual twin-wing beams and locked fire already use the authoritative weapon range. Client instant-preview fallback follows the new range; actual range still comes from the snapshot. NPC range, damage, cooldown, aim geometry and detection radius remain unchanged. The standoff window intentionally widens to 660 units against Dart and 700 against Scow; this makes the prologue encounter easier and may allow fire beyond NPC detection, so live balance needs review. Update mission prompts and range, manual fire and preview regressions. Full CI, mix precommit, installed-client and EC2 acceptance pending. No deployment or version bump.
+
 ## 2026-11-25 — Orrery left-button panning
 
 - Left drag pans along the orbital plane at the current zoom and elevation; five CSS pixels distinguish clicks from drags. Keep left-click selection, middle-button orbit, wheel cursor zoom, context menu and double-click focus. Pointer capture and cancellation prevent accidental waypoint selection; update cursor and control hint. Two new focused JS tests executed against the actual helper and binding logic (passed); full CI, mix precommit and installed-client visual acceptance pending. No server physics, network, version or deployment change.

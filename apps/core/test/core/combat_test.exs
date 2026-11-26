@@ -4,27 +4,25 @@ defmodule Core.CombatTest do
   alias Core.Combat
   alias Core.World.Position
 
-  test "the equipped player laser reaches 540 units and no further" do
+  test "the equipped player laser reaches 1080 units and no further" do
     weapon = Combat.player_weapon(%{damage: 40}, 100)
-    assert weapon.attack_range == 540.0
+    assert weapon.attack_range == 1_080.0
     assert weapon.damage == 40
 
     attacker = combatant(:player, :pilot, {1_000, 1_000},
       attack_range: weapon.attack_range, damage: weapon.damage)
-    in_range = combatant(:npc, "in", {1_530, 1_000})
-    out_of_range = combatant(:npc, "out", {1_560, 1_000})
+    in_range = combatant(:npc, "in", {2_080, 1_000})
+    out_of_range = combatant(:npc, "out", {2_081, 1_000})
     assert :ok == Combat.validate_attack(attacker, in_range, 0)
     assert {:error, :out_of_range} =
              Combat.validate_attack(attacker, out_of_range, 0)
   end
 
-  test "every NPC weapon is outranged by the player beam by a narrow band" do
-    for definition <- Core.NPC.Catalog.all() do
-      band = Combat.player_attack_range() - definition.attack_range
-      # Wide enough to fight from, narrow enough that it takes flying.
-      assert band > 0, "#{definition.id} outranges the player beam"
-      assert band <= 200, "#{definition.id} band #{band} is too forgiving"
-    end
+  test "the extended player range does not alter enemy weapon range" do
+    assert Core.NPC.Catalog.fetch!("dart").attack_range == 420.0
+    assert Core.NPC.Catalog.fetch!("scow").attack_range == 380.0
+    assert Combat.player_attack_range() - Core.NPC.Catalog.fetch!("dart").attack_range == 660.0
+    assert Combat.player_attack_range() - Core.NPC.Catalog.fetch!("scow").attack_range == 700.0
   end
 
   test "validates PvE targets, range, and deterministic cooldown ticks" do

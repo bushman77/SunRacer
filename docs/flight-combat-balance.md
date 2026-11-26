@@ -507,3 +507,7 @@ follows the surrounding style by hand.
 **No manual play-through has been performed.** Every figure above comes from
 the simulation, not from flying the ship. The feel of a 5 second acceleration
 and a 5 second stop needs a cockpit to judge.
+
+## 2026-11-25 player range playtest
+
+The original range analysis above applies to the former 540-unit limit. Player feedback indicates that beam reach feels too short. The current server limit is 1,080 world units; Dart and Scow remain at 420 and 380. This widens the safe bands to 660 and 700, respectively, without changing damage or cooldown. NPC detection radii remain unchanged: a pilot may initiate shots outside detection. Review this tradeoff through actual gameplay before changing enemy range or detection policy.

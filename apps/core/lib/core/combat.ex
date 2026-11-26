@@ -8,12 +8,10 @@ defmodule Core.Combat do
   """
 
   # Player beam range, server-enforced for manual twin beams and locked
-  # autofire. Deliberately only a little longer than NPC weapons (Dart 420,
-  # Scow 380): holding the narrow band between their range and this one
-  # lets a pilot hit without being hit back, but drifting beyond it means
-  # the beam no longer reaches. 540 world units = 32.4 scene units at
-  # WORLD_SCALE 0.06, where a 40-unit NPC hit sphere spans about 8.5 degrees.
-  @player_attack_range 540.0
+  # autofire. Playtest tuning: double the previous 540-unit limit so a
+  # pilot can engage before reaching point-blank distance. NPC weapons
+  # remain unchanged; the wider standoff band is intentional for this pass.
+  @player_attack_range 1_080.0
   @type damage_result :: %{
           requested_damage: non_neg_integer(),
           shield_damage: non_neg_integer(),

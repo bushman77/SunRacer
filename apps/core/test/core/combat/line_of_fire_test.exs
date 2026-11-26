@@ -64,6 +64,15 @@ defmodule Core.Combat.LineOfFireTest do
     assert_in_delta abs(eye.x - @origin.x), @eye_z, 1.0e-6
   end
 
+  test "the actual player weapon reaches beyond the old range and stops at the new cap" do
+    range = Core.Combat.player_attack_range()
+    enemy = npc("extended", 1_000.0, 0.0, @eye_z)
+    beams = LineOfFire.trace_pair(@origin, Orientation.identity(), [enemy], range)
+    assert Enum.all?(beams, & &1.hit)
+    beyond = npc("beyond", 1_000.0, -100.0, @eye_z)
+    refute Enum.any?(LineOfFire.trace_pair(@origin, Orientation.identity(), [beyond], range), & &1.hit)
+  end
+
   test "a distant centered ship can be struck at 3,200 world units" do
     enemy = npc("distant", 1_000.0, 4_200.0, @eye_z)
     facing_south = Orientation.from_angles(%{yaw: :math.pi(), pitch: 0.0, roll: 0.0})
