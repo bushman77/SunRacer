@@ -1,3 +1,8 @@
+## 2026-11-27 — Native-only gameplay entry
+
+- Retired the hosted /play cockpit for authenticated and anonymous visitors; legacy links redirect to the landing page with a desktop-client notice. Browser login now returns to account/home services; landing offers the official GitHub release download. Retained registration, verification, recovery, equipment management, SBS /helmet and native JSON/socket APIs. Kept the shared HEEx cockpit template and renderer because the Tauri staging pipeline consumes them locally.
+- Updated controller regressions for retired gameplay, account sessions and download links. Native markup tests retain cockpit coverage. This is product-surface retirement, not native-client attestation or an API access-control change. Existing native clients and production v0.3.9 are unchanged; local Mix/Node and manual native/SBS verification pending.
+
 ## 2026-11-27 — Leaked Routes: Follow the Copy implementation candidate
 
 - Extends steps 4–7, exact Juno offer, Earth dispatch and Venus audit contacts, durable evidence and 400-credit receipt; validates session, voyage, destination, live entity and tactical state; reuses the shared dispatcher UI. M3 disabled; no migration, new cargo, faction or roster changes.

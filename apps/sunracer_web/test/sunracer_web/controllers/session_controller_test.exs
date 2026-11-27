@@ -22,13 +22,17 @@ defmodule SunracerWeb.SessionControllerTest do
     end
   end
 
-  test "the game route requires an authenticated pilot", %{conn: conn} do
+  test "hosted gameplay redirects anonymous visitors to the desktop download", %{conn: conn} do
     conn = get(conn, ~p"/play")
 
-    assert redirected_to(conn) == ~p"/login"
+    assert redirected_to(conn) == ~p"/"
+    assert get_resp_header(conn, "cache-control") == ["no-store"]
+    home = get(recycle(conn), ~p"/")
+    assert html_response(home, 200) =~ "Download desktop client"
+    refute html_response(home, 200) =~ ~s(id="game-client")
   end
 
-  test "a verified pilot can sign in, launch the client, and sign out", %{conn: conn} do
+  test "a verified pilot can sign in for account services, but cannot launch hosted gameplay", %{conn: conn} do
     password = "sector-access-123"
 
     account =
@@ -42,49 +46,21 @@ defmodule SunracerWeb.SessionControllerTest do
         "session" => %{"username" => account.username, "password" => password}
       })
 
-    assert redirected_to(conn) == ~p"/play"
+    assert redirected_to(conn) == ~p"/"
 
-    conn = get(conn, ~p"/play")
-    response = html_response(conn, 200)
+    conn = get(recycle(conn), ~p"/play")
+    assert redirected_to(conn) == ~p"/"
+    home = get(recycle(conn), ~p"/")
+    response = html_response(home, 200)
     document = LazyHTML.from_document(response)
+    assert Enum.count(LazyHTML.query(document, "#nova-equipment-link[href='/equipment']")) == 1
+    assert Enum.count(LazyHTML.query(document, "#game-client")) == 0
+    refute response =~ "data-socket-token"
 
-    assert Enum.count(
-             LazyHTML.query(
-               document,
-               "#game-client[data-map-id='1-1'][data-layout-player-id='#{account.id}']"
-             )
-           ) == 1
-
-    assert Enum.count(LazyHTML.query(document, "#space-viewport[tabindex='0']")) == 1
-    assert Enum.count(LazyHTML.query(document, "#action-hotbar")) == 1
-    assert Enum.count(LazyHTML.query(document, "#equipment-open[href='/equipment']")) == 1
-
-    assert Enum.count(
-             LazyHTML.query(
-               document,
-               "#hotbar-slot-1[data-action-id='x1_laser'][data-action-type='ammunition'][data-activation-mode='toggle']"
-             )
-           ) == 1
-
-    assert Enum.count(LazyHTML.query(document, "#hotbar-slot-10")) == 1
-    # The old target-info window was retired; the active cockpit HUD has
-    # ship-status and minimap windows. The Solar Atlas is now the entry view.
-    assert Enum.count(LazyHTML.query(document, "[data-cockpit-window]")) == 2
-    assert Enum.count(LazyHTML.query(document, "[data-cockpit-window='ship_status']")) == 1
-    assert Enum.count(LazyHTML.query(document, "[data-cockpit-window='minimap']")) == 1
-    assert Enum.count(LazyHTML.query(document, "#navigation-computer")) == 1
-    assert Enum.count(LazyHTML.query(document, "#nav-solar-view")) == 1
-    assert Enum.count(LazyHTML.query(document, "#nav-solar-engage")) == 1
-    assert Enum.count(LazyHTML.query(document, "#cockpit-minimap-canvas")) == 1
-    assert Enum.count(LazyHTML.query(document, "#minimap-decrease")) == 1
-    assert Enum.count(LazyHTML.query(document, "#minimap-increase")) == 1
-    assert Enum.count(LazyHTML.query(document, "#cockpit-lock-toggle")) == 1
-    assert Enum.count(LazyHTML.query(document, "#cockpit-reset-layout")) == 1
-
-    conn = delete(conn, ~p"/logout")
+    conn = delete(recycle(home), ~p"/logout")
     assert redirected_to(conn) == ~p"/login"
 
-    conn = get(conn, ~p"/play")
+    conn = get(recycle(conn), ~p"/equipment")
     assert redirected_to(conn) == ~p"/login"
   end
 
@@ -93,16 +69,16 @@ defmodule SunracerWeb.SessionControllerTest do
     account = verified_player_account_fixture(%{password: password})
     login = post(conn, ~p"/login", %{"session" => %{"username" => account.username,
       "password" => password, "remember_me" => "true"}})
-    assert redirected_to(login) == ~p"/play"
+    assert redirected_to(login) == ~p"/"
     cookie = login.resp_cookies["_sunracer_remember"]
     assert cookie.max_age == 2_592_000
     assert cookie.http_only
     assert cookie.same_site == "Lax"
     remembered = fn -> Plug.Test.put_req_cookie(build_conn(), "_sunracer_remember", cookie.value) end
-    assert redirected_to(get(remembered.(), ~p"/login")) == ~p"/play"
+    assert redirected_to(get(remembered.(), ~p"/login")) == ~p"/"
     logout = delete(remembered.(), ~p"/logout")
     assert logout.resp_cookies["_sunracer_remember"].max_age == 0
-    assert redirected_to(get(remembered.(), ~p"/play")) == ~p"/login"
+    assert redirected_to(get(remembered.(), ~p"/equipment")) == ~p"/login"
   end
 
   test "ordinary login never sets a persistent credential and invalid cookies cannot log in", %{conn: conn} do
@@ -111,9 +87,9 @@ defmodule SunracerWeb.SessionControllerTest do
     login = post(conn, ~p"/login", %{"session" => %{"username" => account.username,
       "password" => password, "remember_me" => "false"}})
     assert login.resp_cookies["_sunracer_remember"].max_age == 0
-    assert redirected_to(get(build_conn(), ~p"/play")) == ~p"/login"
+    assert redirected_to(get(build_conn(), ~p"/equipment")) == ~p"/login"
     bad = Plug.Test.put_req_cookie(build_conn(), "_sunracer_remember", "invalid")
-    assert redirected_to(get(bad, ~p"/play")) == ~p"/login"
+    assert redirected_to(get(bad, ~p"/equipment")) == ~p"/login"
   end
 
   test "invalid credentials do not create a browser session", %{conn: conn} do

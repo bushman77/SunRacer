@@ -16,7 +16,7 @@ defmodule SunracerWeb.RegistrationController do
 
   def new(conn, _params) do
     if conn.assigns.current_player do
-      redirect(conn, to: ~p"/play")
+      redirect(conn, to: ~p"/")
     else
       render_registration(conn, %{})
     end

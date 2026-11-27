@@ -62,7 +62,7 @@ defmodule SunracerWeb.RegistrationControllerTest do
       post(build_conn(), ~p"/login", %{
         "session" => %{"username" => attrs.username, "password" => attrs.password}
       })
-    assert redirected_to(login) == ~p"/play"
+    assert redirected_to(login) == ~p"/"
   end
 
   test "rejected fields never echo the password into rendered HTML", %{conn: conn} do

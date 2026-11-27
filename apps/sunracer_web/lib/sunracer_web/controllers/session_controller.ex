@@ -6,7 +6,7 @@ defmodule SunracerWeb.SessionController do
 
   def new(conn, _params) do
     if conn.assigns.current_player do
-      redirect(conn, to: ~p"/play")
+      redirect(conn, to: ~p"/")
     else
       render(conn, :new,
         page_title: "Pilot sign in",
@@ -21,7 +21,7 @@ defmodule SunracerWeb.SessionController do
         conn
         |> GameAuth.log_in_player(account, params["remember_me"] == "true")
         |> put_flash(:info, "Welcome aboard, #{account.pilot_name}.")
-        |> redirect(to: ~p"/play")
+        |> redirect(to: ~p"/")
 
       {:error, _reason} ->
         conn

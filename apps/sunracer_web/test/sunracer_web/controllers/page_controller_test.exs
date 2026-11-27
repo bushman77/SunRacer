@@ -10,7 +10,10 @@ defmodule SunracerWeb.PageControllerTest do
     assert html =~ "Space exploration"
     assert Enum.count(LazyHTML.query(document, "#landing-page.nova-title-screen")) == 1
     assert Enum.count(LazyHTML.query(document, "#nova-title")) == 1
-    assert Enum.count(LazyHTML.query(document, "#primary-launch-link[href='/login']")) == 1
+    assert Enum.count(LazyHTML.query(document, "#primary-launch-link[href='https://github.com/bushman77/SunRacer/releases/latest']")) == 1
+    assert html =~ "Download desktop client"
+    assert html =~ "Desktop client · Live multiplayer"
+    assert Enum.count(LazyHTML.query(document, "a[href='/play']")) == 0
     assert Enum.count(LazyHTML.query(document, "#launch-client-link")) == 0
     assert Enum.count(LazyHTML.query(document, "a[href='/login']")) == 1
     assert Enum.count(LazyHTML.query(document, "#nova-settings-toggle[popovertarget='nova-settings-panel']")) == 1

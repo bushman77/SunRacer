@@ -33,6 +33,8 @@ defmodule SunracerWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    # Retired hosted gameplay: old links lead to desktop download information.
+    get "/play", GameController, :retired
     get "/helmet", HelmetController, :show
     get "/login", SessionController, :new
     post "/login", SessionController, :create
@@ -62,7 +64,6 @@ defmodule SunracerWeb.Router do
   scope "/", SunracerWeb do
     pipe_through [:browser, :require_authenticated_player]
 
-    get "/play", GameController, :show
     get "/equipment", EquipmentController, :show
     post "/equipment", EquipmentController, :update
     post "/equipment/activate", EquipmentController, :activate

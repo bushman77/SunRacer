@@ -58,7 +58,7 @@ defmodule SunracerWeb.EquipmentController do
         generator_slots: loadout.generators["ship"] |> Enum.take(ship.generator_slots) |> Enum.with_index()
       )
     else
-      _ -> conn |> put_flash(:error, "Equipment locker unavailable.") |> redirect(to: ~p"/play")
+      _ -> conn |> put_flash(:error, "Equipment locker unavailable.") |> redirect(to: ~p"/")
     end
   end
 
