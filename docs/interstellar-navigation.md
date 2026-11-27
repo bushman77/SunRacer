@@ -72,3 +72,8 @@ execution pending.
 
 - User corrected the mouth direction to east-southeast to align with the schematic Galactic Atlas. SOL mouth now (+84,000,000, +35,000,000, 0) game-km; radius and Pluto clearance unchanged. Updated placement and selection regressions. Paired mouth, transit lock and flight lab unchanged. Full runtime verification pending.
 
+
+
+## Campaign writing reference
+
+See [the campaign bible](story/CAMPAIGN.md) for the proposed narrative route and progression rationale. It is design-only; the production transit and persistence requirements above are unchanged.

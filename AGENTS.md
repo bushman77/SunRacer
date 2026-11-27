@@ -6,6 +6,13 @@ This is a web application written using the Phoenix web framework.
 - Use the already included and available `:req` (`Req`) library for HTTP requests, **avoid** `:httpoison`, `:tesla`, and `:httpc`. Req is included by default and is the preferred HTTP client for Phoenix apps
 - After each milestone, update `ROADMAP.md`, `CHANGELOG.md`, and relevant architecture documentation; record automated tests run, tests added, known limitations, and the exact status of any required manual verification. Never claim manual verification that was not actually performed, and do not use speculative overall completion percentages.
 
+### Story and campaign guidelines
+
+- Consult `docs/story/CAMPAIGN.md`, the relevant chapter design, and the existing First Run documents before implementing or revising narrative missions.
+- Distinguish approved design, proposed lore and implemented gameplay. Do not change approved story facts, reorder the 29-system campaign or unlock travel based on draft outlines.
+- Preserve NPC-issued mission acceptance, server-verified objectives, per-pilot persistence, once-only rewards and explicit failure recovery.
+- Write and review the next chapter before implementing it; document design deviations and require a playthrough before expanding the campaign.
+
 ### Phoenix v1.8 guidelines
 
 - **Always** begin your LiveView templates with `<Layouts.app flash={@flash} ...>` which wraps all inner content
