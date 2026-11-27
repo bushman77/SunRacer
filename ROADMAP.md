@@ -1,3 +1,7 @@
+## 2026-11-26 — Persistent character and quest design (documentation only)
+
+- Added `docs/story/CHARACTERS.md` revision 0.1 recording the agreed limited-sandbox MMO rule: permanent stationary NPCs remain at their home and service location while per-pilot narrative options evolve. Recorded all six existing Green Starbase contacts (including Tarek Sol and Sera Vale), local keys, rooms, positions, existing model mappings, Earth-orbit Ross, and Vesper-02/Corsair-17 encounter scope. Aligned campaign and faction references, added agent guidance and proposed additive/versioned mission design. No new roster, runtime behavior, service changes or travel permissions; source roster and placement cross-checked, no runtime tests executed.
+
 ## 2026-11-26 — Faction design bible (design only)
 
 - Created `docs/story/FACTIONS.md` revision 0.1: six existing commercial/civilian organization IDs, nine SOL territorial authorities, Green Starbase neutrality, proposed economic dependencies, Directorate ideology and internal currents, relationship tensions, coalition and mission design constraints. Preserved `Core.Factions` identity and standing/warrant policies and First Run continuity. New profiles and slogans are proposals, not approved registry or gameplay changes; leaker, Directorate founding and leadership remain open. Linked campaign/lore/index and updated agent guidance. Documentation only; source identity and standing policy cross-checked, no runtime tests executed.

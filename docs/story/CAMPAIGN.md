@@ -165,13 +165,14 @@ Detailed NPC offers, mission steps, rewards, evidence flags and recovery behavio
 | Juno Rook | Green Starbase mission liaison | Builds an evidence-led investigation and becomes a coalition intelligence contact. Must earn trust rather than know every answer. |
 | Mara Venn | Repair engineer | Converts damaged ships and recovered telemetry into practical passage research. Challenges risky decisions that put crews in danger. |
 | Ilya Quill | Ship outfitter | Helps the pilot prepare for progressively harsher journeys; equipment must have real costs and tradeoffs. |
-| Tarek | Commerce contact | Connects the pilot to merchants, legitimate trade, and later resistance supply networks. |
+| Tarek Sol | Green Starbase Trade Broker | Connects the pilot to merchants, legitimate trade, and later resistance supply networks from his existing desk. |
+| Sera Vale | Green Starbase Supply Officer | Helps trace consignments and coordinate emergency supply contacts from the depot. |
 | Eno Kade | Communications officer | Intercepts, validates and relays information. His work links otherwise separated characters. |
-| Captain Ines Varga | Vesper-02 courier captain | A relationship founded on the rescue; grows into a capable convoy or coalition leader. |
+| Captain Ines Varga | Vesper-02 courier captain | A relationship founded on the rescue; may advise and coordinate later operations through established vessel routes, credible communications or scoped encounters. |
 | Dispatcher Halden Ross | Helios dispatcher | Remains a plausible early suspect until the investigation earns its conclusion. His knowledge of routes remains valuable. |
 | Corsair-17 | Surrendered raider vessel | The recovered record is established evidence. Crew identity, survival and later appearances must respect the actual surrender outcome. |
 
-Keep home-system characters reachable through credible relays, recorded messages, visits or later deployments. No instant communications through a disabled passage unless a separate, established system provides it. Introduce local NPCs when a system is developed rather than filling 29 systems with interchangeable quest givers.
+Persistent stationary NPCs keep their existing homes, rooms and service roles. New story content changes eligible dialogue and offers per pilot, not shared placement or availability. Mobile contacts retain established routes; private encounters remain scoped. Keep home-system characters reachable through credible relays, recorded messages or visits when return travel is supported, not story-driven relocation. No instant communications through a disabled passage unless a separate, established system provides it. Introduce local NPCs as needed. See [CHARACTERS.md](CHARACTERS.md) for the accepted continuity rule and source-backed roster.
 
 Existing organizations are authoritative: Helios Courier Cooperative, Solar Merchant League, Outer Rim Trading Guild, Solar Survey Consortium, Independent Operators, Unaffiliated Raiders, and SOL planetary authorities. See `Core.Factions`. Their membership is not synonymous with guilt. The Directorate and Architects are proposed lore; neither is an implemented faction. Proposed motives, internal subdivisions and political relationships are developed in [FACTIONS.md](FACTIONS.md).
 
@@ -199,6 +200,6 @@ Existing organizations are authoritative: Helios Courier Cooperative, Solar Merc
 
 ## 9. Document workflow
 
-This file is the top-level working story bible. Existing First Run documentation remains the reference for the implemented prologue. [LORE.md](LORE.md) records the accepted historical and technological foundations. [FACTIONS.md](FACTIONS.md) develops the proposed faction motives and relationships. Future companion files are planned: `CHARACTERS.md`, `TIMELINE.md`, `MISSION_DESIGN.md` and one directory per system. See [story index](README.md).
+This file is the top-level working story bible. Existing First Run documentation remains the reference for the implemented prologue. [LORE.md](LORE.md) records the accepted historical and technological foundations. [FACTIONS.md](FACTIONS.md) develops the proposed faction motives and relationships. [CHARACTERS.md](CHARACTERS.md) establishes persistent NPC continuity. Future companion files are planned: `TIMELINE.md`, `MISSION_DESIGN.md` and one directory per system. See [story index](README.md).
 
 When a design is accepted, record the decision and update this bible and the relevant chapter. Implementation must not quietly change accepted story facts; propose differences and document them. Track actual gameplay implementation in ROADMAP and CHANGELOG separately from narrative intent.

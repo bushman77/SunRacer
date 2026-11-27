@@ -132,7 +132,7 @@ These are orbital and local-system economic roles, not a claim that gas giants h
 
 This independence makes Green Starbase useful as a place where pilots from different organizations meet. It also creates credible exposure to sensitive commercial and navigation records. The station is therefore a plausible suspect during Leaked Routes without making its entire staff conspirators.
 
-Juno Rook, Mara Venn, Ilya Quill, Tarek and Eno Kade have professional responsibilities that can create disagreements without turning them into caricatures. Character histories and the station's governance will be developed separately. No new station faction ID or legal immunity is implied.
+Juno Rook, Mara Venn, Ilya Quill, Tarek Sol, Sera Vale and Eno Kade have professional responsibilities that can create disagreements without turning them into caricatures. [CHARACTERS.md](CHARACTERS.md) records the permanent station roster and character continuity constraints. Detailed histories and the station's governance remain open. No new station faction ID or legal immunity is implied.
 
 ## 6. The Directorate — author-only
 
