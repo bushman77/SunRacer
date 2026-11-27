@@ -32,9 +32,9 @@ defmodule Core.Universe.WormholeTransit do
   def section(distance) when is_number(distance) do
     p = clamp(distance / @length, 0.0, 1.0)
     %{distance: distance,
-      x: 740.0 * :math.sin(3.0 * :math.pi() * p) * :math.sin(:math.pi() * p),
-      y: 480.0 * :math.sin(5.0 * :math.pi() * p) * :math.sin(:math.pi() * p),
-      radius: 460.0 - 190.0 * :math.pow(:math.sin(4.0 * :math.pi() * p), 2)}
+      x: 980.0 * :math.sin(4.0 * :math.pi() * p) * :math.sin(:math.pi() * p),
+      y: 620.0 * :math.sin(7.0 * :math.pi() * p) * :math.sin(:math.pi() * p),
+      radius: 460.0 - 230.0 * :math.pow(:math.sin(5.0 * :math.pi() * p), 2)}
   end
 
   def geometry do

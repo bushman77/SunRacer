@@ -109,10 +109,13 @@ defmodule Core.Universe.WormholeTransitTest do
     sections = Transit.geometry()
     assert length(sections) == 193
     assert hd(sections).radius == 460.0
-    assert Enum.min_by(sections, & &1.radius).radius <= 270.1
-    assert Enum.max(Enum.map(sections, fn section -> abs(section.x) end)) > 600.0
+    assert_in_delta Enum.min_by(sections, & &1.radius).radius, 230.0, 0.1
+    assert Enum.max(Enum.map(sections, fn section -> abs(section.x) end)) > 900.0
+    assert Enum.max(Enum.map(sections, fn section -> abs(section.y) end)) > 600.0
+    assert_in_delta List.last(sections).radius, 460.0, 0.1
     straight = Transit.new() |> Transit.controls(%{throttle: 1}) |> advance(400)
-    assert straight.status in [:ejected, :destroyed]
+    assert straight.status == :ejected
+    assert straight.elapsed_ms < 10_000
     assert straight.shields == 120
   end
 
