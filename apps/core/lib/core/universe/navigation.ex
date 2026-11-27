@@ -34,6 +34,7 @@ defmodule Core.Universe.Navigation do
   alias Core.Universe.TradeLanes
   alias Core.Universe.Territory
   alias Core.Universe.StoryTraffic
+  alias Core.Universe.Wormholes
   alias Core.World.EventSink
 
   @tick_ms 1_000
@@ -999,6 +1000,7 @@ defmodule Core.Universe.Navigation do
       # Distinct from all planetary forward refineries. Fixed by the server;
       # routes use the existing, validated free-waypoint format.
       starbases: GreenStarbase.catalog(),
+      wormholes: Wormholes.charted_mouths(@system_id),
       green_starbase_nearby: GreenStarbase.nearby?(voyage),
       # Static geometry and a compact region profile are observational only.
       # Never derive collisions, damage, or ownership from these fields.

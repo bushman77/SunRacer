@@ -1,3 +1,7 @@
+## 2026-11-26 — SOL frontier wormhole location
+
+- Moved the SOL-side Alpha Centauri mouth to (-84,000,000, +35,000,000, 0) compressed game-km, radius 91 million, approximately 8.2 million beyond Pluto's orbital ring at west-southwest on the overhead Atlas (positive Y is down). The paired Alpha Centauri mouth is unchanged. Navigation publishes charted mouths with transit_available false. Both overhead and 3D Atlas display a distinct locked wormhole marker, selectable as its exact server-owned approach waypoint using existing SOL navigation; no jump or live portal interaction granted. Hidden in inner focus. Added placement and selection regressions. Full runtime validation pending; tunnel remains development-only.
+
 ## 2026-11-26 — Sharper wormhole turns
 
 - Increased horizontal/vertical bend amplitude to 980/620 units and frequencies to 4π/7π, with five narrower choke points (minimum radius 230; entrance/exit remain 460). Existing 193-section geometry, steering authority, throttle, turbulence, exposure and ejection rules are unchanged. Renderer consumes the revised server geometry automatically. Strengthened geometry and unsteered-ejection regression; existing centerline steering regression retained. Independent numerical mirror: full-throttle unsteered ejection at 6.5 seconds; steered arrival at 40 seconds with 220/300 hull, minimum clearance about 68 units. Actual ExUnit and manual flight validation pending. Development lab only.

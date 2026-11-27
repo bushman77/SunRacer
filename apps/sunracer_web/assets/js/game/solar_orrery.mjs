@@ -215,7 +215,9 @@ export class SolarOrrery {
       if(heading!==null)mesh.rotation.y=heading
       mesh.position.set(point.x,kind==="waypoint"?.2:1.3,point.z)
     }else{
-      mesh=new T.Mesh(new T.OctahedronGeometry(radius),new T.MeshBasicMaterial({color}))
+      mesh=new T.Mesh(kind==="wormhole"?new T.TorusGeometry(radius,1.5,8,32):
+        new T.OctahedronGeometry(radius),new T.MeshBasicMaterial({color}))
+      if(kind==="wormhole")mesh.rotation.x=-Math.PI/2
       mesh.position.set(point.x,radius+1,point.z)
       this.liveGroup.add(mesh)
     }
@@ -253,6 +255,13 @@ export class SolarOrrery {
     for(const base of nav?.starbases||[]){
       if(base.id!=="sol:starbase:green")continue
       this.marker(project(base.position_km),base.id,base.name,"starbase",ORRERY_COLORS.friendly,7)
+    }
+    if(state.focus==="system"){
+      for(const mouth of nav?.wormholes||[]){
+        if(mouth.system_id!=="sol")continue
+        this.marker(project(mouth.position_km),mouth.id,mouth.name+" · TRANSIT LOCKED",
+          "wormhole","#c19aff",7)
+      }
     }
     for(const contact of nav?.contacts||[]){
       // Never infer a position from a call sign, origin or destination.
@@ -299,7 +308,7 @@ export class SolarOrrery {
     const existing=new Map([...this.labels.children].map(n=>[n.dataset.key,n]))
     for(const entry of entries){
       let label=existing.get(entry.key)
-      const interactive=["body","starbase","contact"].includes(entry.kind)
+      const interactive=["body","starbase","contact","wormhole"].includes(entry.kind)
       if(!label){
         label=document.createElement(interactive?"button":"span")
         if(interactive)label.type="button"
@@ -416,7 +425,7 @@ export class SolarOrrery {
 
   entryForEvent(event) {
     const key=event.target?.closest?.("[data-key]")?.dataset.key
-    const entries=[...this.bodies,...this.liveMarkers].filter(e=>["body","starbase","contact"].includes(e.kind))
+    const entries=[...this.bodies,...this.liveMarkers].filter(e=>["body","starbase","contact","wormhole"].includes(e.kind))
     if(key)return entries.find(e=>e.key===key)
     this.setRay(event)
     const hit=this.ray.intersectObjects(entries.map(e=>e.mesh),true)[0]

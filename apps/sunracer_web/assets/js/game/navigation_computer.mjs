@@ -127,7 +127,8 @@ export class NavigationComputer {
       event.preventDefault()
       const clicked=event.target?.closest?.("[data-body-id]")?.getAttribute("data-body-id")
       const baseId=event.target?.closest?.("[data-starbase-id]")?.getAttribute("data-starbase-id")
-      const point=this.solarNavigation?.starbases?.find(s=>s.id===baseId)?.position_km
+      const mouthId=event.target?.closest?.("[data-wormhole-id]")?.getAttribute("data-wormhole-id")
+      const point=this.wormholePosition(mouthId)||this.solarNavigation?.starbases?.find(s=>s.id===baseId)?.position_km
       this.openSolarContextMenu(clicked,event.clientX,event.clientY,
         clicked ? null : point || this.solarPointForEvent(event))
     })
@@ -137,7 +138,8 @@ export class NavigationComputer {
       const rect=this.solarSvg.getBoundingClientRect()
       const clicked=event.target?.closest?.("[data-body-id]")?.getAttribute("data-body-id")
       const baseId=event.target?.closest?.("[data-starbase-id]")?.getAttribute("data-starbase-id")
-      const basePoint=this.solarNavigation?.starbases?.find(s=>s.id===baseId)?.position_km
+      const mouthId=event.target?.closest?.("[data-wormhole-id]")?.getAttribute("data-wormhole-id")
+      const basePoint=this.wormholePosition(mouthId)||this.solarNavigation?.starbases?.find(s=>s.id===baseId)?.position_km
       this.openSolarContextMenu(clicked,rect.left+rect.width/2,rect.top+rect.height/2,
         clicked ? null : basePoint || this.solarPointForEvent({
           clientX:rect.left+rect.width/2,clientY:rect.top+rect.height/2}))
@@ -189,8 +191,10 @@ export class NavigationComputer {
       this.closeSolarContextMenu()
       const id = event.target?.closest?.("[data-body-id]")?.getAttribute("data-body-id")
       const baseId=event.target?.closest?.("[data-starbase-id]")?.getAttribute("data-starbase-id")
+      const mouthId=event.target?.closest?.("[data-wormhole-id]")?.getAttribute("data-wormhole-id")
       if(id)this.selectSolarBody(id)
       else if(baseId)this.selectSolarStarbase(baseId)
+      else if(mouthId)this.selectSolarWormhole(mouthId)
       else{
         const point=this.solarPointForEvent(event)
         if(point)this.selectSolarWaypoint(point)
@@ -200,9 +204,11 @@ export class NavigationComputer {
       if(!["Enter"," "].includes(event.key))return
       const id=event.target?.closest?.("[data-body-id]")?.getAttribute("data-body-id")
       const baseId=event.target?.closest?.("[data-starbase-id]")?.getAttribute("data-starbase-id")
-      if(!id&&!baseId)return
+      const mouthId=event.target?.closest?.("[data-wormhole-id]")?.getAttribute("data-wormhole-id")
+      if(!id&&!baseId&&!mouthId)return
       event.preventDefault()
-      if(baseId)this.selectSolarStarbase(baseId)
+      if(mouthId)this.selectSolarWormhole(mouthId)
+      else if(baseId)this.selectSolarStarbase(baseId)
       else this.selectSolarBody(id)
     })
     this.root.querySelector("#nav-system-bodies")?.addEventListener("click",event=>{
@@ -382,6 +388,7 @@ export class NavigationComputer {
     this.closeSolarContextMenu()
     if(hit.kind==="body")this.selectSolarBody(hit.id)
     else if(hit.kind==="starbase")this.selectSolarStarbase(hit.id)
+    else if(hit.kind==="wormhole")this.selectSolarWormhole(hit.id)
     else if(hit.kind==="waypoint")this.selectSolarWaypoint(hit.position)
     else if(hit.kind==="contact"){
       const contacts=this.root.querySelector("#atlas-sensor-contacts")
@@ -394,7 +401,8 @@ export class NavigationComputer {
 
   contextOrreryHit(hit,x,y){
     if(hit.kind==="contact"){this.selectOrreryHit(hit);return}
-    const point=hit.kind==="starbase"?this.solarNavigation?.starbases?.find(s=>s.id===hit.id)?.position_km:hit.position
+    const point=hit.kind==="wormhole"?this.wormholePosition(hit.id):
+      hit.kind==="starbase"?this.solarNavigation?.starbases?.find(s=>s.id===hit.id)?.position_km:hit.position
     if(hit.kind==="body"||point)this.openSolarContextMenu(hit.kind==="body"?hit.id:null,x,y,point)
   }
 
@@ -466,6 +474,15 @@ export class NavigationComputer {
       this.setSolarFocus("system")
     }
     if(this.isOpen&&this.view==="system")this.draw(0,true)
+  }
+
+  wormholePosition(id) {
+    return this.solarNavigation?.wormholes?.find(m=>m.id===id&&m.system_id==="sol")?.position_km
+  }
+
+  selectSolarWormhole(id) {
+    const point=this.wormholePosition(id)
+    if(point)this.selectSolarWaypoint(point)
   }
 
   selectSolarStarbase(id) {

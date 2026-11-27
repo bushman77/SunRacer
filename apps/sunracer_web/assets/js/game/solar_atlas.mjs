@@ -126,6 +126,26 @@ export function renderStarbases(svg,starbases,focus,selectedStarbaseId=null) {
   }
 }
 
+export function renderWormholes(svg,mouths,focus){
+  if(focus!=="system")return
+  for(const mouth of mouths||[]){
+    if(mouth?.system_id!=="sol")continue
+    const point=solarPositionToChart(mouth.position_km,focus)
+    if(!point)continue
+    const {x,y}=point
+    const group=add(svg,"g",{"data-wormhole-id":mouth.id,role:"button",tabindex:0,
+      "aria-label":mouth.name+"; approach waypoint; transit locked",style:"cursor:pointer"})
+    add(group,"circle",{cx:x,cy:y,r:17,fill:"#24134d",stroke:"#c19aff","stroke-width":2})
+    add(group,"circle",{cx:x,cy:y,r:9,fill:"#090a21",stroke:"#79eaff","stroke-width":2})
+    add(group,"path",{d:`M${x-13} ${y+4} Q${x+14} ${y-18} ${x+11} ${y+10}`,
+      fill:"none",stroke:"#e0baff","stroke-width":2})
+    add(group,"text",{x:x+23,y:y-8,fill:"#e0baff","font-family":"monospace",
+      "font-size":13,"paint-order":"stroke",stroke:"#04101f","stroke-width":4},mouth.name.toUpperCase())
+    add(group,"text",{x:x+23,y:y+8,fill:"#b6a4db","font-family":"monospace",
+      "font-size":10,"paint-order":"stroke",stroke:"#04101f","stroke-width":3},"TRANSIT LOCKED")
+  }
+}
+
 function renderBody(svg,body,selectedId){
   const selected=body.id===selectedId
   const group=add(svg,"g",{
@@ -219,6 +239,7 @@ export function drawSolarAtlas(svg,{focus="system",selectedId="earth",navigation
   renderVoyage(layer,layout,navigation,focus)
   if(waypoint && !selectedStarbaseId)renderWaypoint(layer,waypoint,focus)
   renderStarbases(layer,navigation?.starbases,focus,selectedStarbaseId)
+  renderWormholes(layer,navigation?.wormholes,focus)
   // Orbit draw order first, then active bodies/labels above orbit lines.
   for(const body of layout)renderBody(layer,body,selectedId)
   for(const {pilot,point,stack,color} of atlasPilotMarkers(pilots,p=>solarPositionToChart(p,focus))){

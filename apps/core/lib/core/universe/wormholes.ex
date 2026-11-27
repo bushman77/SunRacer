@@ -13,7 +13,7 @@ defmodule Core.Universe.Wormholes do
       id: "sol_alpha",
       mouths: [
         %{id: "sol_alpha_mouth", system_id: "sol",
-          position_km: %{x: 80_000_000.0, y: 42_000_000.0, z: 0.0}},
+          position_km: %{x: -84_000_000.0, y: 35_000_000.0, z: 0.0}},
         %{id: "alpha_sol_mouth", system_id: "alpha_centauri",
           position_km: %{x: -36_000_000.0, y: 18_000_000.0, z: 0.0}}
       ]
@@ -38,6 +38,16 @@ defmodule Core.Universe.Wormholes do
     @links
     |> Enum.flat_map(& &1.mouths)
     |> Enum.filter(&(&1.system_id == system_id))
+  end
+
+  @doc "Charted approach sites, not authorization for interstellar transit."
+  def charted_mouths(system_id) do
+    Enum.map(mouths(system_id), fn mouth ->
+      {:ok, paired} = paired_mouth(system_id, mouth.id)
+      {:ok, destination} = Core.Universe.StarSystems.fetch(paired.system_id)
+      Map.merge(mouth, %{destination_system_id: paired.system_id,
+        name: destination.name <> " Wormhole", transit_available: false})
+    end)
   end
 
   @doc "Resolve a known mouth only within its owning system."
