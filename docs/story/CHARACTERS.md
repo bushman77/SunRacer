@@ -183,6 +183,6 @@ These are future regression and playthrough requirements, not claims of tests pe
 
 ## 9. Next writing milestone
 
-Write the first detailed SOL chapter, Leaked Routes, using Juno's existing Mission Office as its opening point. Identify exactly which existing characters can supply the required evidence and which genuinely new local actors are needed. Do not choose the culprit prematurely.
+After review of [MISSION_DESIGN.md](MISSION_DESIGN.md), write the first detailed SOL chapter, Leaked Routes, using Juno's existing Mission Office as its opening point. Identify exactly which existing characters can supply the required evidence and which genuinely new local actors are needed. Do not choose the culprit prematurely.
 
 The existing First Run tutorial and all six permanent station contacts remain intact. Expand the world through additive characters and reusable mission content, one reviewed chapter at a time.

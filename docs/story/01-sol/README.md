@@ -11,7 +11,7 @@ SOL is the first complete campaign. Alpha Centauri travel stays locked until a f
 | 04 Beyond the Frontier | Investigate outer SOL activity | Planned |
 | 05 The Gateway | Earn passage clearance | Planned |
 
-See [CAMPAIGN.md](../CAMPAIGN.md#5-sol-first-writing-and-implementation-milestone) for narrative context. Do not duplicate the implemented First Run document.
+See [CAMPAIGN.md](../CAMPAIGN.md#5-sol-first-writing-and-implementation-milestone) for narrative context. Do not duplicate the implemented First Run document. Follow [MISSION_DESIGN.md](../MISSION_DESIGN.md) for the full chapter template and verification gates.
 
 ## Chapter 1 authoring checklist
 

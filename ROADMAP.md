@@ -1,3 +1,7 @@
+## 2026-11-26 — Main-campaign mission design contract (design only)
+
+- Added `docs/story/MISSION_DESIGN.md` revision 0.1: story-first scope, NPC acceptance, verified event and evidence contracts, per-pilot progression, transactional rewards, failure recovery, compatibility, chapter template and verification gates. Cross-checked current Prologue/Story modules and migration: prologue-specific dispatch, progress step range 1–10 and unique progress/reward receipts. Deferred optional, repeatable, epic equipment, faction and cooperative quests; no generic quest engine or runtime implementation. Linked story bible and updated agent guidance. Next: review and write Leaked Routes. Documentation only; no runtime tests run.
+
 ## 2026-11-26 — Approved historical timeline (design only)
 
 - Added `docs/story/TIMELINE.md` revision 0.1 following owner approval: First Crossing year 0, Frontier Century 1–100, Great Expansion 100–250, Prosperity 250–400, Growing Tensions 400–480, Fracture 480–500, First Run year 500. Retained the four overarching ages; left exact incidents, founding dates, calendar and the Architects' chronology open. Distinguished shared historical chronology from live simulation and personal campaign progress. Updated lore, campaign, faction/character references, story index and agent guidance. Next: MISSION_DESIGN.md. Documentation only; no gameplay or runtime tests.

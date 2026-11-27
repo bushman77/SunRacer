@@ -159,4 +159,4 @@ The following remain available for future development:
 
 Do not fill these gaps simply to make a complete-looking timeline. The approved framework should allow years of additional story content without contradicting the original game.
 
-**Next design milestone:** MISSION_DESIGN.md, followed by the reviewed SOL Chapter 1 script. Keep existing gameplay and NPC placement unchanged while establishing the mission design contract.
+**Next design milestone:** review [MISSION_DESIGN.md](MISSION_DESIGN.md), followed by the reviewed SOL Chapter 1 script. Keep existing gameplay and NPC placement unchanged while establishing the mission design contract.

@@ -8,10 +8,11 @@ This is a web application written using the Phoenix web framework.
 
 ### Story and campaign guidelines
 
-- Consult `docs/story/CAMPAIGN.md`, `docs/story/LORE.md`, `docs/story/FACTIONS.md`, `docs/story/CHARACTERS.md`, `docs/story/TIMELINE.md`, the relevant chapter design, and the existing First Run documents before implementing or revising narrative missions.
+- Consult `docs/story/CAMPAIGN.md`, `docs/story/LORE.md`, `docs/story/FACTIONS.md`, `docs/story/CHARACTERS.md`, `docs/story/TIMELINE.md`, `docs/story/MISSION_DESIGN.md`, the relevant chapter design, and the existing First Run documents before implementing or revising narrative missions.
 - Distinguish approved design, proposed lore and implemented gameplay. Do not change approved story facts, reorder the 29-system campaign or unlock travel based on draft outlines.
 - Preserve NPC-issued mission acceptance, server-verified objectives, per-pilot persistence, once-only rewards and explicit failure recovery.
 - Persistent fixed NPCs retain their shared identity, station, room and normal service role; pilot-specific quests may add eligible dialogue, offers and scoped encounters, but cannot relocate or remove shared NPCs or change established traffic routes. Preserve existing progress when extending content.
+- Focus on sequential main-campaign chapters; defer optional, repeatable, epic equipment, faction quest chains and cooperative progression until separately approved. Extend the existing story engine only for demonstrated chapter requirements, preserving existing progress and receipts.
 - Write and review the next chapter before implementing it; document design deviations and require a playthrough before expanding the campaign.
 
 ### Phoenix v1.8 guidelines
