@@ -4,6 +4,8 @@ Start with [CAMPAIGN.md](CAMPAIGN.md), the proposed five-act, 29-system narrativ
 
 ## Current sources
 
+- [TIMELINE.md](TIMELINE.md) — approved 500-year historical framework, chronology boundaries, and deliberate gaps for future stories.
+
 - [CHARACTERS.md](CHARACTERS.md) — accepted persistent NPC rule, existing roster, and additive character/quest design.
 
 - [FACTIONS.md](FACTIONS.md) — existing faction registry and proposed political, economic and institutional motivations (author-only spoilers).
@@ -17,6 +19,6 @@ Start with [CAMPAIGN.md](CAMPAIGN.md), the proposed five-act, 29-system narrativ
 
 ## Planned companion documents
 
-TIMELINE.md (chronology), MISSION_DESIGN.md (chapter and objective specification). Other system directories are created when their narrative is developed. A proposed outline is not an implemented feature or approved canon.
+MISSION_DESIGN.md (chapter and objective specification). Other system directories are created when their narrative is developed. A proposed outline is not an implemented feature or approved canon.
 
-Build order: review campaign premise, establish lore and constraints, write SOL Chapter 1, obtain approval, implement and play-test it. Expand only after the previous milestone is verified.
+Build order: establish the mission design contract, write SOL Chapter 1, obtain approval, implement and play-test it. Expand only after the previous milestone is verified.

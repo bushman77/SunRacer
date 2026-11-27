@@ -238,7 +238,7 @@ At Fomalhaut, the proposed ending concerns stewardship of the liberated network.
 Before introducing a local faction or branch in an expansion system, define:
 
 - Stable proposed identity, kind, jurisdiction, and relation to existing organizations.
-- Founding motive and historical event (coordinate with the future TIMELINE.md).
+- Founding motive and historical event (coordinate with [TIMELINE.md](TIMELINE.md)).
 - Public principles, internal disagreements, resources, dependencies and limitations.
 - Local civilian consequences of the passage crisis.
 - Named NPC representatives with individual motivations and knowledge limits.
@@ -252,7 +252,7 @@ Do not invent all 28 expansion governments now. Develop them as each system's ch
 
 - Review the proposed motives, mottos, SOL economic profiles and internal Directorate currents.
 - Determine who leaked the First Run route; keep the three established suspects plausible until evidence resolves it.
-- Establish the Directorate's founding incident, leaders and recruitment history in future timeline and character documents.
+- Establish the Directorate's founding incident, leaders and recruitment history within the approved historical framework in [TIMELINE.md](TIMELINE.md); specific dates remain open.
 - Decide the legal charter of Green Starbase and the details of local territorial jurisdiction.
 - Define expansion-system institutions and the coalition's exact composition as required by the campaign.
 - Review any proposed reputation or faction registry extension separately before implementation.

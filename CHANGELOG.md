@@ -1,3 +1,7 @@
+## 2026-11-26 — Approved historical timeline (design only)
+
+- Added `docs/story/TIMELINE.md` revision 0.1 following owner approval: First Crossing year 0, Frontier Century 1–100, Great Expansion 100–250, Prosperity 250–400, Growing Tensions 400–480, Fracture 480–500, First Run year 500. Retained the four overarching ages; left exact incidents, founding dates, calendar and the Architects' chronology open. Distinguished shared historical chronology from live simulation and personal campaign progress. Updated lore, campaign, faction/character references, story index and agent guidance. Next: MISSION_DESIGN.md. Documentation only; no gameplay or runtime tests.
+
 ## 2026-11-26 — Persistent character and quest design (documentation only)
 
 - Added `docs/story/CHARACTERS.md` revision 0.1 recording the agreed limited-sandbox MMO rule: permanent stationary NPCs remain at their home and service location while per-pilot narrative options evolve. Recorded all six existing Green Starbase contacts (including Tarek Sol and Sera Vale), local keys, rooms, positions, existing model mappings, Earth-orbit Ross, and Vesper-02/Corsair-17 encounter scope. Aligned campaign and faction references, added agent guidance and proposed additive/versioned mission design. No new roster, runtime behavior, service changes or travel permissions; source roster and placement cross-checked, no runtime tests executed.

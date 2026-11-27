@@ -14,7 +14,7 @@ Earth remains humanity's ancestral home, but it is no longer the center of every
 
 People depend on trade for materials, medical supplies, equipment and livelihoods. A courier is therefore an essential worker, not merely a tutorial character. The pilot begins as one such worker, with an inexpensive Sunracer, a license to earn and a delivery to complete.
 
-For the purpose of authoring the timeline, the first successful crossing is the reference event, year 0; the opening of First Run is approximately year 500. This relative dating convention is a working tool, not yet an in-universe calendar name or an agreed Gregorian year. Do not assign exact intervening dates without reviewing TIMELINE.md when it is written.
+For the purpose of authoring the timeline, the first successful crossing is the reference event, year 0; the opening of First Run is approximately year 500. This relative dating convention is a working tool, not yet an in-universe calendar name or an agreed Gregorian year. See [TIMELINE.md](TIMELINE.md) for the approved broad historical periods; exact intervening events and dates remain open.
 
 ## 2. The four ages
 
@@ -25,7 +25,7 @@ For the purpose of authoring the timeline, the first successful crossing is the 
 | The Age of Expansion | After year 0 | Generations of surveyors, settlers and engineers establish interstellar routes, settlements and economies. |
 | The Age of Fracture | By year 500 | Disappearances, instability, shortages, piracy and political distrust threaten the transport network. First Run begins. |
 
-The ages describe historical changes, not four equal periods. Their exact boundaries, apart from the first crossing and campaign present, remain to be decided.
+The ages describe historical changes, not four equal periods. The approved timeline subdivides Expansion and places the Fracture broadly in years 480–500; exact incident dates and local transitions remain open.
 
 ### The Solar Age
 
@@ -61,7 +61,7 @@ By the time the pilot enters service, established trade routes are becoming less
 
 Most inhabitants see local problems. A refinery manager sees a shipment that never arrives; a repair engineer sees unexpected weapons damage; a courier sees unusually dangerous routes. They do not begin the story with a complete explanation of events.
 
-The campaign gradually connects these experiences. The larger conflict is detailed in the writer-only portion of CAMPAIGN.md. The start of the Age of Fracture should not be assigned a specific year until the chronology of those incidents is designed.
+The campaign gradually connects these experiences. The larger conflict is detailed in the writer-only portion of CAMPAIGN.md. The approved broad Fracture period is years 480–500. No single incident or exact onset date is established.
 
 ## 3. Technological laws
 
@@ -134,14 +134,14 @@ Real star names identify our fictional campaign locations. Their real astronomic
 **Accepted 2026-11-26**
 
 - 500 years elapsed since the first successful human interstellar crossing to Alpha Centauri.
-- Four ages: Solar, Discovery, Expansion and Fracture; First Run begins in the last.
+- Four ages: Solar, Discovery, Expansion and Fracture; First Run begins in the last. The broad historical periods within them are approved in [TIMELINE.md](TIMELINE.md).
 - First wormhole discovered beyond Pluto, with dangerous early attempts and hull damage.
 - Independent planetary authorities, mature interstellar cultures and physical supply dependencies.
 - Conventional sublight propulsion, wormhole-only interstellar travel, shield bypass, relay-dependent communications, limited automation, specialized stabilization and poorly understood ancient technology.
 - The gradual ancient-engineering revelation; the fate of the builders remains unresolved.
 
-**Working interpretation, not individually ratified:** relative year 0/500 authoring convention, details of early survey development, political and economic historical explanations, and the broad progression of passage infrastructure.
+**Working interpretation, not individually ratified:** details of early survey development, political and economic historical explanations, and the broad progression of passage infrastructure.
 
 **Still open:** absolute calendar, expedition and crew names, dates of later crossings and settlement, specific political constitutions and wars, Directorate founding and leadership, passage communication mechanism and delays, and the Architects' identity and fate.
 
-Maintain this distinction in later scripts. TIMELINE.md will eventually establish named events and dates; FACTIONS.md and CHARACTERS.md will define institutions and personal histories. New details must not contradict the accepted 500-year interval or the implemented First Run.
+Maintain this distinction in later scripts. [TIMELINE.md](TIMELINE.md) establishes the broad framework; named events and exact dates will be added as needed; FACTIONS.md and CHARACTERS.md will define institutions and personal histories. New details must not contradict the accepted 500-year interval or the implemented First Run.

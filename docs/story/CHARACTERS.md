@@ -4,7 +4,7 @@
 
 **Status:** the persistent-NPC principle was agreed by the project owner on 2026-11-26. Existing identities and placements are recorded from the game. Proposed character development, future catalogue design and quest mechanisms require separate review before implementation.
 
-**Related:** [CAMPAIGN.md](CAMPAIGN.md), [LORE.md](LORE.md), [FACTIONS.md](FACTIONS.md), [First Run](../story-first-run.md).
+**Related:** [CAMPAIGN.md](CAMPAIGN.md), [LORE.md](LORE.md), [FACTIONS.md](FACTIONS.md), [TIMELINE.md](TIMELINE.md), [First Run](../story-first-run.md).
 
 ## 1. The design rule
 
