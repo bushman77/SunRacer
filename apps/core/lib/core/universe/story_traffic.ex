@@ -19,9 +19,9 @@ defmodule Core.Universe.StoryTraffic do
   alias Core.NPC.Catalog, as: NPCCatalog
   alias Core.Universe.GreenStarbase
 
-  @scripts [:vesper_pass, :corsair_raid]
+  @scripts [:vesper_pass, :corsair_raid, :leaked_routes_intercept]
 
-  @type script :: :vesper_pass | :corsair_raid
+  @type script :: :vesper_pass | :corsair_raid | :leaked_routes_intercept
 
   @spec scripts() :: [script()]
   def scripts, do: @scripts
@@ -34,6 +34,20 @@ defmodule Core.Universe.StoryTraffic do
   def contact_id(player_id, :corsair_raid),
     do: "traffic:sol:story:#{player_id}:corsair-17"
 
+  def contact_id(player_id, :leaked_routes_intercept),
+    do: "traffic:sol:story:#{player_id}:breaker-09"
+
+  def intercept_id(player_id, voyage),
+    do: "flyby:" <> contact_id(player_id, :leaked_routes_intercept) <> ":" <> Integer.to_string(voyage)
+
+  @doc "Authoritative route eligibility; supports internal and public navigation snapshots."
+  def intercept_route?(%{system_id: "sol", status: :traveling, origin_id: "venus",
+        destination_id: "earth", free_flight: false, logout_paused: false,
+        pending_encounter: nil, tactical_encounter: nil,
+        travel_distance_km: distance, distance_travelled_km: travelled})
+      when distance > 0 and travelled >= distance * 0.12, do: true
+  def intercept_route?(_), do: false
+
   @doc "Which script a contact or encounter ID belongs to, if any."
   @spec script_of(term()) :: script() | nil
   def script_of(id) when is_binary(id) do
@@ -41,6 +55,7 @@ defmodule Core.Universe.StoryTraffic do
       not String.contains?(id, "traffic:sol:story:") -> nil
       String.contains?(id, ":vesper-02") -> :vesper_pass
       String.contains?(id, ":corsair-17") -> :corsair_raid
+      String.contains?(id, ":breaker-09") -> :leaked_routes_intercept
       true -> nil
     end
   end
@@ -142,6 +157,9 @@ defmodule Core.Universe.StoryTraffic do
         "Stay and you'll learn what our guns can do."}
   ]
 
+  defp hail_transcript(:leaked_routes_intercept, greeting), do: [
+    %{speaker: "Breaker-09", channel: "Open channel", text: greeting}
+  ]
   defp hail_transcript(_, _), do: []
 
   defp spec(:vesper_pass) do
@@ -185,6 +203,14 @@ defmodule Core.Universe.StoryTraffic do
         "Corsair-17. This isn't your fight, courier. Turn around and keep " <>
           "your little Sunracer in one piece."
     }
+  end
+
+  defp spec(:leaked_routes_intercept) do
+    %{call_sign: "Breaker-09", kind: :raider, ship_class: "dart",
+      faction_id: "independent_raiders", disposition: :hostile, purpose: :intercept_traffic,
+      origin_id: "deep_space", destination_id: "earth", cargo: %{}, protected?: false,
+      surrender_at: 0.5, offset_km: %{x: -140_000.0, y: 160_000.0, z: -20_000.0},
+      message: "The exchange record. That's all we want. Hand it over and you can continue on your way."}
   end
 
   defp initial_condition(ship_class) do

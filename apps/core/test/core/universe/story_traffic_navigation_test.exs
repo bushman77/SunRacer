@@ -147,6 +147,40 @@ defmodule Core.Universe.StoryTrafficNavigationTest do
     refute Enum.any?(contacts, &StoryTraffic.story_id?(&1.id))
   end
 
+  test "Breaker-09 is route-gated, private and carries no cargo", %{server: server} do
+    script = :leaked_routes_intercept
+    assert {:ok, _} = Navigation.set_course(server, @pilot, "venus")
+    assert {:error, :invalid_story_route} = Navigation.stage_story_contact(server, @pilot, script)
+    for _ <- 1..400, do: :ok = Navigation.tick(server)
+    assert {:ok, %{status: :idle, location_id: "venus"}} = Navigation.snapshot(server, @pilot)
+    assert {:ok, _} = Navigation.set_course(server, @pilot, "earth")
+    assert {:error, :invalid_story_route} = Navigation.stage_story_contact(server, @pilot, script)
+    Enum.reduce_while(1..400, nil, fn _, _ ->
+      :ok = Navigation.tick(server)
+      {:ok, nav} = Navigation.snapshot(server, @pilot)
+      if StoryTraffic.intercept_route?(nav), do: {:halt, nav}, else: {:cont, nil}
+    end) |> then(fn nav -> assert is_map(nav) end)
+    assert {:ok, %{pending_encounter: encounter}} =
+      Navigation.stage_story_contact(server, @pilot, script)
+    assert encounter.call_sign == "Breaker-09"
+    assert encounter.classification == :hostile_contact
+    assert {:ok, other} = Navigation.snapshot(server, @other)
+    refute Enum.any?(other.contacts, &(&1.id == encounter.contact_id))
+    assert {:error, :unknown_contact} = Navigation.hail(server, @other, encounter.contact_id)
+    assert {:ok, %{tactical_encounter: tactical}} =
+      Navigation.enter_tactical(server, @pilot, encounter.id)
+    assert tactical.private_to == @pilot
+    assert {:ok, %{cargo: %{}} = source} = Navigation.tactical_contact(server, @pilot, encounter.id)
+    assert source.cargo == %{}
+    combat = tactical.combat
+    report = %{contact_id: tactical.contact_id, voyage_number: tactical.voyage_number,
+      encounter_id: encounter.id,
+      combat: %{combat | hull: div(combat.max_hull, 2), shields: 0, status: :surrendered}}
+    assert {:ok, _} = Navigation.finish_tactical(server, @pilot, encounter.id, :surrender, report)
+    assert {:error, :story_attempt_already_staged} =
+      Navigation.stage_story_contact(server, @pilot, script)
+  end
+
   test "script IDs are recognised without trusting other traffic" do
     assert StoryTraffic.script_of(StoryTraffic.contact_id(7, :vesper_pass)) == :vesper_pass
 

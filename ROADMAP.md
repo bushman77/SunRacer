@@ -1,3 +1,8 @@
+## 2026-11-27 — Leaked Routes: Secure the Record implementation candidate
+
+- Extended existing chapter through step 10: Nadia's explicit local Venus offer, private Breaker-09 on a verified Venus-origin Earth-bound cruise (12% or later), attempt identity bound to pilot and voyage, map-verified surrender/victory, failure/retry and Juno's final 600-credit receipt. Records remain non-cargo. No new faction or system unlock; Chapter 2 remains design-only. Reuses existing tactical settlement and native UI, disables Breaker cargo seizure.
+- Follow the Copy was manually played through stage 7 in the native client, with Earth/Venus communications, reconnect state, location and 1,100-credit inventory observed. Earlier local tests reported passing; latest native-only and M3 changes still require full Mix/Node/precommit and stock-ship playthrough. Wrong-planet and duplicate payout manual verification remain pending. Recovery uses runtime settlement receipt when present; if unavailable, retry a new voyage, never infer victory. No release/deployment.
+
 ## 2026-11-27 — Native-only gameplay entry
 
 - Retired the hosted /play cockpit for authenticated and anonymous visitors; legacy links redirect to the landing page with a desktop-client notice. Browser login now returns to account/home services; landing offers the official GitHub release download. Retained registration, verification, recovery, equipment management, SBS /helmet and native JSON/socket APIs. Kept the shared HEEx cockpit template and renderer because the Tauri staging pipeline consumes them locally.

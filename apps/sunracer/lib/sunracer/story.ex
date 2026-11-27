@@ -188,12 +188,13 @@ defmodule Sunracer.Story do
   def accept_leaked_routes(player_id), do: accept_leaked_routes(player_id, :accept_station_records)
 
   def accept_leaked_routes(player_id, event)
-      when event in [:accept_station_records, :accept_follow_copy] do
+      when event in [:accept_station_records, :accept_follow_copy, :accept_secure_record] do
     case record(player_id, {:leaked_routes, event}) do
       {:ok, _} ->
         message = case event do
           :accept_station_records -> "Investigation accepted. Speak to Eno Kade and Tarek Sol."
           :accept_follow_copy -> "Assignment accepted. Travel to Earth and contact Dispatcher Ross."
+          :accept_secure_record -> "Assignment accepted. Plot Earth from Venus and protect the certified audit."
         end
         {:ok, message}
       {:error, reason} -> {:error, reason}
@@ -225,6 +226,8 @@ defmodule Sunracer.Story do
           is_nil(row) -> :ignored
           event in [:accept_follow_copy, :dispatch_original, :clearing_audit] and
               is_nil(reward_receipt(player_id, LeakedRoutes.reward_id())) -> :ignored
+          not is_nil(row) and row.step >= 7 and
+              is_nil(reward_receipt(player_id, LeakedRoutes.follow_reward_id())) -> :ignored
           true -> apply_chapter_event(player_id, row, event)
         end
       else

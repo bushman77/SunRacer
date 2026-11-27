@@ -52,11 +52,45 @@ defmodule Sunracer.Story.LeakedRoutesTest do
     assert done.step == 7
     assert done.flags["clearing_audit"]
     refute Chapter.public(done).complete
-    assert nil == Chapter.local_contact(done)
+    assert %{location_id: "venus", topic: "leaked_routes.accept_secure_record"} = Chapter.local_contact(done)
     assert :ignore = Chapter.apply(done, :clearing_audit)
-    assert :ignore = Chapter.apply(done, :accept_secure_record)
+    assert {:ok, active, []} = Chapter.apply(done, :accept_secure_record)
+    assert active.step == 8
     assert %{id: "leaked_routes:follow_copy_complete"} = Chapter.scene(venus, done)
     assert nil == Chapter.scene(done, done)
+  end
+
+  test "Secure the Record requires a bound attempt, supports retries and pays only at Juno" do
+    p = Map.merge(Chapter.new(), %{step: 7, flags: %{"follow_copy_complete" => true,
+      "clearing_audit" => true, "dispatch_original" => true, "station_distribution" => true,
+      "exchange_reference" => true}})
+    assert :ignore = Chapter.apply(p, :deliver_case)
+    assert {:ok, active, []} = Chapter.apply(p, :accept_secure_record)
+    assert :ignore = Chapter.apply(active, {:intercept_finished, "wrong", 1, :victory})
+    id = Core.Universe.StoryTraffic.intercept_id(41, 2)
+    assert {:ok, armed, []} = Chapter.apply(active, {:arm_intercept, id, 2})
+    assert {:ok, held, []} = Chapter.apply(armed, {:intercept_staged, id, 2})
+    assert :ignore = Chapter.apply(held, {:intercept_finished, "wrong", 2, :victory})
+    assert :ignore = Chapter.apply(held, {:intercept_finished, id, 1, :victory})
+    assert :ignore = Chapter.apply(held, :deliver_case)
+    assert {:ok, failed, []} = Chapter.apply(held, {:intercept_finished, id, 2, :retreat})
+    assert failed.step == 8
+    assert failed.flags["clearing_audit"]
+    assert :ignore = Chapter.apply(failed, {:arm_intercept, id, 2})
+    assert :ignore = Chapter.apply(failed, {:intercept_finished, id, 2, :victory})
+    next_id = Core.Universe.StoryTraffic.intercept_id(41, 3)
+    assert {:ok, retry, []} = Chapter.apply(failed, {:arm_intercept, next_id, 3})
+    assert :ignore = Chapter.apply(retry, {:intercept_finished, id, 2, :surrender})
+    for outcome <- [:surrender, :victory] do
+      assert {:ok, hand_in, []} = Chapter.apply(retry, {:intercept_finished, next_id, 3, outcome})
+      assert hand_in.step == 9
+      assert {:ok, _, :deliver_case} = Chapter.dialogue(hand_in, "missions", "leaked_routes.deliver_case")
+      assert {:ok, complete, [{:story_credits, "sol.leaked_routes.secure_record", 600}]} =
+        Chapter.apply(hand_in, :deliver_case)
+      assert complete.step == 10
+      assert Chapter.public(complete).complete
+      assert :ignore = Chapter.apply(complete, :deliver_case)
+    end
   end
 
   test "eligibility requires all First Run evidence and completion" do

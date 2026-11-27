@@ -164,6 +164,20 @@ defmodule Sunracer.StoryTest do
     assert %{credits: 400} = Story.reward_receipt(id, "sol.leaked_routes.follow_the_copy")
     assert :ignored = record!(id, {:leaked_routes, :clearing_audit})
     assert Repo.get!(PlayerAccount, id).credits == before + 1100
+    assert {:ok, _} = Story.accept_leaked_routes(id, :accept_secure_record)
+    assert %{step: 8} = Story.snapshot(id)
+    assert :ignored = record!(id, {:leaked_routes, :deliver_case})
+    encounter = Core.Universe.StoryTraffic.intercept_id(id, 3)
+    assert {:ok, _} = record!(id, {:leaked_routes, {:arm_intercept, encounter, 3}})
+    assert {:ok, _} = record!(id, {:leaked_routes, {:intercept_staged, encounter, 3}})
+    assert :ignored = record!(id, {:leaked_routes, {:intercept_finished, encounter, 2, :victory}})
+    assert {:ok, _} = record!(id, {:leaked_routes, {:intercept_finished, encounter, 3, :surrender}})
+    assert %{step: 9} = Story.snapshot(id)
+    assert {:ok, _, nil} = Story.leaked_routes_talk(id, "missions", "leaked_routes.deliver_case")
+    assert %{complete: true} = Story.snapshot(id)
+    assert %{credits: 600} = Story.reward_receipt(id, "sol.leaked_routes.secure_record")
+    assert :ignored = record!(id, {:leaked_routes, :deliver_case})
+    assert Repo.get!(PlayerAccount, id).credits == before + 1700
     refute Map.has_key?(Story.snapshot(id), :scene)
     assert %{step: 10} = Story.prologue_progress(id)
   end

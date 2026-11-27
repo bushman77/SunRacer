@@ -1,9 +1,9 @@
 defmodule Sunracer.Story.LeakedRoutes do
   @moduledoc """
-  SOL chapter 1, revision 1: The Distribution List and Follow the Copy.
+  SOL chapter 1, revision 1: Leaked Routes.
 
-  Stops at step 7 pending Secure the Record. World validates contact access
-  and Story settles durable effects.
+  World validates contact access and encounter settlement; Story persists
+  the chapter-specific evidence, attempt identity and reward receipts.
   """
   @chapter "sol.leaked_routes"
   @reward "sol.leaked_routes.station_records"
@@ -17,6 +17,11 @@ defmodule Sunracer.Story.LeakedRoutes do
   @follow_offer "leaked_routes.offer_follow_copy"
   @dispatch "leaked_routes.dispatch_original"
   @audit "leaked_routes.clearing_audit"
+  @secure_reward "sol.leaked_routes.secure_record"
+  @deliver "leaked_routes.deliver_case"
+
+  def follow_reward_id, do: @follow_reward
+  def secure_reward_id, do: @secure_reward
 
   def chapter, do: @chapter
   def reward_id, do: @reward
@@ -48,6 +53,8 @@ defmodule Sunracer.Story.LeakedRoutes do
     do: [%{id: @dispatch, label: "Request original flight plan"}]
   def topics(%{step: 6, flags: %{"dispatch_original" => true}}, "venus_auditor"),
     do: [%{id: @audit, label: "Audit batch AX-41"}]
+  def topics(%{step: 9, flags: %{"intercept_resolved" => true}}, "missions"),
+    do: [%{id: @deliver, label: "Deliver the certified audit"}]
   def topics(_, _), do: []
 
   def local_contact(%{step: 5, skipped: false, flags: %{"follow_copy_accepted" => true}}),
@@ -60,6 +67,17 @@ defmodule Sunracer.Story.LeakedRoutes do
       role: "Venus orbital freight exchange · Audit clerk", title: "Follow the Copy",
       message: "Freight exchange audit desk. Which distribution batch are you investigating?",
       topic: @audit, action_label: "Audit batch AX-41"}
+  def local_contact(%{step: 7, skipped: false,
+        flags: %{"follow_copy_complete" => true, "clearing_audit" => true}}),
+    do: %{npc_id: "venus_auditor", location_id: "venus", name: "Nadia Pell",
+      role: "Venus orbital freight exchange · Audit clerk", title: "Secure the Record",
+      offer_topic: "leaked_routes.offer_secure_record",
+      message: "Someone asked whether AX-41 had been audited. They shouldn't know what you asked me to look up. " <>
+        "I don't know who made the inquiry, but I'm not sending the extract back over the same commercial exchange. " <>
+        "Carry the certified record to Juno yourself. Plot Earth first, then return to Green Starbase. " <>
+        "If someone challenges you on the lane, deal with the threat before continuing. " <>
+        "Juno has authorized six hundred credits for a completed return.",
+      topic: "leaked_routes.accept_secure_record", action_label: "Accept return assignment — 600 credits"}
   def local_contact(_), do: nil
 
   def local_contact_available?(%{location_id: location}, %{
@@ -114,6 +132,12 @@ defmodule Sunracer.Story.LeakedRoutes do
             "The commercial copy went through a licensed exchange under batch AX-41. Plenty of organizations use " <>
             "that service, including the Merchant League. Follow the batch, not the logo on the invoice.",
             :exchange_reference}
+        @deliver ->
+          {:ok, "Let's see it. Station distribution, commercial batch, dispatch original, and the certified audit. " <>
+            "The sequence holds. Someone paid to process access to the same route Corsair had. It could still have passed through any of those places. " <>
+            "And somebody tried to stop you carrying this record back. That's worth noting, but it doesn't tell us who gave the order. " <>
+            "VX-204 is our lead. Whoever paid that charge used a clearing account. We follow the money next, not the rumors. " <>
+            "Six hundred credits. You've earned them.", :deliver_case}
         @report ->
           {:ok, "Two legitimate copies, and neither tells us who passed the record to Corsair. Good. " <>
             "We know where to look without making accusations. Your two hundred credits are settled. " <>
@@ -156,11 +180,57 @@ defmodule Sunracer.Story.LeakedRoutes do
     flags = p.flags |> Map.put("clearing_audit", true) |> Map.put("follow_copy_complete", true)
     {:ok, %{p | step: 7, flags: flags}, [{:story_credits, @follow_reward, 400}]}
   end
+  def apply(%{step: 7, flags: %{"follow_copy_complete" => true, "clearing_audit" => true,
+        "dispatch_original" => true}} = p, :accept_secure_record),
+    do: {:ok, %{p | step: 8, flags: Map.put(p.flags, "secure_record_accepted", true)}, []}
+
+  def apply(%{step: 8, flags: %{"secure_record_accepted" => true}} = p,
+            {:arm_intercept, id, voyage}) when is_binary(id) and is_integer(voyage) and voyage > 0 do
+    if voyage > Map.get(p.flags, "intercept_voyage", 0) do
+      flags = p.flags |> Map.put("intercept_id", id) |> Map.put("intercept_voyage", voyage)
+        |> Map.put("intercept_staged", false) |> Map.delete("intercept_failed")
+      {:ok, %{p | flags: flags}, []}
+    else
+      :ignore
+    end
+  end
+
+  def apply(%{step: 8, flags: %{"intercept_id" => id, "intercept_voyage" => voyage,
+        "intercept_staged" => false}} = p, {:intercept_staged, id, voyage}) do
+    if p.flags["intercept_failed"], do: :ignore,
+      else: {:ok, %{p | flags: Map.put(p.flags, "intercept_staged", true)}, []}
+  end
+
+  def apply(%{step: 8, flags: %{"intercept_id" => id, "intercept_voyage" => voyage}} = p,
+            {:intercept_finished, id, voyage, outcome}) when outcome in [:surrender, :victory] do
+    if p.flags["intercept_failed"] do
+      :ignore
+    else
+      flags = p.flags |> Map.put("intercept_resolved", true)
+        |> Map.put("intercept_outcome", Atom.to_string(outcome))
+      {:ok, %{p | step: 9, flags: flags}, []}
+    end
+  end
+
+  def apply(%{step: 8, flags: %{"intercept_id" => id, "intercept_voyage" => voyage}} = p,
+            {:intercept_finished, id, voyage, outcome})
+      when outcome in [:ignored, :retreat, :defeat, :escaped, :encounter_lost] do
+    if p.flags["intercept_failed"], do: :ignore,
+      else: {:ok, %{p | flags: Map.put(p.flags, "intercept_failed", Atom.to_string(outcome))}, []}
+  end
+
+  def apply(%{step: 9, flags: %{"station_distribution" => true, "exchange_reference" => true,
+        "dispatch_original" => true, "clearing_audit" => true, "intercept_resolved" => true,
+        "secure_record_accepted" => true}} = p, :deliver_case) do
+    {:ok, %{p | step: 10, flags: Map.put(p.flags, "case_delivered", true)},
+      [{:story_credits, @secure_reward, 600}]}
+  end
   def apply(_, _), do: :ignore
 
   def public(%{step: step, skipped: skipped} = p) do
-    %{chapter: @chapter, step: step, total_steps: 9, complete: false,
-      skipped: skipped, can_skip: step in 2..3, license: true, reward: nil,
+    %{chapter: @chapter, step: min(step, 9), total_steps: 9, complete: step == 10,
+      skipped: skipped, can_skip: step in 2..3, license: true,
+      reward: if(step == 10, do: %{credits: 600}, else: nil),
       prompt: if(skipped, do: nil, else: prompt(p))}
   end
 
@@ -195,8 +265,34 @@ defmodule Sunracer.Story.LeakedRoutes do
   end
   def prompt(%{step: 7}) do
     %{speaker: "Nadia Pell", station: "Venus orbital freight exchange",
-      text: "Audit verified. Four hundred credits settled. The clearing account is our next lead.",
-      objective: "Follow the Copy complete. Await Secure the Record", checks: [], action: nil}
+      text: "Audit verified. Four hundred credits settled. I have one more request, on Juno's authority.",
+      objective: "Speak to Nadia Pell at Venus about returning the certified audit",
+      checks: [], action: %{id: "contact_story", label: "Contact Nadia Pell"}}
+  end
+  def prompt(%{step: 8, flags: %{"intercept_failed" => _}}) do
+    %{speaker: "Nadia Pell", station: "Venus orbital freight exchange",
+      text: "The audit is still secure. Repair if necessary and take a new Earth-bound voyage from Venus.",
+      objective: "Return to Venus and retry the Earth-bound interception", checks: [], action: nil}
+  end
+  def prompt(%{step: 8, flags: %{"intercept_staged" => true}}) do
+    %{speaker: "Breaker-09", station: "Open channel",
+      text: "Courier, you're carrying material that doesn't belong to you. Stand down and hand it over.",
+      objective: "Resolve the Breaker-09 interception. Surrender or victory counts.", checks: [], action: nil}
+  end
+  def prompt(%{step: 8}) do
+    %{speaker: "Nadia Pell", station: "Venus orbital freight exchange",
+      text: "Take the Earth-bound route, courier. Keep the record secure. Juno will be waiting at Green Starbase.",
+      objective: "Plot Earth from Venus and engage cruise", checks: [], action: nil}
+  end
+  def prompt(%{step: 9}) do
+    %{speaker: "Juno Rook", station: "Green Starbase Mission Office",
+      text: "Interceptor neutralized. Audit record intact. Bring it straight to the Mission Office.",
+      objective: "Return to Green Starbase and deliver the certified audit to Juno", checks: [], action: nil}
+  end
+  def prompt(%{step: 10}) do
+    %{speaker: "Juno Rook", station: "Green Starbase Mission Office",
+      text: "Investigation complete. Payment confirmed. VX-204 is our next lead.",
+      objective: "Leaked Routes complete. Await the next assignment from Juno Rook", checks: [], action: nil}
   end
   def prompt(_) do
     %{speaker: "Juno Rook", station: "Green Starbase Mission Office",
@@ -213,7 +309,32 @@ defmodule Sunracer.Story.LeakedRoutes do
   def scene(%{step: 6}, %{step: 7}) do
     %{id: "leaked_routes:follow_copy_complete", lines: [
       %{speaker: "Nadia Pell", channel: "Venus orbital freight exchange",
-        text: "Audit verified. Four hundred credits settled. The certified record is yours."}
+        text: "Audit verified. Four hundred credits settled. I have one more request, on Juno’s authority. Speak to me before you leave Venus."}
+    ]}
+  end
+  def scene(%{step: 7}, %{step: 8}) do
+    %{id: "leaked_routes:secure_record_accepted", lines: [
+      %{speaker: "Nadia Pell", channel: "Venus orbital freight exchange",
+        text: "Take the Earth-bound route, courier. Keep the record secure. Juno will be waiting at Green Starbase."}
+    ]}
+  end
+  def scene(%{step: 8, flags: %{"intercept_staged" => false}},
+            %{step: 8, flags: %{"intercept_staged" => true, "intercept_id" => id}}) do
+    %{id: "leaked_routes:staged:" <> id, lines: [
+      %{speaker: "Breaker-09", channel: "Open channel",
+        text: "Courier, you're carrying material that doesn't belong to you. Stand down and hand it over."}
+    ]}
+  end
+  def scene(%{step: 8}, %{step: 9}) do
+    %{id: "leaked_routes:intercept_resolved", lines: [
+      %{speaker: "Juno Rook", channel: "SOL relay",
+        text: "Keep that record. Don't chase another ship. Bring it straight to the Mission Office."}
+    ]}
+  end
+  def scene(%{step: 9}, %{step: 10}) do
+    %{id: "leaked_routes:complete", lines: [
+      %{speaker: "Juno Rook", channel: "Green Starbase Mission Office",
+        text: "Investigation complete. Payment confirmed. Come back when you're ready to discuss the clearing account."}
     ]}
   end
   def scene(_, _), do: nil

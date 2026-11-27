@@ -12,6 +12,7 @@ defmodule Sunracer.World do
   alias Core.Universe.Navigation, as: SolarNavigation
   alias Core.Universe.OrbitalEntry
   alias Core.Universe.FreeFlightRegion
+  alias Core.Universe.StoryTraffic
   alias Core.World.SessionManager
   alias Core.World.MapDefinition
   alias Sunracer.Accounts
@@ -379,10 +380,79 @@ defmodule Sunracer.World do
   def local_story_talk(session_id, token, topic) do
     with {:ok, %{npc_id: npc_id, topic: ^topic}, ^token} <- local_story_contact(session_id),
          {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
-         {:ok, message, nil} <- Story.leaked_routes_talk(session.player_id, npc_id, topic) do
+         {:ok, message} <- local_story_topic(session.player_id, npc_id, topic) do
       {:ok, %{message: message, story: Story.snapshot(session.player_id)}}
     else
       _ -> {:error, :local_story_contact_required}
+    end
+  end
+
+  defp local_story_topic(player_id, "venus_auditor", "leaked_routes.accept_secure_record"),
+    do: Story.accept_leaked_routes(player_id, :accept_secure_record)
+  defp local_story_topic(player_id, npc_id, topic) do
+    case Story.leaked_routes_talk(player_id, npc_id, topic) do
+      {:ok, message, nil} -> {:ok, message}
+      _ -> {:error, :invalid_story_topic}
+    end
+  end
+
+  @doc "Stage a private interception only on the active, verified Earth-bound voyage."
+  def advance_intercept(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         %{chapter: "sol.leaked_routes", step: 8, skipped: false} = progress <- Story.progress(session.player_id),
+         {:ok, navigation} <- Simulation.solar_snapshot(session_id),
+         true <- StoryTraffic.intercept_route?(navigation),
+         voyage <- navigation.voyage_number,
+         id <- StoryTraffic.intercept_id(session.player_id, voyage),
+         {:ok, armed} <- arm_intercept(session.player_id, progress, id, voyage),
+         false <- armed.flags["intercept_staged"] == true or is_binary(armed.flags["intercept_failed"]),
+         {:ok, %{pending_encounter: %{id: ^id}}} <-
+           GenServer.call(Module.concat(SessionManager, SolarNavigation),
+             {:stage_story_contact, session.player_id, :leaked_routes_intercept, voyage}) do
+      Story.record(session.player_id, {:leaked_routes, {:intercept_staged, id, voyage}})
+    else
+      _ -> :ignored
+    end
+  end
+
+  defp arm_intercept(player_id, progress, id, voyage) do
+    if progress.flags["intercept_id"] == id and progress.flags["intercept_voyage"] == voyage do
+      {:ok, progress}
+    else
+      case Story.record(player_id, {:leaked_routes, {:arm_intercept, id, voyage}}) do
+        {:ok, %{progress: armed}} -> {:ok, armed}
+        _ -> :ignored
+      end
+    end
+  end
+
+  @doc "Reconcile an orphaned interception at the authenticated join boundary."
+  def recover_intercept(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         %{chapter: "sol.leaked_routes", step: 8, skipped: false,
+           flags: %{"intercept_id" => id, "intercept_voyage" => voyage}} <- Story.progress(session.player_id),
+         {:ok, nil} <- Simulation.pending_tactical_cleanup(session_id),
+         {:ok, %{tactical_encounter: nil, pending_encounter: nil}} <- Simulation.solar_snapshot(session_id) do
+      server = Module.concat(SessionManager, SolarNavigation)
+      outcome =
+        case GenServer.call(server, {:story_settlement, session.player_id, id}) do
+          %{outcome: result, report: %{encounter_id: ^id, voyage_number: ^voyage}}
+              when result in [:surrender, :victory, :retreat, :defeat, :escaped] -> result
+          _ -> :encounter_lost
+        end
+      finish_intercept(session.player_id, id, voyage, outcome)
+    else
+      _ -> :ignored
+    end
+  end
+
+  defp finish_intercept(player_id, id, voyage, outcome) do
+    if id == StoryTraffic.intercept_id(player_id, voyage) do
+      result = Story.record(player_id, {:leaked_routes, {:intercept_finished, id, voyage, outcome}})
+      if match?({:ok, _}, result), do: Simulation.solar_clear_story_contacts(player_id)
+      result
+    else
+      :ignored
     end
   end
 
@@ -687,6 +757,11 @@ defmodule Sunracer.World do
            Simulation.solar_resolve_encounter(session_id, encounter_id, choice) do
       _ = story_event(session_id,
         {:encounter_resolved, encounter_id, navigation.voyage_number})
+      if StoryTraffic.script_of(encounter_id) == :leaked_routes_intercept do
+        with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
+          finish_intercept(session.player_id, encounter_id, navigation.voyage_number, :ignored)
+        end
+      end
       result
     end
   end
@@ -706,6 +781,11 @@ defmodule Sunracer.World do
            settle_tactical(session_id, encounter_id, outcome, opts) do
       _ = story_event(session_id,
         {:tactical_finished, encounter_id, outcome, navigation.voyage_number})
+      if StoryTraffic.script_of(encounter_id) == :leaked_routes_intercept do
+        with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
+          finish_intercept(session.player_id, encounter_id, navigation.voyage_number, outcome)
+        end
+      end
       result
     end
   end
@@ -714,6 +794,14 @@ defmodule Sunracer.World do
     server = Module.concat(SessionManager, SolarNavigation)
     claim_cargo? = Keyword.get(opts, :claim_cargo, false) == true
 
+    if claim_cargo? and StoryTraffic.script_of(encounter_id) == :leaked_routes_intercept do
+      {:error, :story_contact_has_no_cargo}
+    else
+      settle_tactical_verified(session_id, encounter_id, outcome, claim_cargo?, server)
+    end
+  end
+
+  defp settle_tactical_verified(session_id, encounter_id, outcome, claim_cargo?, server) do
     Simulation.solar_finish_tactical(session_id, encounter_id, outcome,
       persist_player_condition: fn %{player_id: player_id,
                                      ship_instance_id: ship_id, combat: combat} ->

@@ -5,7 +5,7 @@ SOL is the first complete campaign. Alpha Centauri travel stays locked until a f
 | Chapter | Design | Status |
 | --- | --- | --- |
 | 00 First Run | [Existing design](../../story-first-run.md) and [playthrough](../../story-first-run-playthrough.md) | Implemented; preserve |
-| 01 Leaked Routes | [Complete chapter design](01-leaked-routes.md) | M1 production-playtested; M2 candidate pending verification; M3 pending |
+| 01 Leaked Routes | [Complete chapter design](01-leaked-routes.md) | M1 production-playtested; M2 native playtested; M3 candidate pending verification |
 | 02 Following the Money | Trace suspicious payments | Planned |
 | 03 Supply Line | Follow military-grade equipment | Planned |
 | 04 Beyond the Frontier | Investigate outer SOL activity | Planned |

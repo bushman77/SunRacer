@@ -800,6 +800,16 @@ defmodule SunracerWeb.WorldChannel do
         socket
       end
 
+    socket =
+      if match?(%{chapter: "sol.leaked_routes", step: 8}, socket.assigns[:story_progress]) do
+        case World.recover_intercept(socket.assigns.world_session_id) do
+          {:ok, %{progress: progress}} -> assign(socket, :story_progress, progress)
+          _ -> socket
+        end
+      else
+        socket
+      end
+
     navigation =
       case World.solar_snapshot(socket.assigns.world_session_id) do
         {:ok, fresh} -> fresh
@@ -934,10 +944,22 @@ defmodule SunracerWeb.WorldChannel do
 
     socket = assign(socket, :story_nav_key, key)
 
-    if Story.wants?(progress, :navigation) and
-         (arrived? or Story.preview(progress, {:navigation, navigation}) != :ignore),
-       do: story_event(socket, {:navigation, navigation}),
-       else: socket
+    cond do
+      match?(%{chapter: "sol.leaked_routes", step: 8, skipped: false}, progress) and
+          Core.Universe.StoryTraffic.intercept_route?(navigation) and
+          (progress.flags["intercept_voyage"] != navigation.voyage_number or
+            (progress.flags["intercept_staged"] != true and not progress.flags["intercept_failed"])) ->
+        case World.advance_intercept(socket.assigns.world_session_id) do
+          {:ok, %{progress: next}} -> assign(socket, :story_progress, next)
+          _ -> socket
+        end
+
+      Story.wants?(progress, :navigation) and
+          (arrived? or Story.preview(progress, {:navigation, navigation}) != :ignore) ->
+        story_event(socket, {:navigation, navigation})
+
+      true -> socket
+    end
   end
 
   defp story_navigation(socket, _navigation), do: socket

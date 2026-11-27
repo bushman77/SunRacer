@@ -47,7 +47,7 @@ export function storyHudModel(story) {
     canSkip: story.complete !== true && story.can_skip !== false,
     license: story.license === true,
     reward: story.reward && Number.isInteger(story.reward.credits)
-      ? `+${story.reward.credits} credits · Helios courier license`
+      ? `+${story.reward.credits} credits` + (story.chapter === "sol.leaked_routes" ? "" : " · Helios courier license")
       : null,
     stereoLine: objective
       ? (story.complete ? "STORY · " : "OBJ · ") + objective.toUpperCase().slice(0, 58)

@@ -673,12 +673,18 @@ defmodule Core.Universe.Navigation do
     {:reply, response, state}
   end
 
-  def handle_call({:stage_story_contact, player_id, script}, _from, state) do
+  def handle_call({:stage_story_contact, player_id, script}, from, state),
+    do: handle_call({:stage_story_contact, player_id, script, nil}, from, state)
+
+  def handle_call({:stage_story_contact, player_id, script, expected_voyage}, _from, state) do
     {voyage, state} = ensure_player(state, player_id)
 
     cond do
       script not in StoryTraffic.scripts() ->
         {:reply, {:error, :invalid_story_script}, state}
+
+      not is_nil(expected_voyage) and voyage.voyage_number != expected_voyage ->
+        {:reply, {:error, :story_voyage_changed}, state}
 
       match?(%{contact_id: _}, voyage.pending_encounter) and
           voyage.pending_encounter.contact_id == StoryTraffic.contact_id(player_id, script) ->
@@ -695,6 +701,14 @@ defmodule Core.Universe.Navigation do
 
       voyage.tactical_encounter != nil ->
         {:reply, {:error, :tactical_encounter_active}, state}
+
+      script == :leaked_routes_intercept and not StoryTraffic.intercept_route?(voyage) ->
+        {:reply, {:error, :invalid_story_route}, state}
+
+      script == :leaked_routes_intercept and MapSet.member?(
+          Map.get(state.encountered, player_id, MapSet.new()),
+          StoryTraffic.intercept_id(player_id, voyage.voyage_number)) ->
+        {:reply, {:error, :story_attempt_already_staged}, state}
 
       true ->
         vessel = StoryTraffic.build(player_id, script, voyage.position_km,
@@ -713,6 +727,11 @@ defmodule Core.Universe.Navigation do
         broadcast(state, player_id, held)
         {:reply, {:ok, public(held, state, player_id)}, state}
     end
+  end
+
+  def handle_call({:story_settlement, player_id, encounter_id}, _from, state) do
+    receipt = Map.get(state.settled_tactical, {player_id, encounter_id})
+    {:reply, receipt, state}
   end
 
   def handle_call({:clear_story_contacts, player_id}, _from, state) do

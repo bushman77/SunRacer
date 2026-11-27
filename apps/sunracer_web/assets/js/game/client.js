@@ -1605,16 +1605,18 @@ class SpaceClient {
         }]
       })
     }
+    const breaker = tactical.call_sign === "Breaker-09"
     for (const button of [accept, seize]) {
       if (button) {
-        button.hidden = !surrendered
+        button.hidden = !surrendered || (breaker && button === seize)
         button.disabled = this.tacticalRetreating
       }
     }
     const message = panel.querySelector("[data-solar-tactical-message]")
     if (message && !this.tacticalRetreating) {
       message.textContent = surrendered
-        ? "Corsair-17: Hold your fire! We surrender. Release them or seize the cargo (4-tonne hold limits apply)."
+        ? (breaker ? "Breaker-09: We're done. Keep your record. Accept their surrender."
+          : (tactical.call_sign || "Opposing vessel") + ": Hold your fire! We surrender. Release them or seize the cargo (4-tonne hold limits apply).")
         : "Defeat the opposing vessel, accept surrender if offered, or retreat."
     }
   }
