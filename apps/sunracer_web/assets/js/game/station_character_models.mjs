@@ -7,6 +7,7 @@ export const STATION_CHARACTER_ASSETS = Object.freeze({
   trade: "/images/game/station/tarek_sol.glb",           // Tarek Sol
   resupply: "/images/game/station/sera_vale.glb",     // Sera Vale
   outfitting: "/images/game/station/ilya_quill.glb",  // Ilya Quill
+  missions: "/images/game/station/juno_rook.glb",     // Juno Rook
 })
 
 // Blender exports metres; the station's procedural characters are ~9 local

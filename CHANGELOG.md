@@ -1,3 +1,9 @@
+## 2026-11-27 — Juno Rook station character model
+
+- Mapped the `missions` attendant to `juno_rook.glb` in `station_character_models.mjs`, so Juno Rook's Mission Office figure is replaced by an imported model on the same loader path as Mara, Tarek, Sera and Ilya. Presentation only: identity, role, room, position, dialogue and story offers still come from `Core.World.StationAttendants` through MapServer, and no reward, progress or roster behaviour changed.
+- The GLB itself is not committed. Until it is generated it is a missing asset, which the loader already handles by logging once and keeping the procedural figure, so Juno looks exactly as before on a checkout without the file. Her source prompt lives in ai3d as `examples/juno/prompt.txt` (text prompt; no approved reference image exists for her) and installs with `make_character.sh --install-as juno_rook`.
+- Reworked the two asset-map tests that used `missions` as the example of an attendant with no configured model to use `comms` (Eno Kade), and extended the per-attendant test to five configured models. Ran `node --test js/game/*_test.mjs`: 595 pass, 0 fail. Not run: Mix/precommit (no Elixir runtime in this environment). Not performed: any native cockpit or headset view of Juno, which cannot happen until the GLB exists.
+
 ## 2026-11-27 — Completed chapter dialogue
 
 - Juno's greeting and contracts response now acknowledge completed Leaked Routes and the VX-204 lead without opening Chapter 2 or repeating payment. Stage 4 retains its contextual message. Added pure dialogue and no-repeat regression assertions; local tests pending.

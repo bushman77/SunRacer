@@ -1732,3 +1732,11 @@ docking, station walking and mission completion. Branch `story_line`.
 ### Native station GLB texture decoding
 
 - Permit local blob URLs in native WebView image and fetch CSP directives for Three.js embedded GLB texture decoding. Script and object restrictions unchanged. Added CSP regression test and GLB metadata audit command (`node clients/tauri/scripts/audit-station-textures.mjs`). Actual installed model appearance and binary asset metadata still need verification; no model files changed.
+
+
+### Juno Rook station character model
+
+- `missions` now resolves to `juno_rook.glb` on the existing station character loader, with the ai3d source prompt committed as `examples/juno/prompt.txt` in the ai3d repository. Deliberately a text prompt, since no approved reference image exists for Juno; her slate-blue liaison uniform follows the attendant colour `0x8ca8dd` she replaces.
+- [x] Client mapping, documentation and tests (`node --test js/game/*_test.mjs`, 595 pass).
+- [ ] Generate the GLB on the RTX 3060 rig and copy it into `priv/static/images/game/station/`; until then the documented missing-asset fallback keeps her procedural figure.
+- [ ] Review the generated views and the installed model in the cockpit and headset (not yet performed).

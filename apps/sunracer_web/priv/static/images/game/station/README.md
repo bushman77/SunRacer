@@ -2,9 +2,20 @@
 
 Station attendant models live here, one GLB per attendant listed in
 `assets/js/game/station_character_models.mjs` (`STATION_CHARACTER_ASSETS`,
-keyed by attendant id): **mara_venn.glb** (repair), **ilya_quill.glb**
-(outfitting). To add another attendant, make the GLB with ai3d
-(`--install-as FILE`) and add one line to that table.
+keyed by attendant id): **mara_venn.glb** (repair), **tarek_sol.glb**
+(trade), **sera_vale.glb** (resupply), **ilya_quill.glb** (outfitting) and
+**juno_rook.glb** (missions). To add another attendant, make the GLB with
+ai3d (`--install-as FILE`) and add one line to that table.
+
+`juno_rook.glb` is mapped but not present yet; Juno Rook keeps her
+procedural figure until it is generated. Make it from the text prompt in
+ai3d (no approved reference image exists for her):
+
+```bash
+cd ~/ai3d
+bash make_character.sh --name juno_v1 --prompt-file examples/juno/prompt.txt \
+  --install-as juno_rook --sunracer ~/darkorbit_umbrella
+```
 
 - Browser/static URL: `/images/game/station/mara_venn.glb`
 - Tauri: `clients/tauri/scripts/stage-client.mjs` copies this directory into
