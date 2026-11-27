@@ -333,9 +333,11 @@ defmodule Sunracer.World do
       case SessionManager.fetch(SessionManager, session_id) do
         {:ok, session} ->
           reply =
-            if attendant_id == "missions" and topic == "greeting" and
-                 match?(%{chapter: "sol.leaked_routes", step: 4}, Story.progress(session.player_id)) do
-              %{reply | message: "Distribution List is complete. When you're ready, we'll follow the copy."}
+            if attendant_id == "missions" and topic in ["greeting", "contracts"] do
+              case LeakedRoutes.juno_message(Story.progress(session.player_id), topic) do
+                nil -> reply
+                message -> %{reply | message: message}
+              end
             else
               reply
             end

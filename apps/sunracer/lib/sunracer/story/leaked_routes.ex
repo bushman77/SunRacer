@@ -36,6 +36,16 @@ defmodule Sunracer.Story.LeakedRoutes do
   end
   def eligible?(_), do: false
 
+  @doc "Read-only Juno dialogue reflecting the pilot's committed chapter state."
+  def juno_message(%{chapter: @chapter, step: 4, skipped: false}, topic)
+      when topic in ["greeting", "contracts"],
+    do: "Distribution List is complete. When you're ready, we'll follow the copy."
+  def juno_message(%{chapter: @chapter, step: 10, skipped: false}, "greeting"),
+    do: "Good work, courier. The investigation is complete, and your payment is settled. VX-204 is our next lead. I'll be in touch when we have more."
+  def juno_message(%{chapter: @chapter, step: 10, skipped: false}, "contracts"),
+    do: "Nothing new just yet. I'm looking into the VX-204 clearing account. Check back when the next assignment is ready."
+  def juno_message(_, _), do: nil
+
   def topics(%{skipped: true}, _), do: []
   def topics(%{step: 1}, "missions"),
     do: [%{id: @offer, label: "About the leaked route"}]

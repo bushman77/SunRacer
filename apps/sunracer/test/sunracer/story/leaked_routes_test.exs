@@ -89,6 +89,12 @@ defmodule Sunracer.Story.LeakedRoutesTest do
         Chapter.apply(hand_in, :deliver_case)
       assert complete.step == 10
       assert Chapter.public(complete).complete
+      assert Chapter.juno_message(complete, "greeting") =~ "investigation is complete"
+      assert Chapter.juno_message(complete, "contracts") =~ "VX-204"
+      assert Chapter.juno_message(complete, "rewards") == nil
+      assert Chapter.juno_message(hand_in, "greeting") == nil
+      assert Chapter.topics(complete, "missions") == []
+      assert :error = Chapter.dialogue(complete, "missions", "leaked_routes.deliver_case")
       assert :ignore = Chapter.apply(complete, :deliver_case)
     end
   end

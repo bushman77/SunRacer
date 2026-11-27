@@ -1,3 +1,7 @@
+## 2026-11-27 — Completed chapter dialogue
+
+- Juno's greeting and contracts response now acknowledge completed Leaked Routes and the VX-204 lead without opening Chapter 2 or repeating payment. Stage 4 retains its contextual message. Added pure dialogue and no-repeat regression assertions; local tests pending.
+
 ## 2026-11-27 — Docked repair HUD synchronization
 
 - Local native playtest reported stale upper-left hull after complimentary repair. The server already returns its repaired parked condition; the native client now renders those confirmed values independently of the dialogue lifecycle. Join includes the authenticated ship's private condition, including docked reconnects; fitting reuses the same HUD presenter. Stale flight entities cannot overwrite docked health. No gameplay economy or repair authorization changes.
