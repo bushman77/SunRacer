@@ -783,7 +783,7 @@ class SpaceClient {
         if (!finish()) return
         if (reply.story) this.storyHud?.apply(reply.story)
         this.root.querySelector("#story-dispatch-text").textContent = reply.message || ""
-        feedback.textContent = "Record received."
+        feedback.textContent = contact.offer_topic ? "Assignment accepted." : "Record received."
       })
       .receive("error", reply => {
         if (!finish()) return

@@ -114,3 +114,10 @@ test("the headset payload (prompt without action) still yields the HUD line", ()
   assert.deepEqual(model.action, {id: "contact_story", label: "Contact Ross"})
   assert.equal(model.canSkip, false)
 })
+
+ test("Secure the Record completion does not repeat the prologue license reward", () => {
+  const model = storyHudModel(story({chapter: "sol.leaked_routes", complete: true,
+    step: 9, reward: {credits: 600}, prompt: {objective: "Leaked Routes complete"}}))
+  assert.equal(model.stepLabel, "LEAKED ROUTES · COMPLETE")
+  assert.equal(model.reward, "+600 credits")
+})

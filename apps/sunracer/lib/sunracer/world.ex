@@ -405,7 +405,7 @@ defmodule Sunracer.World do
          voyage <- navigation.voyage_number,
          id <- StoryTraffic.intercept_id(session.player_id, voyage),
          {:ok, armed} <- arm_intercept(session.player_id, progress, id, voyage),
-         false <- armed.flags["intercept_staged"] == true or is_binary(armed.flags["intercept_failed"]),
+         true <- armed.flags["intercept_staged"] != true and is_nil(armed.flags["intercept_failed"]),
          {:ok, %{pending_encounter: %{id: ^id}}} <-
            GenServer.call(Module.concat(SessionManager, SolarNavigation),
              {:stage_story_contact, session.player_id, :leaked_routes_intercept, voyage}) do
@@ -432,15 +432,23 @@ defmodule Sunracer.World do
          %{chapter: "sol.leaked_routes", step: 8, skipped: false,
            flags: %{"intercept_id" => id, "intercept_voyage" => voyage}} <- Story.progress(session.player_id),
          {:ok, nil} <- Simulation.pending_tactical_cleanup(session_id),
-         {:ok, %{tactical_encounter: nil, pending_encounter: nil}} <- Simulation.solar_snapshot(session_id) do
-      server = Module.concat(SessionManager, SolarNavigation)
-      outcome =
-        case GenServer.call(server, {:story_settlement, session.player_id, id}) do
-          %{outcome: result, report: %{encounter_id: ^id, voyage_number: ^voyage}}
-              when result in [:surrender, :victory, :retreat, :defeat, :escaped] -> result
-          _ -> :encounter_lost
-        end
-      finish_intercept(session.player_id, id, voyage, outcome)
+         {:ok, navigation} <- Simulation.solar_snapshot(session_id) do
+      case navigation do
+        %{pending_encounter: %{id: ^id}, voyage_number: ^voyage} ->
+          Story.record(session.player_id, {:leaked_routes, {:intercept_staged, id, voyage}})
+
+        %{tactical_encounter: nil, pending_encounter: nil} ->
+          server = Module.concat(SessionManager, SolarNavigation)
+          outcome =
+            case GenServer.call(server, {:story_settlement, session.player_id, id}) do
+              %{outcome: result, report: %{encounter_id: ^id, voyage_number: ^voyage}}
+                  when result in [:surrender, :victory, :retreat, :defeat, :escaped] -> result
+              _ -> :encounter_lost
+            end
+          finish_intercept(session.player_id, id, voyage, outcome)
+
+        _ -> :ignored
+      end
     else
       _ -> :ignored
     end

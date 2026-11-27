@@ -948,7 +948,7 @@ defmodule SunracerWeb.WorldChannel do
       match?(%{chapter: "sol.leaked_routes", step: 8, skipped: false}, progress) and
           Core.Universe.StoryTraffic.intercept_route?(navigation) and
           (progress.flags["intercept_voyage"] != navigation.voyage_number or
-            (progress.flags["intercept_staged"] != true and not progress.flags["intercept_failed"])) ->
+            (progress.flags["intercept_staged"] != true and is_nil(progress.flags["intercept_failed"]))) ->
         case World.advance_intercept(socket.assigns.world_session_id) do
           {:ok, %{progress: next}} -> assign(socket, :story_progress, next)
           _ -> socket
