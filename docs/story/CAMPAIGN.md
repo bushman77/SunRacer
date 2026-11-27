@@ -173,7 +173,7 @@ Detailed NPC offers, mission steps, rewards, evidence flags and recovery behavio
 
 Keep home-system characters reachable through credible relays, recorded messages, visits or later deployments. No instant communications through a disabled passage unless a separate, established system provides it. Introduce local NPCs when a system is developed rather than filling 29 systems with interchangeable quest givers.
 
-Existing organizations are authoritative: Helios Courier Cooperative, Solar Merchant League, Outer Rim Trading Guild, Solar Survey Consortium, Independent Operators, Unaffiliated Raiders, and SOL planetary authorities. See `Core.Factions`. Their membership is not synonymous with guilt. The Directorate and Architects are proposed lore; neither is an implemented faction. Detailed motives and internal subdivisions belong in a future `FACTIONS.md`.
+Existing organizations are authoritative: Helios Courier Cooperative, Solar Merchant League, Outer Rim Trading Guild, Solar Survey Consortium, Independent Operators, Unaffiliated Raiders, and SOL planetary authorities. See `Core.Factions`. Their membership is not synonymous with guilt. The Directorate and Architects are proposed lore; neither is an implemented faction. Proposed motives, internal subdivisions and political relationships are developed in [FACTIONS.md](FACTIONS.md).
 
 ## 7. Narrative-to-gameplay contract
 
@@ -199,6 +199,6 @@ Existing organizations are authoritative: Helios Courier Cooperative, Solar Merc
 
 ## 9. Document workflow
 
-This file is the top-level working story bible. Existing First Run documentation remains the reference for the implemented prologue. [LORE.md](LORE.md) records the accepted historical and technological foundations. Future companion files are planned: `FACTIONS.md`, `CHARACTERS.md`, `TIMELINE.md`, `MISSION_DESIGN.md` and one directory per system. See [story index](README.md).
+This file is the top-level working story bible. Existing First Run documentation remains the reference for the implemented prologue. [LORE.md](LORE.md) records the accepted historical and technological foundations. [FACTIONS.md](FACTIONS.md) develops the proposed faction motives and relationships. Future companion files are planned: `CHARACTERS.md`, `TIMELINE.md`, `MISSION_DESIGN.md` and one directory per system. See [story index](README.md).
 
 When a design is accepted, record the decision and update this bible and the relevant chapter. Implementation must not quietly change accepted story facts; propose differences and document them. Track actual gameplay implementation in ROADMAP and CHANGELOG separately from narrative intent.

@@ -119,7 +119,7 @@ Do not claim that they created every wormhole, that they were human, or that the
 
 Act IV is the planned point at which the player earns substantial evidence about the network's origins. Earlier events may contain anomalies and fragments, but not explicit confirmation of the Architects. Ancient technology is neither magic nor an unlimited source of power.
 
-The Directorate's specific origin, motives, leadership and proposed Resonance Array are covered provisionally in CAMPAIGN.md and will be refined in FACTIONS.md. No exact founding date, culprit, or individual antagonist is established here.
+The Directorate's specific origin, motives, leadership and proposed Resonance Array are covered provisionally in CAMPAIGN.md and are developed provisionally in [FACTIONS.md](FACTIONS.md). No exact founding date, culprit, or individual antagonist is established here.
 
 ## 5. Cultural and narrative constraints
 

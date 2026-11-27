@@ -8,7 +8,7 @@ This is a web application written using the Phoenix web framework.
 
 ### Story and campaign guidelines
 
-- Consult `docs/story/CAMPAIGN.md`, `docs/story/LORE.md`, the relevant chapter design, and the existing First Run documents before implementing or revising narrative missions.
+- Consult `docs/story/CAMPAIGN.md`, `docs/story/LORE.md`, `docs/story/FACTIONS.md`, the relevant chapter design, and the existing First Run documents before implementing or revising narrative missions.
 - Distinguish approved design, proposed lore and implemented gameplay. Do not change approved story facts, reorder the 29-system campaign or unlock travel based on draft outlines.
 - Preserve NPC-issued mission acceptance, server-verified objectives, per-pilot persistence, once-only rewards and explicit failure recovery.
 - Write and review the next chapter before implementing it; document design deviations and require a playthrough before expanding the campaign.

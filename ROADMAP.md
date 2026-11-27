@@ -1,3 +1,7 @@
+## 2026-11-26 — Faction design bible (design only)
+
+- Created `docs/story/FACTIONS.md` revision 0.1: six existing commercial/civilian organization IDs, nine SOL territorial authorities, Green Starbase neutrality, proposed economic dependencies, Directorate ideology and internal currents, relationship tensions, coalition and mission design constraints. Preserved `Core.Factions` identity and standing/warrant policies and First Run continuity. New profiles and slogans are proposals, not approved registry or gameplay changes; leaker, Directorate founding and leadership remain open. Linked campaign/lore/index and updated agent guidance. Documentation only; source identity and standing policy cross-checked, no runtime tests executed.
+
 ## 2026-11-26 — Accepted lore foundations (design only)
 
 - Added `docs/story/LORE.md` revision 0.1 following owner approval of the historical premise and 500 years since humanity's first successful interstellar transit to Alpha Centauri. Recorded four ages, technological limitations, the gradual ancient-engineering revelation, and the distinction between accepted canon, working interpretations and open decisions. Updated campaign index, agent guidance and campaign references. No gameplay, travel permissions or database changes; documentation-only, no runtime tests run.
