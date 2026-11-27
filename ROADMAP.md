@@ -1,3 +1,7 @@
+## 2026-11-27 — Leaked Routes: Distribution List implementation
+
+- Added a chapter-specific pure transition module and additive progress row on authenticated acceptance, preserving the original prologue row and receipt. M1 uses existing Juno/Eno/Tarek positions, channel-bound offer/accept, two verified records in either order and transactional 200-credit receipt; HUD and radio identify Leaked Routes. Stops at step 4, incomplete, awaiting Follow the Copy. M2/M3, remote contacts and Breaker-09 are not enabled. No schema migration or new roster. Added regression tests; Mix/JS execution and manual playthrough pending (no Elixir runtime in editing environment).
+
 ## 2026-11-26 — Leaked Routes chapter design (design only)
 
 - Drafted `docs/story/01-sol/01-leaked-routes.md` revision 0.1: three separately accepted main-campaign missions, local Green Starbase investigation, Earth dispatch and proposed Venus auditor Nadia Pell, private Breaker-09 return intercept, authored evidence provenance, full dialogue/HUD, proposed 200/400/600 credit receipts, ten-step compatibility mapping and recovery/test/playthrough plan. Culprit unresolved; lead is a clearing account for Following the Money. Cross-checked current station topics, dispatcher, private traffic, tactical outcomes, progress and reward code; local remote contacts, chapter dispatch and new encounter remain implementation dependencies. No gameplay, schema, roster or travel changes. Owner review required before implementation; no runtime tests executed.

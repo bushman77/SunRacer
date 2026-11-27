@@ -407,7 +407,7 @@ defmodule Sunracer.Story.Prologue do
       "Green Starbase Mission Office",
       "First run done, and paid. Come back to the Green Starbase when you can. " <>
         "We need to talk about where that chip came from.",
-      "Prologue complete. Return when Chapter 1 opens"
+      "First Run complete. Return to Juno for Leaked Routes"
     )
   end
 

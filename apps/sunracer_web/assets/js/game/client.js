@@ -2264,6 +2264,7 @@ class SpaceClient {
     this.outfittingPanel?.close({restoreDialogue: false})
     this.tradePanel?.close({restoreDialogue: false})
     if (!this.stationNpcDialogOpen) return
+    if (this.channel?.state === "joined") this.channel.push("station_dialogue_close", {})
     this.stationNpcDialogOpen = false
     this.stationNpcBusy = false
     this.stationNpcId = null

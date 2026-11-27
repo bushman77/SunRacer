@@ -31,19 +31,20 @@ export function storyHudModel(story) {
         .map(check => ({label: check.label, done: check.done === true}))
     : []
   const objective = text(prompt.objective)
+  const chapterLabel = story.chapter === "sol.leaked_routes" ? "LEAKED ROUTES" : "FIRST RUN"
 
   return {
     visible: true,
     resumeVisible: false,
     complete: story.complete === true,
-    stepLabel: story.complete ? "FIRST RUN · COMPLETE" : `FIRST RUN · ${step} / ${total}`,
+    stepLabel: story.complete ? `${chapterLabel} · COMPLETE` : `${chapterLabel} · ${step} / ${total}`,
     speaker: text(prompt.speaker, "Comms"),
     station: text(prompt.station),
     text: text(prompt.text),
     objective,
     checks,
     action,
-    canSkip: story.complete !== true,
+    canSkip: story.complete !== true && story.can_skip !== false,
     license: story.license === true,
     reward: story.reward && Number.isInteger(story.reward.credits)
       ? `+${story.reward.credits} credits · Helios courier license`

@@ -114,6 +114,45 @@ defmodule Sunracer.StoryTest do
     # Replays after completion change nothing.
     assert :ignored = record!(id, {:navigation, mars})
     assert Repo.get!(PlayerAccount, id).credits == before + 500
+
+    # Chapter 1 eligibility is read-only until Juno's validated acceptance.
+    assert Enum.any?(Story.topics(id, "missions"), &(&1.id == "leaked_routes.offer_station_records"))
+    assert {:ok, _, choices} = Story.leaked_routes_talk(id, "missions", "leaked_routes.offer_station_records")
+    assert Enum.any?(choices, &(&1.id == "leaked_routes.accept_station_records"))
+    assert %{chapter: "prologue", complete: true} = Story.snapshot(id)
+    assert {:error, :invalid_station_topic} =
+      Story.leaked_routes_talk(id, "comms", "leaked_routes.station_distribution")
+
+    assert {:ok, _} = Story.accept_leaked_routes(id)
+    assert %{chapter: "sol.leaked_routes", step: 2, complete: false} = Story.snapshot(id)
+    assert %{step: 10} = Story.prologue_progress(id)
+    assert {:error, :mission_unavailable} = Story.accept_leaked_routes(id)
+    assert :ignored = record!(id, :accept_consignment)
+    assert :ignored = record!(id, {:navigation, mars})
+    assert {:error, :invalid_station_topic} =
+      Story.leaked_routes_talk(id, "missions", "leaked_routes.report_distribution")
+    assert {:error, :invalid_station_topic} =
+      Story.leaked_routes_talk(id, "repair", "leaked_routes.exchange_reference")
+
+    assert {:ok, _, nil} = Story.leaked_routes_talk(id, "trade", "leaked_routes.exchange_reference")
+    assert {:error, :invalid_station_topic} =
+      Story.leaked_routes_talk(id, "trade", "leaked_routes.exchange_reference")
+    assert {:ok, %{story: %{skipped: true}}} = record!(id, :skip)
+    assert {:error, :invalid_station_topic} =
+      Story.leaked_routes_talk(id, "comms", "leaked_routes.station_distribution")
+    assert {:ok, _} = record!(id, :resume)
+    assert {:ok, _, nil} = Story.leaked_routes_talk(id, "comms", "leaked_routes.station_distribution")
+    assert %{chapter: "sol.leaked_routes", step: 3} = Story.snapshot(id)
+    assert {:ok, _, nil} = Story.leaked_routes_talk(id, "missions", "leaked_routes.report_distribution")
+    assert %{chapter: "sol.leaked_routes", step: 4, complete: false} = Story.snapshot(id)
+    assert %{credits: 200} = Story.reward_receipt(id, "sol.leaked_routes.station_records")
+    assert %{credits: 500} = Story.reward_receipt(id)
+    assert Repo.get!(PlayerAccount, id).credits == before + 700
+    assert {:error, :invalid_station_topic} =
+      Story.leaked_routes_talk(id, "missions", "leaked_routes.report_distribution")
+    assert Repo.get!(PlayerAccount, id).credits == before + 700
+    refute Map.has_key?(Story.snapshot(id), :scene)
+    assert %{step: 10} = Story.prologue_progress(id)
   end
 
   test "a short delivery waits, and Earth reissues the consignment once" do

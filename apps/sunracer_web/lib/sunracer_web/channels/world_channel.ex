@@ -3,7 +3,7 @@ defmodule SunracerWeb.WorldChannel do
   require Logger
 
   alias Sunracer.World
-  alias Sunracer.Story.Prologue
+  alias Sunracer.Story
 
   alias SunracerWeb.{WorldStreamDelta, WorldStreamPolicy}
 
@@ -225,6 +225,9 @@ defmodule SunracerWeb.WorldChannel do
   end
 
   def handle_in("station_walk", input, socket) when is_map(input) do
+    socket = if Enum.any?(["forward", "strafe", "turn"], fn key ->
+      is_number(input[key]) and input[key] != 0
+    end), do: assign(socket, :station_story_offer, false), else: socket
     case World.station_walk(socket.assigns.world_session_id, input) do
       {:ok, accepted} -> {:reply, {:ok, accepted}, socket}
       {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
@@ -343,16 +346,33 @@ defmodule SunracerWeb.WorldChannel do
   def handle_in("station_talk",
                 %{"attendant_id" => id, "topic" => topic}, socket)
       when is_binary(id) and is_binary(topic) do
-    case World.station_talk(socket.assigns.world_session_id, id, topic) do
-      {:ok, response} -> {:reply, {:ok, response}, socket}
+    offered? = socket.assigns[:station_story_offer] == true
+    socket = assign(socket, :station_story_offer, false)
+    result =
+      case topic do
+        "leaked_routes.accept_station_records" when offered? and id == "missions" ->
+          World.accept_station_story(socket.assigns.world_session_id, id)
+        "leaked_routes.accept_station_records" ->
+          {:error, :station_contact_required}
+        _ -> World.station_talk(socket.assigns.world_session_id, id, topic)
+      end
+
+    case result do
+      {:ok, response} ->
+        offered = id == "missions" and topic == "leaked_routes.offer_station_records"
+        {:reply, {:ok, response}, assign(socket, :station_story_offer, offered)}
       {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
     end
   end
 
   def handle_in("station_talk", _payload, socket),
-    do: {:reply, {:error, %{reason: "invalid_station_dialogue"}}, socket}
+    do: {:reply, {:error, %{reason: "invalid_station_dialogue"}}, assign(socket, :station_story_offer, false)}
+
+  def handle_in("station_dialogue_close", _payload, socket),
+    do: {:reply, {:ok, %{}}, assign(socket, :station_story_offer, false)}
 
   def handle_in("station_launch", _payload, socket) do
+    socket = assign(socket, :station_story_offer, false)
     case World.launch(socket.assigns.world_session_id) do
       {:ok, status} -> {:reply, {:ok, status}, socket}
       {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
@@ -734,7 +754,8 @@ defmodule SunracerWeb.WorldChannel do
     # Join occurs after prepared departure recovery. Reconcile orphaned
     # story combat before applying ordinary navigation/docking checks.
     socket =
-      if match?(%{step: 6, skipped: false}, socket.assigns[:story_progress]) do
+      if Story.prologue_active?(socket.assigns[:story_progress]) and
+         match?(%{step: 6, skipped: false}, socket.assigns[:story_progress]) do
         case World.recover_story_encounter(socket.assigns.world_session_id) do
           {:ok, %{progress: progress}} -> assign(socket, :story_progress, progress)
           _ -> socket
@@ -752,7 +773,7 @@ defmodule SunracerWeb.WorldChannel do
     socket = story_navigation(socket, navigation)
 
     socket =
-      if Prologue.wants?(socket.assigns[:story_progress], :docked) do
+      if Story.wants?(socket.assigns[:story_progress], :docked) do
         case World.docking_status(socket.assigns.world_session_id) do
           {:ok, %{docked: true}} -> story_event(socket, :docked_starbase)
           _ -> socket
@@ -856,7 +877,7 @@ defmodule SunracerWeb.WorldChannel do
   end
 
   defp story_flight_controls(socket, entity, input) do
-    if Prologue.wants?(socket.assigns[:story_progress], :flight_controls) do
+    if Story.wants?(socket.assigns[:story_progress], :flight_controls) do
       confirmed = %{
         throttle: abs(number(Map.get(entity, :throttle))) > 0.05,
         rotation: Enum.any?(["yaw", "pitch", "roll"], &(abs(number(input[&1])) > 0.05))
@@ -877,8 +898,8 @@ defmodule SunracerWeb.WorldChannel do
 
     socket = assign(socket, :story_nav_key, key)
 
-    if Prologue.wants?(progress, :navigation) and
-         (arrived? or Prologue.apply(progress, {:navigation, navigation}) != :ignore),
+    if Story.wants?(progress, :navigation) and
+         (arrived? or Story.preview(progress, {:navigation, navigation}) != :ignore),
        do: story_event(socket, {:navigation, navigation}),
        else: socket
   end
@@ -886,7 +907,7 @@ defmodule SunracerWeb.WorldChannel do
   defp story_navigation(socket, _navigation), do: socket
 
   defp story_event_if(socket, kind, event) do
-    if Prologue.wants?(socket.assigns[:story_progress], kind),
+    if Story.wants?(socket.assigns[:story_progress], kind),
       do: story_event(socket, event),
       else: socket
   end

@@ -1,7 +1,7 @@
 # Phase 01 — SOL · Chapter 01: Leaked Routes
 
 **Design revision:** 0.1 · 2026-11-26  
-**Status:** complete chapter design draft, pending owner review of narrative, missions, rewards and dependencies. Not implemented.  
+**Status:** owner authorized implementation on 2026-11-27. First assignment implementation underway; M2/M3 remain design-only. Runtime verification and manual playthrough pending.  
 **Previous:** [First Run](../../story-first-run.md) · **Next:** Following the Money (outline only).
 
 Follow [MISSION_DESIGN.md](../MISSION_DESIGN.md), [CAMPAIGN.md](../CAMPAIGN.md), [LORE.md](../LORE.md), [FACTIONS.md](../FACTIONS.md), [CHARACTERS.md](../CHARACTERS.md) and [TIMELINE.md](../TIMELINE.md). This chapter is set in the existing Year 500 SOL campaign. No system unlock, optional quests, repeatable contracts, new economy or permanent NPC relocation.
@@ -341,4 +341,4 @@ Review before implementation:
 - Stock Dart baseline and 50% surrender, both verified surrender and victory acceptable; retry from Venus after failure.
 - Proposed chapter steps, exact contact authorization, version compatibility and pause behavior.
 
-No approval to implement this draft has yet been recorded. After review, implement only this chapter, using the existing architecture with the smallest necessary extensions.
+Implementation authorized 2026-11-27. Deliver the first assignment as an incremental milestone; preserve the remaining design, and do not mark the chapter complete until all three assignments are implemented and verified.

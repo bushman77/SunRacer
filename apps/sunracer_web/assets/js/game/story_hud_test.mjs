@@ -98,3 +98,12 @@ test("the headset payload (prompt without action) still yields the HUD line", ()
              checks: []}})
   assert.equal(model.stereoLine, "OBJ · HAIL VESPER-02, THEN RESUME CRUISE")
 })
+
+ test("Leaked Routes uses its own chapter label and honors the pause boundary", () => {
+  const model = storyHudModel(story({chapter: "sol.leaked_routes", step: 4, can_skip: false,
+    prompt: {speaker: "Juno Rook", objective: "Distribution List complete. Await Follow the Copy"}}))
+  assert.equal(model.stepLabel, "LEAKED ROUTES · 4 / 9")
+  assert.equal(model.canSkip, false)
+  assert.equal(model.complete, false)
+  assert.equal(model.action, null)
+})

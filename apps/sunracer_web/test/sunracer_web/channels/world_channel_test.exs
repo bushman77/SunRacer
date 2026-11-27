@@ -207,6 +207,15 @@ defmodule SunracerWeb.WorldChannelTest do
     story = push(joined, "station_talk", %{"attendant_id" => "repair", "topic" => "story"})
     assert_reply story, :error, %{reason: "not_docked"}
 
+    offer = push(joined, "station_talk", %{
+      "attendant_id" => "missions", "topic" => "leaked_routes.offer_station_records"
+    })
+    assert_reply offer, :error, %{reason: "not_docked"}
+    accept = push(joined, "station_talk", %{
+      "attendant_id" => "missions", "topic" => "leaked_routes.accept_station_records"
+    })
+    assert_reply accept, :error, %{reason: "station_contact_required"}
+
     # Fitting commands cannot identify arbitrary ships or fake kiosk positions.
     console = push(joined, "station_outfitting", %{})
     assert_reply console, :error, %{reason: "not_docked"}

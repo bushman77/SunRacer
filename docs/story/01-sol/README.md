@@ -5,7 +5,7 @@ SOL is the first complete campaign. Alpha Centauri travel stays locked until a f
 | Chapter | Design | Status |
 | --- | --- | --- |
 | 00 First Run | [Existing design](../../story-first-run.md) and [playthrough](../../story-first-run-playthrough.md) | Implemented; preserve |
-| 01 Leaked Routes | [Complete chapter design](01-leaked-routes.md) | Drafted; awaiting approval |
+| 01 Leaked Routes | [Complete chapter design](01-leaked-routes.md) | M1 implementation; M2/M3 pending |
 | 02 Following the Money | Trace suspicious payments | Planned |
 | 03 Supply Line | Follow military-grade equipment | Planned |
 | 04 Beyond the Frontier | Investigate outer SOL activity | Planned |
@@ -20,5 +20,5 @@ See [CAMPAIGN.md](../CAMPAIGN.md#5-sol-first-writing-and-implementation-mileston
 - [x] Write complete dialogue, evidence provenance, and the chapter's ending lead.
 - [x] Specify verified server events, cargo/evidence and reward receipts.
 - [x] Define retries, loss, death, disconnect, and optional choices.
-- [ ] Obtain explicit approval before writing gameplay changes.
+- [x] Obtain explicit approval before writing gameplay changes.
 - [ ] Implement, test and manually play through the chapter.

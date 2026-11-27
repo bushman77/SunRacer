@@ -300,6 +300,24 @@ defmodule Sunracer.World do
     end
   end
 
+  def station_talk(session_id, attendant_id, "leaked_routes.decline_station_records") do
+    station_talk(session_id, attendant_id, "greeting")
+  end
+
+  def station_talk(session_id, attendant_id, <<"leaked_routes.", _::binary>> = topic)
+      when is_binary(attendant_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, reply} <- Simulation.station_talk(session_id, attendant_id, "greeting"),
+         {:ok, message, offer_topics} <- Story.leaked_routes_talk(session.player_id, attendant_id, topic) do
+      reply = %{reply | message: message}
+      {:ok, if(is_list(offer_topics), do: %{reply | topics: offer_topics},
+        else: with_story_topics(reply, session.player_id))}
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+
   def station_talk(session_id, attendant_id, topic)
       when is_binary(attendant_id) and is_binary(topic) do
     with {:ok, reply} <- Simulation.station_talk(session_id, attendant_id, topic) do
@@ -309,6 +327,19 @@ defmodule Sunracer.World do
       end
     end
   end
+
+  # Called only after the authenticated channel verifies the conversation offer.
+  def accept_station_story(session_id, "missions") do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, reply} <- Simulation.station_talk(session_id, "missions", "greeting"),
+         {:ok, message} <- Story.accept_leaked_routes(session.player_id) do
+      {:ok, with_story_topics(%{reply | message: message}, session.player_id)}
+    else
+      :error -> {:error, :session_not_found}
+      error -> error
+    end
+  end
+  def accept_station_story(_, _), do: {:error, :invalid_station_topic}
 
   defp with_story_topics(%{attendant_id: id, topics: topics} = reply, player_id),
     do: %{reply | topics: topics ++ Story.topics(player_id, id)}
@@ -333,7 +364,7 @@ defmodule Sunracer.World do
   @doc "Read an authenticated pilot's current mission offer from Helios dispatch."
   def dispatcher_offer(session_id) do
     with {:ok, session} <- SessionManager.fetch(SessionManager, session_id) do
-      Prologue.mission_offer(Story.progress(session.player_id))
+      Prologue.mission_offer(Story.prologue_progress(session.player_id))
     else
       :error -> {:error, :session_not_found}
     end
@@ -342,7 +373,7 @@ defmodule Sunracer.World do
   @doc "Accept Ross's NPC-issued mission; internal engine still verifies step 2."
   def dispatcher_accept(session_id) do
     with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
-         {:ok, _offer} <- Prologue.mission_offer(Story.progress(session.player_id)) do
+         {:ok, _offer} <- Prologue.mission_offer(Story.prologue_progress(session.player_id)) do
       case Story.record(session.player_id, :accept_consignment, session_id: session_id) do
         {:ok, %{story: story}} -> {:ok, story}
         :ignored -> {:error, :mission_unavailable}
@@ -381,7 +412,8 @@ defmodule Sunracer.World do
   """
   def recover_story_encounter(session_id) do
     with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
-         %{step: 6, skipped: false} <- Story.progress(session.player_id),
+         %{step: 6, skipped: false} = progress <- Story.progress(session.player_id),
+         true <- Story.prologue_active?(progress),
          {:ok, nil} <- Simulation.pending_tactical_cleanup(session_id),
          {:ok, %{tactical_encounter: nil, pending_encounter: nil} = navigation} <-
            Simulation.solar_snapshot(session_id) do

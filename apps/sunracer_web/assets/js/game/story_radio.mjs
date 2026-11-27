@@ -1,7 +1,7 @@
 // One-time radio dialogue delivered with an authoritative story_updated event.
 // No player decisions are sent from this panel; it is an optional transcript.
 export const validScene = scene => {
-  if (typeof scene?.id !== "string" || !scene.id.startsWith("first_run:") ||
+  if (typeof scene?.id !== "string" || !["first_run:", "leaked_routes:"].some(prefix => scene.id.startsWith(prefix)) ||
       !Array.isArray(scene.lines) || scene.lines.length === 0 ||
       scene.lines.length > 6) return false
   return scene.lines.every(line =>

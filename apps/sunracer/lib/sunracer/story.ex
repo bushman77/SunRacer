@@ -1,6 +1,6 @@
 defmodule Sunracer.Story do
   @moduledoc """
-  Persistent story progress for the "First Run" prologue.
+  Persistent story progress for First Run and the first Leaked Routes assignment.
 
   Callers report *server-confirmed* events only (a flight command the map
   accepted, a hail Navigation answered, a settled tactical outcome, a dock
@@ -27,17 +27,38 @@ defmodule Sunracer.Story do
   alias Sunracer.Piracy
   alias Sunracer.Repo
   alias Sunracer.ShipCondition
-  alias Sunracer.Story.{Progress, Prologue, Reward, Scenes}
+  alias Sunracer.Story.{Progress, Prologue, Reward, Scenes, LeakedRoutes}
   alias Sunracer.World.PubSub
 
   @first_run_reward "prologue:first_run"
 
-  @type progress :: Prologue.progress()
+  @type progress :: map()
 
   @doc "The pilot's prologue progress, created at step 1 on first use."
   @spec progress(pos_integer()) :: progress()
   def progress(player_id) when is_integer(player_id) and player_id > 0 do
-    player_id |> fetch_or_create() |> as_progress()
+    prologue = prologue_progress(player_id)
+    if LeakedRoutes.eligible?(prologue) do
+      case Repo.get_by(Progress, user_id: player_id, chapter: LeakedRoutes.chapter()) do
+        nil -> prologue
+        row -> chapter_progress(row)
+      end
+    else
+      prologue
+    end
+  end
+
+  def prologue_progress(player_id), do: player_id |> fetch_or_create() |> as_progress()
+
+  def prologue_active?(%{chapter: "sol.leaked_routes"}), do: false
+  def prologue_active?(%{step: _}), do: true
+  def prologue_active?(_), do: false
+
+  def wants?(progress, kind),
+    do: prologue_active?(progress) and Prologue.wants?(progress, kind)
+
+  def preview(progress, event) do
+    if prologue_active?(progress), do: Prologue.apply(progress, event), else: :ignore
   end
 
   @doc "Client-facing story state (HUD prompt, checks, reward)."
@@ -45,6 +66,7 @@ defmodule Sunracer.Story do
   def snapshot(player_id), do: player_id |> progress() |> public()
 
   @spec public(progress()) :: map()
+  def public(%{chapter: "sol.leaked_routes"} = progress), do: LeakedRoutes.public(progress)
   def public(%{step: step, flags: flags, skipped: skipped} = progress) do
     complete = step == Prologue.complete_step()
 
@@ -78,8 +100,17 @@ defmodule Sunracer.Story do
   @spec record(pos_integer(), term(), keyword()) ::
           {:ok, %{story: map(), progress: progress()}} | :ignored | {:error, term()}
   def record(player_id, event, opts \\ []) when is_integer(player_id) and player_id > 0 do
-    _ = fetch_or_create(player_id)
+    active = progress(player_id)
 
+    cond do
+      match?({:leaked_routes, _}, event) -> record_leaked_routes(player_id, event)
+      not prologue_active?(active) and event in [:skip, :resume] -> record_leaked_routes(player_id, event)
+      not prologue_active?(active) -> :ignored
+      true -> record_prologue(player_id, event, opts)
+    end
+  end
+
+  defp record_prologue(player_id, event, opts) do
     result =
       Repo.transaction(fn ->
         row = lock!(player_id)
@@ -120,12 +151,106 @@ defmodule Sunracer.Story do
 
   @doc "Story topics an attendant adds at this pilot's step."
   @spec topics(pos_integer(), String.t()) :: [map()]
-  def topics(player_id, attendant_id), do: Prologue.topics(progress(player_id), attendant_id)
+  def topics(player_id, attendant_id) do
+    case progress(player_id) do
+      %{chapter: "sol.leaked_routes"} = current -> LeakedRoutes.topics(current, attendant_id)
+      prologue ->
+        base = Prologue.topics(prologue, attendant_id)
+        if eligible_leaked_routes?(player_id, prologue),
+          do: base ++ LeakedRoutes.topics(LeakedRoutes.new(), attendant_id),
+          else: base
+    end
+  end
+
+  defp eligible_leaked_routes?(player_id, prologue),
+    do: LeakedRoutes.eligible?(prologue) and not is_nil(reward_receipt(player_id))
+
+  def leaked_routes_talk(player_id, attendant_id, topic) do
+    current = progress(player_id)
+    chapter =
+      case current do
+        %{chapter: "sol.leaked_routes"} -> current
+        prologue -> if eligible_leaked_routes?(player_id, prologue), do: LeakedRoutes.new()
+      end
+
+    case LeakedRoutes.dialogue(chapter, attendant_id, topic) do
+      {:ok, message, nil} -> {:ok, message, LeakedRoutes.offer_topics()}
+      {:ok, message, event} ->
+        case record(player_id, {:leaked_routes, event}) do
+          {:ok, _} -> {:ok, message, nil}
+          {:error, reason} -> {:error, reason}
+          :ignored -> {:error, :invalid_station_topic}
+        end
+      :error -> {:error, :invalid_station_topic}
+    end
+  end
+
+  def accept_leaked_routes(player_id) do
+    case record(player_id, {:leaked_routes, :accept_station_records}) do
+      {:ok, _} -> {:ok, "Investigation accepted. Speak to Eno Kade and Tarek Sol."}
+      {:error, reason} -> {:error, reason}
+      :ignored -> {:error, :mission_unavailable}
+    end
+  end
+
+  # Lock the completed prologue first, then the chapter row. This serializes
+  # first acceptance with other chapter events and preserves the old row.
+  defp record_leaked_routes(player_id, event) do
+    event = case event do
+      {:leaked_routes, kind} -> kind
+      kind when kind in [:skip, :resume] -> kind
+      _ -> :unsupported
+    end
+
+    result = Repo.transaction(fn ->
+      prologue = lock!(player_id) |> as_progress()
+      if eligible_leaked_routes?(player_id, prologue) do
+        row = Repo.get_by(Progress, user_id: player_id, chapter: LeakedRoutes.chapter())
+        cond do
+          is_nil(row) and event == :accept_station_records ->
+            now = DateTime.utc_now()
+            initial = LeakedRoutes.new()
+            row = Repo.insert!(%Progress{user_id: player_id, chapter: LeakedRoutes.chapter(),
+              step: initial.step, flags: initial.flags, skipped: false,
+              step_started_at: now, step_times: %{"1" => DateTime.to_iso8601(now)}})
+            apply_chapter_event(player_id, row, event)
+          is_nil(row) -> :ignored
+          true -> apply_chapter_event(player_id, row, event)
+        end
+      else
+        :ignored
+      end
+    end)
+
+    case result do
+      {:ok, :ignored} -> :ignored
+      {:ok, {current, next}} ->
+        story = public(next)
+        broadcast(player_id, story, next, LeakedRoutes.scene(current, next))
+        {:ok, %{story: story, progress: next}}
+      {:error, reason} -> {:error, reason}
+    end
+  end
+
+  defp apply_chapter_event(player_id, row, event) do
+    current = chapter_progress(row)
+    case LeakedRoutes.apply(current, event) do
+      :ignore -> :ignored
+      {:ok, next, effects} ->
+        Enum.each(effects, &db_effect!(player_id, &1))
+        save!(row, current, next)
+        {current, next}
+    end
+  end
+
+  defp chapter_progress(row), do: Map.put(as_progress(row), :chapter, row.chapter)
 
   @doc "The story line for a validated story topic, recording the dialogue."
   @spec talk(pos_integer(), String.t(), keyword()) :: {:ok, String.t()} | {:error, term()}
   def talk(player_id, attendant_id, opts \\ []) do
-    case Prologue.dialogue(progress(player_id), attendant_id) do
+    current = progress(player_id)
+    dialogue = if prologue_active?(current), do: Prologue.dialogue(current, attendant_id), else: :error
+    case dialogue do
       {:ok, message} ->
         case record(player_id, {:talked, attendant_id}, opts) do
           {:error, reason} -> {:error, reason}
@@ -255,6 +380,18 @@ defmodule Sunracer.Story do
       "story_delivery",
       Prologue.helios_standing_gain()
     )
+  end
+
+  defp db_effect!(player_id, {:story_credits, reward_id, credits}) do
+    case Repo.insert(Ecto.Changeset.change(%Reward{}, user_id: player_id,
+           reward_id: reward_id, credits: credits, details: %{"chapter" => LeakedRoutes.chapter()}),
+           on_conflict: :nothing, conflict_target: [:user_id, :reward_id], returning: true) do
+      {:ok, %Reward{id: id}} when is_integer(id) ->
+        {1, _} = from(a in PlayerAccount, where: a.id == ^player_id)
+                 |> Repo.update_all(inc: [credits: credits])
+      {:ok, _already_paid} -> :ok
+      {:error, reason} -> Repo.rollback(reason)
+    end
   end
 
   defp db_effect!(_player_id, _runtime_only), do: :ok
