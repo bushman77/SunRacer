@@ -151,6 +151,19 @@ defmodule Sunracer.StoryTest do
     assert {:error, :invalid_station_topic} =
       Story.leaked_routes_talk(id, "missions", "leaked_routes.report_distribution")
     assert Repo.get!(PlayerAccount, id).credits == before + 700
+    assert {:ok, _, choices} = Story.leaked_routes_talk(id, "missions", "leaked_routes.offer_follow_copy")
+    assert Enum.any?(choices, &(&1.id == "leaked_routes.accept_follow_copy"))
+    assert %{step: 4} = Story.snapshot(id)
+    assert {:ok, _} = Story.accept_leaked_routes(id, :accept_follow_copy)
+    assert %{step: 5} = Story.snapshot(id)
+    assert :ignored = record!(id, {:leaked_routes, :clearing_audit})
+    assert {:ok, _, nil} = Story.leaked_routes_talk(id, "helios_dispatch", "leaked_routes.dispatch_original")
+    assert %{step: 6} = Story.snapshot(id)
+    assert {:ok, _, nil} = Story.leaked_routes_talk(id, "venus_auditor", "leaked_routes.clearing_audit")
+    assert %{step: 7, complete: false} = Story.snapshot(id)
+    assert %{credits: 400} = Story.reward_receipt(id, "sol.leaked_routes.follow_the_copy")
+    assert :ignored = record!(id, {:leaked_routes, :clearing_audit})
+    assert Repo.get!(PlayerAccount, id).credits == before + 1100
     refute Map.has_key?(Story.snapshot(id), :scene)
     assert %{step: 10} = Story.prologue_progress(id)
   end

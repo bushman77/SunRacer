@@ -695,6 +695,11 @@ class SpaceClient {
         request.receive("ok", reply => this.showDispatcherOffer(reply.offer))
         return request
       }
+      if (action === "contact_story") {
+        const request = this.channel.push("story_contact_open", {}, 5000)
+        request.receive("ok", reply => this.showLocalStoryContact(reply.contact))
+        return request
+      }
       return this.channel.push("story_action", {action}, 5000)
     })
     this.root.querySelector("#story-dispatch-accept")?.addEventListener("click",
@@ -719,6 +724,12 @@ class SpaceClient {
     const panel = this.root.querySelector("#story-dispatch-dialogue")
     if (!panel) return
     this.dispatchOfferOpen = true
+    this.localStoryContact = null
+    const accept = this.root.querySelector("#story-dispatch-accept")
+    accept.hidden = false
+    accept.disabled = false
+    accept.textContent = "Accept assignment"
+    this.root.querySelector("#story-dispatch-decline").textContent = "Not now [Esc]"
     this.root.querySelector("#story-dispatch-name").textContent = offer.name
     this.root.querySelector("#story-dispatch-role").textContent = offer.role
     this.root.querySelector("#story-dispatch-title").textContent = offer.title
@@ -729,18 +740,77 @@ class SpaceClient {
     this.root.querySelector("#story-dispatch-accept")?.focus({preventScroll: true})
   }
 
+  showLocalStoryContact(contact) {
+    if (!contact || !["helios_dispatch", "venus_auditor"].includes(contact.npc_id) ||
+        typeof contact.topic !== "string") return
+    const panel = this.root.querySelector("#story-dispatch-dialogue")
+    if (!panel) return
+    this.dispatchOfferOpen = true
+    this.localStoryContact = contact
+    this.root.querySelector("#story-dispatch-name").textContent = contact.name
+    this.root.querySelector("#story-dispatch-role").textContent = contact.role
+    this.root.querySelector("#story-dispatch-title").textContent = contact.title
+    this.root.querySelector("#story-dispatch-text").textContent = contact.message
+    this.root.querySelector("#story-dispatch-feedback").textContent = ""
+    const button = this.root.querySelector("#story-dispatch-accept")
+    button.textContent = contact.action_label
+    button.hidden = false
+    button.disabled = false
+    this.root.querySelector("#story-dispatch-decline").textContent = "Close [Esc]"
+    panel.style.display = "flex"
+    this.flightControls?.release({silent: true})
+    if (document.pointerLockElement === this.canvas) document.exitPointerLock?.()
+    button.focus({preventScroll: true})
+  }
+
+  requestLocalStoryRecord() {
+    const contact = this.localStoryContact
+    if (!contact || !this.dispatchOfferOpen || this.dispatchOfferBusy ||
+        this.channel?.state !== "joined") return
+    this.dispatchOfferBusy = true
+    const button = this.root.querySelector("#story-dispatch-accept")
+    const feedback = this.root.querySelector("#story-dispatch-feedback")
+    button.disabled = true
+    feedback.textContent = "Requesting record…"
+    const finish = () => {
+      if (this.localStoryContact !== contact) return false
+      this.dispatchOfferBusy = false
+      button.hidden = true
+      return true
+    }
+    this.channel.push("story_contact_talk", {topic: contact.topic}, 5000)
+      .receive("ok", reply => {
+        if (!finish()) return
+        if (reply.story) this.storyHud?.apply(reply.story)
+        this.root.querySelector("#story-dispatch-text").textContent = reply.message || ""
+        feedback.textContent = "Record received."
+      })
+      .receive("error", reply => {
+        if (!finish()) return
+        feedback.textContent = "Contact unavailable: " +
+          String(reply?.reason || "unavailable").replaceAll("_", " ") + ". Close and reconnect."
+      })
+      .receive("timeout", () => {
+        if (!finish()) return
+        feedback.textContent = "Contact timed out. Close and reconnect."
+      })
+  }
+
   closeDispatcherOffer({clearOffer = true} = {}) {
     if (clearOffer && this.dispatchOfferOpen && this.channel?.state === "joined") {
-      this.channel.push("story_dispatch_decline", {}, 2000)
+      if (this.localStoryContact) this.channel.push("story_contact_close", {}, 2000)
+      else this.channel.push("story_dispatch_decline", {}, 2000)
     }
     const panel = this.root.querySelector("#story-dispatch-dialogue")
     if (panel) panel.style.display = "none"
     this.dispatchOfferOpen = false
     this.dispatchOfferBusy = false
+    this.localStoryContact = null
     this.canvas?.focus({preventScroll: true})
   }
 
   acceptDispatcherOffer() {
+    if (this.localStoryContact) return this.requestLocalStoryRecord()
     if (!this.dispatchOfferOpen || this.dispatchOfferBusy ||
         this.channel?.state !== "joined") return
     this.dispatchOfferBusy = true

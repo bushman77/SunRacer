@@ -346,20 +346,26 @@ defmodule SunracerWeb.WorldChannel do
   def handle_in("station_talk",
                 %{"attendant_id" => id, "topic" => topic}, socket)
       when is_binary(id) and is_binary(topic) do
-    offered? = socket.assigns[:station_story_offer] == true
+    offered = socket.assigns[:station_story_offer]
     socket = assign(socket, :station_story_offer, false)
     result =
       case topic do
-        "leaked_routes.accept_station_records" when offered? and id == "missions" ->
+        "leaked_routes.accept_station_records"
+            when offered == "leaked_routes.offer_station_records" and id == "missions" ->
           World.accept_station_story(socket.assigns.world_session_id, id)
-        "leaked_routes.accept_station_records" ->
+        "leaked_routes.accept_follow_copy"
+            when offered == "leaked_routes.offer_follow_copy" and id == "missions" ->
+          World.accept_station_story(socket.assigns.world_session_id, id, :accept_follow_copy)
+        accept when accept in ["leaked_routes.accept_station_records", "leaked_routes.accept_follow_copy"] ->
           {:error, :station_contact_required}
         _ -> World.station_talk(socket.assigns.world_session_id, id, topic)
       end
 
     case result do
       {:ok, response} ->
-        offered = id == "missions" and topic == "leaked_routes.offer_station_records"
+        offered = if id == "missions" and topic in [
+          "leaked_routes.offer_station_records", "leaked_routes.offer_follow_copy"
+        ], do: topic, else: false
         {:reply, {:ok, response}, assign(socket, :station_story_offer, offered)}
       {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
     end
@@ -407,6 +413,36 @@ defmodule SunracerWeb.WorldChannel do
   # Declining explicitly revokes the conversation-scoped acceptance token.
   def handle_in("story_dispatch_decline", _payload, socket),
     do: {:reply, {:ok, %{}}, assign(socket, :dispatch_offer, false)}
+
+  # Channel-owned token binds the local contact to session, voyage and topic.
+  def handle_in("story_contact_open", _payload, socket) do
+    socket = assign(socket, :local_story_contact, nil)
+    case World.local_story_contact(socket.assigns.world_session_id) do
+      {:ok, contact, token} ->
+        {:reply, {:ok, %{contact: contact}}, assign(socket, :local_story_contact, token)}
+      {:error, reason} ->
+        {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+    end
+  end
+
+  def handle_in("story_contact_talk", %{"topic" => topic}, socket) when is_binary(topic) do
+    token = socket.assigns[:local_story_contact]
+    socket = assign(socket, :local_story_contact, nil)
+    if is_nil(token) do
+      {:reply, {:error, %{reason: "local_story_contact_required"}}, socket}
+    else
+      case World.local_story_talk(socket.assigns.world_session_id, token, topic) do
+        {:ok, response} -> {:reply, {:ok, response}, socket}
+        {:error, reason} -> {:reply, {:error, %{reason: error_reason(reason)}}, socket}
+      end
+    end
+  end
+
+  def handle_in("story_contact_talk", _payload, socket),
+    do: {:reply, {:error, %{reason: "local_story_contact_required"}}, assign(socket, :local_story_contact, nil)}
+
+  def handle_in("story_contact_close", _payload, socket),
+    do: {:reply, {:ok, %{}}, assign(socket, :local_story_contact, nil)}
 
   # The HUD can skip/resume; it cannot issue or accept a contract.
   def handle_in("story_action", %{"action" => action}, socket) when is_binary(action) do

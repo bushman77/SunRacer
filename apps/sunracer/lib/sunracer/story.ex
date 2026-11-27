@@ -174,7 +174,7 @@ defmodule Sunracer.Story do
       end
 
     case LeakedRoutes.dialogue(chapter, attendant_id, topic) do
-      {:ok, message, nil} -> {:ok, message, LeakedRoutes.offer_topics()}
+      {:ok, message, nil} -> {:ok, message, LeakedRoutes.offer_topics(topic)}
       {:ok, message, event} ->
         case record(player_id, {:leaked_routes, event}) do
           {:ok, _} -> {:ok, message, nil}
@@ -185,9 +185,17 @@ defmodule Sunracer.Story do
     end
   end
 
-  def accept_leaked_routes(player_id) do
-    case record(player_id, {:leaked_routes, :accept_station_records}) do
-      {:ok, _} -> {:ok, "Investigation accepted. Speak to Eno Kade and Tarek Sol."}
+  def accept_leaked_routes(player_id), do: accept_leaked_routes(player_id, :accept_station_records)
+
+  def accept_leaked_routes(player_id, event)
+      when event in [:accept_station_records, :accept_follow_copy] do
+    case record(player_id, {:leaked_routes, event}) do
+      {:ok, _} ->
+        message = case event do
+          :accept_station_records -> "Investigation accepted. Speak to Eno Kade and Tarek Sol."
+          :accept_follow_copy -> "Assignment accepted. Travel to Earth and contact Dispatcher Ross."
+        end
+        {:ok, message}
       {:error, reason} -> {:error, reason}
       :ignored -> {:error, :mission_unavailable}
     end
@@ -215,6 +223,8 @@ defmodule Sunracer.Story do
               step_started_at: now, step_times: %{"1" => DateTime.to_iso8601(now)}})
             apply_chapter_event(player_id, row, event)
           is_nil(row) -> :ignored
+          event in [:accept_follow_copy, :dispatch_original, :clearing_audit] and
+              is_nil(reward_receipt(player_id, LeakedRoutes.reward_id())) -> :ignored
           true -> apply_chapter_event(player_id, row, event)
         end
       else

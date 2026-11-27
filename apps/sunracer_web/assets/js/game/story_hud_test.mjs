@@ -107,3 +107,10 @@ test("the headset payload (prompt without action) still yields the HUD line", ()
   assert.equal(model.complete, false)
   assert.equal(model.action, null)
 })
+
+ test("Follow the Copy exposes the local contact action", () => {
+  const model = storyHudModel(story({chapter: "sol.leaked_routes", step: 5, can_skip: false,
+    prompt: {speaker: "Juno Rook", objective: "Travel to Earth", action: {id: "contact_story", label: "Contact Ross"}}}))
+  assert.deepEqual(model.action, {id: "contact_story", label: "Contact Ross"})
+  assert.equal(model.canSkip, false)
+})

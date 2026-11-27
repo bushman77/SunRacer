@@ -1,7 +1,7 @@
 # Phase 01 — SOL · Chapter 01: Leaked Routes
 
 **Design revision:** 0.1 · 2026-11-26  
-**Status:** owner authorized implementation on 2026-11-27. First assignment implementation underway; M2/M3 remain design-only. Runtime verification and manual playthrough pending.  
+**Status:** M1 implemented and production-playtested through stage 4, including credit and reconnect persistence. M2 implementation candidate through stage 7, tests and manual playthrough pending. M3 remains design-only. M2 pause not enabled in this increment.
 **Previous:** [First Run](../../story-first-run.md) · **Next:** Following the Money (outline only).
 
 Follow [MISSION_DESIGN.md](../MISSION_DESIGN.md), [CAMPAIGN.md](../CAMPAIGN.md), [LORE.md](../LORE.md), [FACTIONS.md](../FACTIONS.md), [CHARACTERS.md](../CHARACTERS.md) and [TIMELINE.md](../TIMELINE.md). This chapter is set in the existing Year 500 SOL campaign. No system unlock, optional quests, repeatable contracts, new economy or permanent NPC relocation.

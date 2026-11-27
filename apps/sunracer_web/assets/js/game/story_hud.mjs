@@ -2,7 +2,7 @@
 // HUD summary. The server owns every step: this module only renders the
 // story snapshot it receives and sends the choices the prompt offers.
 
-const ALLOWED_ACTIONS = new Set(["contact_dispatch", "skip", "resume"])
+const ALLOWED_ACTIONS = new Set(["contact_dispatch", "contact_story", "skip", "resume"])
 
 const text = (value, fallback = "") =>
   typeof value === "string" && value.trim() !== "" ? value : fallback

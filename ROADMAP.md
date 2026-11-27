@@ -1,3 +1,8 @@
+## 2026-11-27 — Leaked Routes: Follow the Copy implementation candidate
+
+- Extends steps 4–7, exact Juno offer, Earth dispatch and Venus audit contacts, durable evidence and 400-credit receipt; validates session, voyage, destination, live entity and tactical state; reuses the shared dispatcher UI. M3 disabled; no migration, new cargo, faction or roster changes.
+- Added pure transition, contact predicate, reward persistence and HUD tests. M1 production playthrough confirmed +200 credits and reconnect persistence. Elixir/Mix unavailable in editing environment; no automated execution claimed. Concurrent reward, channel integration, native/SBS and manual M2 playthrough remain pending. M2 pause not enabled. No release/deployment.
+
 ## 2026-11-27 — Leaked Routes: Distribution List implementation
 
 - Added a chapter-specific pure transition module and additive progress row on authenticated acceptance, preserving the original prologue row and receipt. M1 uses existing Juno/Eno/Tarek positions, channel-bound offer/accept, two verified records in either order and transactional 200-credit receipt; HUD and radio identify Leaked Routes. Stops at step 4, incomplete, awaiting Follow the Copy. M2/M3, remote contacts and Breaker-09 are not enabled. No schema migration or new roster. Added regression tests; Mix/JS execution and manual playthrough pending (no Elixir runtime in editing environment).

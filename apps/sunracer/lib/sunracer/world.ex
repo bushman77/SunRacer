@@ -24,7 +24,7 @@ defmodule Sunracer.World do
   alias Sunracer.Piracy
   alias Sunracer.PilotLocation
   alias Sunracer.Story
-  alias Sunracer.Story.Prologue
+  alias Sunracer.Story.{Prologue, LeakedRoutes}
   alias Sunracer.World.PubSub
 
   @legacy_test_earth_sector Application.compile_env(:sunracer, :legacy_test_earth_sector, false)
@@ -300,7 +300,8 @@ defmodule Sunracer.World do
     end
   end
 
-  def station_talk(session_id, attendant_id, "leaked_routes.decline_station_records") do
+  def station_talk(session_id, attendant_id, topic)
+      when topic in ["leaked_routes.decline_station_records", "leaked_routes.decline_follow_copy"] do
     station_talk(session_id, attendant_id, "greeting")
   end
 
@@ -322,27 +323,68 @@ defmodule Sunracer.World do
       when is_binary(attendant_id) and is_binary(topic) do
     with {:ok, reply} <- Simulation.station_talk(session_id, attendant_id, topic) do
       case SessionManager.fetch(SessionManager, session_id) do
-        {:ok, session} -> {:ok, with_story_topics(reply, session.player_id)}
+        {:ok, session} ->
+          reply =
+            if attendant_id == "missions" and topic == "greeting" and
+                 match?(%{chapter: "sol.leaked_routes", step: 4}, Story.progress(session.player_id)) do
+              %{reply | message: "Distribution List is complete. When you're ready, we'll follow the copy."}
+            else
+              reply
+            end
+          {:ok, with_story_topics(reply, session.player_id)}
         _ -> {:ok, reply}
       end
     end
   end
 
   # Called only after the authenticated channel verifies the conversation offer.
-  def accept_station_story(session_id, "missions") do
+  def accept_station_story(session_id, attendant_id),
+    do: accept_station_story(session_id, attendant_id, :accept_station_records)
+
+  def accept_station_story(session_id, "missions", event)
+      when event in [:accept_station_records, :accept_follow_copy] do
     with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
          {:ok, reply} <- Simulation.station_talk(session_id, "missions", "greeting"),
-         {:ok, message} <- Story.accept_leaked_routes(session.player_id) do
+         {:ok, message} <- Story.accept_leaked_routes(session.player_id, event) do
       {:ok, with_story_topics(%{reply | message: message}, session.player_id)}
     else
       :error -> {:error, :session_not_found}
       error -> error
     end
   end
-  def accept_station_story(_, _), do: {:error, :invalid_station_topic}
+  def accept_station_story(_, _, _), do: {:error, :invalid_station_topic}
 
   defp with_story_topics(%{attendant_id: id, topics: topics} = reply, player_id),
     do: %{reply | topics: topics ++ Story.topics(player_id, id)}
+
+  @doc "Open the eligible planetary contact without granting any evidence."
+  def local_story_contact(session_id) do
+    with {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         %{chapter: "sol.leaked_routes"} = progress <- Story.progress(session.player_id),
+         %{} = contact <- LeakedRoutes.local_contact(progress),
+         {:ok, navigation} <- Simulation.solar_snapshot(session_id),
+         true <- LeakedRoutes.local_contact_available?(contact, navigation),
+         {:ok, %{map_id: map_id}} <- region_for_player(session.player_id),
+         true <- map_id == session.map_id,
+         {:ok, %{docked: false, combat: %{status: :alive, hull: hull}}} when hull > 0 <-
+           Simulation.ship_condition(session_id),
+         {:ok, nil} <- Simulation.pending_tactical_cleanup(session_id) do
+      {:ok, contact, {session_id, navigation.voyage_number, contact.npc_id, contact.topic}}
+    else
+      _ -> {:error, :local_story_contact_unavailable}
+    end
+  end
+
+  @doc "Revalidate the channel-owned contact before recording the selected topic."
+  def local_story_talk(session_id, token, topic) do
+    with {:ok, %{npc_id: npc_id, topic: ^topic}, ^token} <- local_story_contact(session_id),
+         {:ok, session} <- SessionManager.fetch(SessionManager, session_id),
+         {:ok, message, nil} <- Story.leaked_routes_talk(session.player_id, npc_id, topic) do
+      {:ok, %{message: message, story: Story.snapshot(session.player_id)}}
+    else
+      _ -> {:error, :local_story_contact_required}
+    end
+  end
 
   @doc """
   Read-only, authenticated pilot hold and equipment inventory. Unlike
