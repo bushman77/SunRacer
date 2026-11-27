@@ -7,6 +7,7 @@ fn main() {
                 "save_network_settings",
                 "restart_client",
                 "native_loopback_post",
+                "remembered_credential",
                 "start_sbs_relay_probe",
                 "configure_sbs_relay_tls",
                 "sbs_relay_probe_status",

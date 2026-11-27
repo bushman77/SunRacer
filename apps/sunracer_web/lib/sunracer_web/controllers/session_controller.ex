@@ -19,7 +19,7 @@ defmodule SunracerWeb.SessionController do
     case Accounts.login_account(username, password) do
       {:ok, account} ->
         conn
-        |> GameAuth.log_in_player(account)
+        |> GameAuth.log_in_player(account, params["remember_me"] == "true")
         |> put_flash(:info, "Welcome aboard, #{account.pilot_name}.")
         |> redirect(to: ~p"/play")
 

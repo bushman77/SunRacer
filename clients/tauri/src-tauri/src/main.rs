@@ -2,6 +2,7 @@
 
 mod network;
 mod native_loopback;
+mod remembered_login;
 mod sbs_relay_probe;
 
 use std::sync::atomic::{AtomicBool, Ordering};
@@ -33,6 +34,7 @@ fn main() {
             network::save_network_settings,
             network::restart_client,
             native_loopback::native_loopback_post,
+            remembered_login::remembered_credential,
             sbs_relay_probe::start_sbs_relay_probe,
             sbs_relay_probe::configure_sbs_relay_tls,
             sbs_relay_probe::sbs_relay_probe_status,

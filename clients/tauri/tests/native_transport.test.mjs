@@ -29,7 +29,7 @@ test("native loopback login sends only the whitelisted route and credentials via
 })
 
 test("native refresh and logout accept bearer token without persistence", async () => {
-  for (const route of ["/api/native/refresh", "/api/native/logout"]) {
+  for (const route of ["/api/native/refresh", "/api/native/resume", "/api/native/logout"]) {
     const result = await nativePostJson("http://127.0.0.1:4000", route, {}, "test-token", {
       invoke: async (_command, args) => {
         assert.equal(args.bearer, "test-token")

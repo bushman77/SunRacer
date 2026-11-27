@@ -28,6 +28,12 @@
         required
         class="hud-field mt-2 w-full rounded-xl border border-slate-700 bg-slate-900/90 px-4 py-3 text-sm text-white outline-none transition placeholder:text-slate-600 focus:border-cyan-300/70 focus:ring-4 focus:ring-cyan-400/10"
       />
+      <.input
+        field={@form[:remember_me]}
+        type="checkbox"
+        label="Remember me for 30 days (private devices only)"
+        class="size-4 rounded border-slate-600 accent-cyan-300"
+      />
       <button
         id="pilot-login-button"
         type="submit"

@@ -25,6 +25,7 @@ defmodule SunracerWeb.Router do
     post "/probe", NativeClientController, :probe
     post "/login", NativeClientController, :login
     post "/refresh", NativeClientController, :refresh
+    post "/resume", NativeClientController, :resume
     post "/logout", NativeClientController, :logout
   end
 

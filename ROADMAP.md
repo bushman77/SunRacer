@@ -1,3 +1,7 @@
+## 2026-11-26 — Opt-in remembered login
+
+- Browser: unchecked by default; signed 30-day HttpOnly SameSite=Lax cookie (Secure on HTTPS), restores verified existing session, removed on logout. Desktop: distinct 30-day native-purpose credential exchanged at /api/native/resume for existing 900-second game-socket token. No password or bearer stored in web storage. Native vault scoped to validated server origin (Linux Secret Service via secret-tool; Windows Credential Manager). If unavailable, manual login works and user is informed; no plaintext fallback. Session rotation on login, logout and password reset revokes remembered credentials; resume does not extend their expiry. Offline logout clears local vault where available but cannot guarantee server revocation. Existing single-session-per-account policy unchanged. Added browser/native API, transport, markup and vault wrapper regressions. Full Mix, Node, Cargo and Linux/Windows vault validation pending; requires updated server and native build.
+
 ## 2026-11-26 — Correct SOL wormhole bearing
 
 - User corrected the mouth direction to east-southeast to align with the schematic Galactic Atlas. SOL mouth now (+84,000,000, +35,000,000, 0) game-km; radius and Pluto clearance unchanged. Updated placement and selection regressions. Paired mouth, transit lock and flight lab unchanged. Full runtime verification pending.

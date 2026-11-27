@@ -17,6 +17,7 @@ fn route_allowed(route: &str) -> bool {
         "/api/native/probe"
             | "/api/native/login"
             | "/api/native/refresh"
+            | "/api/native/resume"
             | "/api/native/logout"
     )
 }
@@ -48,7 +49,7 @@ pub async fn native_loopback_post(
     if encoded.len() > 4096 {
         return Err("Native request payload is too large.".into());
     }
-    if bearer.is_some() && !matches!(route.as_str(), "/api/native/refresh" | "/api/native/logout") {
+    if bearer.is_some() && !matches!(route.as_str(), "/api/native/refresh" | "/api/native/resume" | "/api/native/logout") {
         return Err("Bearer authorization is not permitted for this route.".into());
     }
     if let Some(ref token) = bearer {
@@ -104,11 +105,12 @@ mod tests {
     }
 
     #[test]
-    fn only_four_native_json_routes_are_whitelisted() {
+    fn only_explicit_native_json_routes_are_whitelisted() {
         for route in [
             "/api/native/probe",
             "/api/native/login",
             "/api/native/refresh",
+            "/api/native/resume",
             "/api/native/logout",
         ] {
             assert!(route_allowed(route), "{route}");

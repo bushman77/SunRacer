@@ -107,6 +107,7 @@ export function nativeGameDocument(markup) {
     '<input id="native-username" name="username" autocomplete="username" autofocus required maxlength="80">',
     '<label for="native-password">Password</label>',
     '<input id="native-password" type="password" name="password" autocomplete="current-password" required maxlength="512">',
+    '<label class="native-remember"><input id="native-remember-me" type="checkbox" name="remember_me"> Remember me for 30 days (private devices only)</label>',
     '<p id="native-login-error" role="alert" hidden></p>',
     '<button id="native-login-submit" class="nova-button nova-button-primary" type="submit">Sign in and launch</button>',
     '</form>',

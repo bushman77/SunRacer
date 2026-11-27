@@ -45,10 +45,12 @@ test("no EEx expressions, server forms or remote asset links remain", () => {
   assert.doesNotMatch(document, /src="https?:\/\//)
 })
 
-test("native bootstrap uses authenticated API without persisting pilot tokens", () => {
+test("native bootstrap uses authenticated API without persisting socket tokens in web storage", () => {
   const js = readFileSync(new URL("../ui/native_bootstrap.mjs", import.meta.url), "utf8")
   assert.match(js, /\/api\/native\/login/)
   assert.match(js, /\/api\/native\/refresh/)
+  assert.match(js, /\/api\/native\/resume/)
+  assert.match(document, /id="native-remember-me" type="checkbox"/)
   assert.match(js, /\/api\/native\/logout/)
   assert.match(js, /nativePostJson/)
   assert.match(js, /import\("\.\/native_game\.js"\)/)

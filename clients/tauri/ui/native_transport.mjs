@@ -18,7 +18,7 @@ export function nativeErrorMessage(cause) {
 
 const ROUTES = new Set([
   "/api/native/probe", "/api/native/login",
-  "/api/native/refresh", "/api/native/logout",
+  "/api/native/refresh", "/api/native/resume", "/api/native/logout",
 ])
 
 export function isLocalNativeServer(rawOrigin) {

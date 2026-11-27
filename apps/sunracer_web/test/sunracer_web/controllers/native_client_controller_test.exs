@@ -44,6 +44,7 @@ defmodule SunracerWeb.NativeClientControllerTest do
     assert payload["pilot_id"] == account.id
     assert payload["pilot_name"] == account.pilot_name
     assert payload["expires_in"] == 900
+    refute Map.has_key?(payload, "remember_token")
     assert {:ok, verified} = GameAuth.verify_socket_token(payload["token"])
     assert verified.id == account.id
 
@@ -54,6 +55,28 @@ defmodule SunracerWeb.NativeClientControllerTest do
     logout = json_post(build_conn(), "/api/native/logout", %{}, token)
     assert response(logout, 204) == ""
     assert :error == GameAuth.verify_socket_token(token)
+  end
+
+  test "native remember token resumes but cannot join sockets or refresh directly", %{conn: conn} do
+    password = "remember-native-pilot"
+    account = verified_player_account_fixture(%{password: password})
+    login = json_post(conn, "/api/native/login", %{username: account.username,
+      password: password, remember_me: true})
+    payload = json_response(login, 200)
+    remember = payload["remember_token"]
+    assert is_binary(remember)
+    assert payload["remember_expires_in"] == 2_592_000
+    assert get_resp_header(login, "cache-control") == ["no-store"]
+    assert :error == GameAuth.verify_socket_token(remember)
+    assert :error == GameAuth.verify_remember_token(remember, :browser)
+    assert :error == GameAuth.verify_remember_token(payload["token"], :native)
+    assert json_response(json_post(build_conn(), "/api/native/refresh", %{}, remember), 401)
+    resumed = json_response(json_post(build_conn(), "/api/native/resume", %{}, remember), 200)
+    assert resumed["pilot_id"] == account.id
+    refute Map.has_key?(resumed, "remember_token")
+    assert {:ok, _} = GameAuth.verify_socket_token(resumed["token"])
+    assert response(json_post(build_conn(), "/api/native/logout", %{}, resumed["token"]), 204) == ""
+    assert json_response(json_post(build_conn(), "/api/native/resume", %{}, remember), 401)
   end
 
   test "native login rejects invalid credentials without a session", %{conn: conn} do

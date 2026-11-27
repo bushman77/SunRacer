@@ -38,6 +38,7 @@
             "allow-save-network-settings",
             "allow-restart-client",
             "allow-native-loopback-post",
+            "allow-remembered-credential",
             "allow-start-sbs-relay-probe",
             "allow-configure-sbs-relay-tls",
             "allow-sbs-relay-probe-status",

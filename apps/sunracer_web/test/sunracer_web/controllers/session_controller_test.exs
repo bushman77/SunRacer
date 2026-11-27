@@ -88,6 +88,34 @@ defmodule SunracerWeb.SessionControllerTest do
     assert redirected_to(conn) == ~p"/login"
   end
 
+  test "remember me restores a verified browser session and logout revokes it", %{conn: conn} do
+    password = "remember-private-pilot"
+    account = verified_player_account_fixture(%{password: password})
+    login = post(conn, ~p"/login", %{"session" => %{"username" => account.username,
+      "password" => password, "remember_me" => "true"}})
+    assert redirected_to(login) == ~p"/play"
+    cookie = login.resp_cookies["_sunracer_remember"]
+    assert cookie.max_age == 2_592_000
+    assert cookie.http_only
+    assert cookie.same_site == "Lax"
+    remembered = fn -> Plug.Test.put_req_cookie(build_conn(), "_sunracer_remember", cookie.value) end
+    assert redirected_to(get(remembered.(), ~p"/login")) == ~p"/play"
+    logout = delete(remembered.(), ~p"/logout")
+    assert logout.resp_cookies["_sunracer_remember"].max_age == 0
+    assert redirected_to(get(remembered.(), ~p"/play")) == ~p"/login"
+  end
+
+  test "ordinary login never sets a persistent credential and invalid cookies cannot log in", %{conn: conn} do
+    password = "ordinary-private-pilot"
+    account = verified_player_account_fixture(%{password: password})
+    login = post(conn, ~p"/login", %{"session" => %{"username" => account.username,
+      "password" => password, "remember_me" => "false"}})
+    assert login.resp_cookies["_sunracer_remember"].max_age == 0
+    assert redirected_to(get(build_conn(), ~p"/play")) == ~p"/login"
+    bad = Plug.Test.put_req_cookie(build_conn(), "_sunracer_remember", "invalid")
+    assert redirected_to(get(bad, ~p"/play")) == ~p"/login"
+  end
+
   test "invalid credentials do not create a browser session", %{conn: conn} do
     conn =
       post(conn, ~p"/login", %{
