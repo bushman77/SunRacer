@@ -1,3 +1,7 @@
+## 2026-11-26 — Leaked Routes chapter design (design only)
+
+- Drafted `docs/story/01-sol/01-leaked-routes.md` revision 0.1: three separately accepted main-campaign missions, local Green Starbase investigation, Earth dispatch and proposed Venus auditor Nadia Pell, private Breaker-09 return intercept, authored evidence provenance, full dialogue/HUD, proposed 200/400/600 credit receipts, ten-step compatibility mapping and recovery/test/playthrough plan. Culprit unresolved; lead is a clearing account for Following the Money. Cross-checked current station topics, dispatcher, private traffic, tactical outcomes, progress and reward code; local remote contacts, chapter dispatch and new encounter remain implementation dependencies. No gameplay, schema, roster or travel changes. Owner review required before implementation; no runtime tests executed.
+
 ## 2026-11-26 — Main-campaign mission design contract (design only)
 
 - Added `docs/story/MISSION_DESIGN.md` revision 0.1: story-first scope, NPC acceptance, verified event and evidence contracts, per-pilot progression, transactional rewards, failure recovery, compatibility, chapter template and verification gates. Cross-checked current Prologue/Story modules and migration: prologue-specific dispatch, progress step range 1–10 and unique progress/reward receipts. Deferred optional, repeatable, epic equipment, faction and cooperative quests; no generic quest engine or runtime implementation. Linked story bible and updated agent guidance. Next: review and write Leaked Routes. Documentation only; no runtime tests run.

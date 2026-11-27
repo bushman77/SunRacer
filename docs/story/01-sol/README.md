@@ -5,7 +5,7 @@ SOL is the first complete campaign. Alpha Centauri travel stays locked until a f
 | Chapter | Design | Status |
 | --- | --- | --- |
 | 00 First Run | [Existing design](../../story-first-run.md) and [playthrough](../../story-first-run-playthrough.md) | Implemented; preserve |
-| 01 Leaked Routes | Return to Juno; investigate the leaked flight plan | Next to write |
+| 01 Leaked Routes | [Complete chapter design](01-leaked-routes.md) | Drafted; awaiting approval |
 | 02 Following the Money | Trace suspicious payments | Planned |
 | 03 Supply Line | Follow military-grade equipment | Planned |
 | 04 Beyond the Frontier | Investigate outer SOL activity | Planned |
@@ -15,10 +15,10 @@ See [CAMPAIGN.md](../CAMPAIGN.md#5-sol-first-writing-and-implementation-mileston
 
 ## Chapter 1 authoring checklist
 
-- [ ] Review Juno's existing dialogue and all three plausible suspects.
-- [ ] Define the NPC offer, acceptance and objective sequence.
-- [ ] Write complete dialogue, evidence provenance, and the chapter's ending lead.
-- [ ] Specify verified server events, cargo/evidence and reward receipts.
-- [ ] Define retries, loss, death, disconnect, and optional choices.
+- [x] Review Juno's existing dialogue and all three plausible suspects.
+- [x] Define the NPC offer, acceptance and objective sequence.
+- [x] Write complete dialogue, evidence provenance, and the chapter's ending lead.
+- [x] Specify verified server events, cargo/evidence and reward receipts.
+- [x] Define retries, loss, death, disconnect, and optional choices.
 - [ ] Obtain explicit approval before writing gameplay changes.
 - [ ] Implement, test and manually play through the chapter.

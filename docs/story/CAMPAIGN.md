@@ -138,7 +138,7 @@ The final conflict is about access, responsibility and the future of civilizatio
 | Chapter | Working title | Story function | Status |
 | --- | --- | --- | --- |
 | 00 | First Run | Rescue, route evidence, first paid delivery | Implemented; preserve existing design |
-| 01 | Leaked Routes | Determine how the pilot's route was exposed; investigate three plausible suspects | Next detailed script |
+| 01 | [Leaked Routes](01-sol/01-leaked-routes.md) | Determine how the pilot's route was exposed; investigate three plausible suspects | Detailed draft; awaiting approval |
 | 02 | Following the Money | Trace suspicious contracts and payments; protect evidence and witnesses | Outline |
 | 03 | Supply Line | Follow military-grade equipment through belt and Jovian shipping routes | Outline |
 | 04 | Beyond the Frontier | Investigate Survey Consortium data and Outer Rim Trading Guild contacts; identify an unauthorized experiment | Outline |
@@ -156,7 +156,7 @@ Chapter 1 should begin with an explicit return to Juno Rook's Mission Office at 
 >
 > **Juno:** Start with the original record. Find out who received it, and when. Then come back to me. Don't pick a fight just because somebody looks guilty.
 
-Detailed NPC offers, mission steps, rewards, evidence flags and recovery behavior belong in `01-sol/01-leaked-routes.md` once written and approved. The first mission must be explicitly accepted from Juno, not triggered by proximity or an automatic Atlas action.
+Detailed NPC offers, mission steps, rewards, evidence flags and recovery behavior are drafted in [01-leaked-routes.md](01-sol/01-leaked-routes.md), pending approval. The first mission must be explicitly accepted from Juno, not triggered by proximity or an automatic Atlas action.
 
 ## 6. Recurring cast and institutional continuity
 

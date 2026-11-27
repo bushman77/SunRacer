@@ -261,6 +261,6 @@ The eligible pilot has completed First Run and received Juno's invitation. The f
 
 Use the recovered navigation evidence and Mara's inspection as prerequisites already established by the prologue. Keep the three suspects (Helios dispatch, Solar Merchant League and Green Starbase) plausible until a reviewed investigation establishes evidence. Investigate provenance, not guilt by affiliation.
 
-The chapter must deliver a concrete narrative payoff and a lead into Following the Money. Its exact mission count, dialogue, locations, new contacts, effects, rewards and recovery remain to be written and approved. Do not add optional quests, repeatable contracts, unrelated content systems, or a production wormhole unlock as part of this chapter.
+The chapter must deliver a concrete narrative payoff and a lead into Following the Money. Its mission count, dialogue, locations, new contacts, effects, rewards and recovery are drafted in [01-leaked-routes.md](01-sol/01-leaked-routes.md), pending approval. Do not add optional quests, repeatable contracts, unrelated content systems, or a production wormhole unlock as part of this chapter.
 
 The aim is a second fully playable story chapter that reuses and carefully extends the existing game. Only then assess which mission abstractions have been demonstrated to be useful.
