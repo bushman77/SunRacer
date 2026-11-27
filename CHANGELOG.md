@@ -1,3 +1,7 @@
+## 2026-11-26 — Accepted lore foundations (design only)
+
+- Added `docs/story/LORE.md` revision 0.1 following owner approval of the historical premise and 500 years since humanity's first successful interstellar transit to Alpha Centauri. Recorded four ages, technological limitations, the gradual ancient-engineering revelation, and the distinction between accepted canon, working interpretations and open decisions. Updated campaign index, agent guidance and campaign references. No gameplay, travel permissions or database changes; documentation-only, no runtime tests run.
+
 ## 2026-11-26 — Galactic campaign bible (design only)
 
 - Created `docs/story/CAMPAIGN.md` revision 0.1, story index and SOL workspace. Proposed five acts, 29 ordered system campaigns, a revelation ladder, recurring cast continuity, six SOL chapters including the implemented First Run, and narrative-to-gameplay constraints. The Directorate, ancient-network explanation, future settlements and endings are draft lore pending review. Existing prologue, catalogue, live travel lock and game code unchanged. Next milestone: approve campaign premise, then write and review Leaked Routes before implementation. Documentation-only; catalogue order checked, no runtime tests executed.

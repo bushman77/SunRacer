@@ -28,6 +28,8 @@ A pilot becomes consequential by keeping promises, learning to fly, making diffi
 
 ## 3. The truth behind the conspiracy (writer-only)
 
+Human interstellar civilization is 500 years old at the start of First Run, measured from the first successful crossing to Alpha Centauri. The four historical ages and accepted technological constraints are recorded in [LORE.md](LORE.md).
+
 The wormhole passages predate human expansion. Human surveyors discovered how to chart them, while successive generations of engineers developed beacon technology to stabilize approach and exit conditions. Settlements grew around reliable routes.
 
 An influential but initially concealed coalition, working name **The Directorate**, believes that fragmented planetary authorities and unrestricted trade make civilization vulnerable. Its leadership treats a centrally controlled passage network as the only sustainable solution. A hardline inner circle deliberately manufactures the crisis that supposedly justifies its intervention.
@@ -190,13 +192,13 @@ Existing organizations are authoritative: Helios Courier Cooperative, Solar Merc
 
 - Confirm the working title, Directorate ideology, Resonance Array and ancient-network reveal.
 - Confirm the eventual leaker and whether a recurring individual antagonist is needed; keep the three SOL suspects plausible until reviewed.
-- Determine detailed passage history, politics, technologies and settlements in separate lore and faction documents. Do not assume real exoplanets or inhabited worlds have been established by the current catalogue.
+- Elaborate the accepted 500-year history, politics, technologies and settlements in the lore, timeline and faction documents. Do not assume real exoplanets or inhabited worlds have been established by the current catalogue.
 - Define how previously visited systems are revisited after unlocking and whether return travel has additional rules.
 - Select mission counts, rewards, branching scope, and local chapter scripts one phase at a time.
 - Decide what a completed campaign permits in multiplayer and future expansions; no global irreversible changes are approved.
 
 ## 9. Document workflow
 
-This file is the top-level working story bible. Existing First Run documentation remains the reference for the implemented prologue. Future companion files are planned, not yet authoritative: `LORE.md`, `FACTIONS.md`, `CHARACTERS.md`, `TIMELINE.md`, `MISSION_DESIGN.md` and one directory per system. See [story index](README.md).
+This file is the top-level working story bible. Existing First Run documentation remains the reference for the implemented prologue. [LORE.md](LORE.md) records the accepted historical and technological foundations. Future companion files are planned: `FACTIONS.md`, `CHARACTERS.md`, `TIMELINE.md`, `MISSION_DESIGN.md` and one directory per system. See [story index](README.md).
 
 When a design is accepted, record the decision and update this bible and the relevant chapter. Implementation must not quietly change accepted story facts; propose differences and document them. Track actual gameplay implementation in ROADMAP and CHANGELOG separately from narrative intent.
