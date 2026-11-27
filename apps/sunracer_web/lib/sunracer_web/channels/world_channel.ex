@@ -884,6 +884,14 @@ defmodule SunracerWeb.WorldChannel do
           story: story
         }
 
+        # The parked ship is intentionally absent from the world entity stream.
+        # Send its own condition privately, including when reconnecting while docked.
+        response =
+          case World.ship_condition(session.id) do
+            {:ok, combat} -> Map.put(response, :ship_condition, combat)
+            _ -> response
+          end
+
         delta? = Map.get(payload, "stream") == "delta_v1"
         response = if delta?, do: Map.put(response, :stream, "delta_v1"), else: response
 

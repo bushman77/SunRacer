@@ -37,3 +37,14 @@ test("station console lists each attendant's live service", () => {
   assert.match(markup, /Tarek Sol buys your cargo and sells common goods/)
   assert.doesNotMatch(markup, /cargo trading remains offline/)
 })
+
+ test("repair updates the parked hull HUD even if the conversation closes", () => {
+  const repair = game.slice(game.indexOf("  askStationNpc(id, topic) {"),
+    game.indexOf("  sendStationOutfitting("))
+  assert.ok(repair.indexOf("this.applyShipConditionHud(response.repair)") >= 0)
+  assert.ok(repair.indexOf("this.applyShipConditionHud(response.repair)") <
+    repair.indexOf("if (!this.stationNpcDialogOpen || seq !== this.stationNpcRequestSeq)"))
+  assert.match(game, /this\.applyShipConditionHud\(response\.ship_condition\)/)
+  assert.match(game, /this\.applyShipConditionHud\(response\.combat\)/)
+  assert.match(game, /updateCombatHud\(\) \{[\s\S]*?if \(ownShip && !this\.docked\)/)
+})

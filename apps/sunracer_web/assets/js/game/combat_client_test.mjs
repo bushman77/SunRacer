@@ -5,6 +5,7 @@ import {
   applyAuthoritativeDamage,
   findNpcAtScreenPoint,
   healthPercent,
+  shipConditionHud,
   nearestNpc,
   selectableNpc,
 } from "./combat_client.mjs"
@@ -72,4 +73,13 @@ test("health percentages clamp and authoritative damage never uses local guesses
 
   assert.equal(applyAuthoritativeDamage(target, {id: "npc:other", hull: 0}), false)
   assert.equal(target.hull, 730)
+})
+
+ test("parked ship condition uses authoritative repair values and capacities", () => {
+  assert.deepEqual(shipConditionHud({hull: 282, max_hull: 300, shields: 0, max_shields: 0}),
+    {hull: "282 / 300", shields: "0 / 0", hullPercent: 94, shieldPercent: 0})
+  assert.deepEqual(shipConditionHud({hull: 300, max_hull: 300, shields: 50, max_shields: 50}),
+    {hull: "300 / 300", shields: "50 / 50", hullPercent: 100, shieldPercent: 100})
+  assert.equal(shipConditionHud({hull: 300}), null)
+  assert.equal(shipConditionHud(null), null)
 })

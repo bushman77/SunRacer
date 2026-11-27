@@ -1,3 +1,8 @@
+## 2026-11-27 — Docked repair HUD synchronization
+
+- Local native playtest reported stale upper-left hull after complimentary repair. The server already returns its repaired parked condition; the native client now renders those confirmed values independently of the dialogue lifecycle. Join includes the authenticated ship's private condition, including docked reconnects; fitting reuses the same HUD presenter. Stale flight entities cannot overwrite docked health. No gameplay economy or repair authorization changes.
+- Added JS regression coverage for damaged/repaired values, shield capacity, absent telemetry, repair callback ordering and reconnect wiring. Manual native repair/restart/launch and Elixir suite pending. No production deployment.
+
 ## 2026-11-27 — Leaked Routes: Secure the Record implementation candidate
 
 - Extended existing chapter through step 10: Nadia's explicit local Venus offer, private Breaker-09 on a verified Venus-origin Earth-bound cruise (12% or later), attempt identity bound to pilot and voyage, map-verified surrender/victory, failure/retry and Juno's final 600-credit receipt. Records remain non-cargo. No new faction or system unlock; Chapter 2 remains design-only. Reuses existing tactical settlement and native UI, disables Breaker cargo seizure.

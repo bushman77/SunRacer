@@ -162,6 +162,13 @@ defmodule Sunracer.World do
 
   defdelegate docking_status(session_id), to: Simulation
 
+  @doc "Private live or parked combat condition for the authenticated world session."
+  def ship_condition(session_id) do
+    with {:ok, %{combat: combat}} <- Simulation.ship_condition(session_id) do
+      {:ok, Map.take(combat, [:hull, :max_hull, :shields, :max_shields])}
+    end
+  end
+
   @doc """
   Accept bounded station-walking axes for the authenticated docked session.
   The map process owns the avatar coordinates and collision; only the desktop

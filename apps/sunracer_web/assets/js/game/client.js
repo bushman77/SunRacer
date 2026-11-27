@@ -6,6 +6,7 @@ import {
   applyAuthoritativeDamage,
   entityKey,
   healthPercent,
+  shipConditionHud,
   nearestNpc,
 } from "./combat_client.mjs"
 import {
@@ -1144,6 +1145,7 @@ class SpaceClient {
     this.flightControls.mode = authoritativeMode === "newtonian" ? "newtonian" : "cruise"
     this.lastFlightModeDisplay = null
     this.populateHud()
+    this.applyShipConditionHud(response.ship_condition)
     this.setConnection("Authoritative sync", "online")
   }
 
@@ -2225,9 +2227,13 @@ class SpaceClient {
     const seq = ++this.stationNpcRequestSeq
     // Service operations are distinct from read-only NPC dialogue.
     const repair = id === "repair" && topic === "repair"
+    const channel = this.channel
     this.channel.push(repair ? "station_repair" : "station_talk",
       repair ? {} : {attendant_id: id, topic}, 5000)
       .receive("ok", response => {
+        if (this.channel !== channel) return
+        // The service can complete even if the player closes the dialogue.
+        if (repair && this.docked) this.applyShipConditionHud(response.repair)
         if (!this.stationNpcDialogOpen || seq !== this.stationNpcRequestSeq) return
         this.stationNpcBusy = false
         if (this.nearbyStationNpc()?.id !== id) {
@@ -2302,13 +2308,16 @@ class SpaceClient {
     if (!response?.player) return
     this.player = response.player
     this.populateHud()
-    if (response.combat) {
-      const c = response.combat
-      this.text("#hud-hp", String(c.hull) + " / " + String(c.max_hull))
-      this.text("#hud-shields", String(c.shields) + " / " + String(c.max_shields))
-      this.setWidth("#hud-hp-bar", healthPercent(c.hull, c.max_hull))
-      this.setWidth("#hud-shield-bar", healthPercent(c.shields, c.max_shields))
-    }
+    this.applyShipConditionHud(response.combat)
+  }
+
+  applyShipConditionHud(condition) {
+    const hud = shipConditionHud(condition)
+    if (!hud) return
+    this.text("#hud-hp", hud.hull)
+    this.text("#hud-shields", hud.shields)
+    this.setWidth("#hud-hp-bar", hud.hullPercent)
+    this.setWidth("#hud-shield-bar", hud.shieldPercent)
   }
 
   showStationNpcResponse(response) {
@@ -2911,7 +2920,9 @@ class SpaceClient {
 
   updateCombatHud() {
     const ownShip = this.entities.get(this.selfId)
-    if (ownShip) {
+    // A parked ship's condition comes from the station service or join
+    // reply. Do not overwrite it with a stale in-flight entity.
+    if (ownShip && !this.docked) {
       this.text("#hud-hp", `${number(ownShip.hull)} / ${number(ownShip.maxHull)}`)
       this.text("#hud-shields", `${number(ownShip.shields)} / ${number(ownShip.maxShields)}`)
       this.setWidth("#hud-hp-bar", healthPercent(ownShip.hull, ownShip.maxHull))

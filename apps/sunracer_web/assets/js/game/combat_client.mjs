@@ -5,6 +5,19 @@ export const healthPercent = (current, maximum) => {
   return Math.min(100, Math.max(0, (current / maximum) * 100))
 }
 
+// A station receipt or join condition is server-owned telemetry, not a guess
+// based on the ship's rated capacity or a local flight entity.
+export const shipConditionHud = condition => {
+  const {hull, max_hull, shields, max_shields} = condition || {}
+  if (![hull, max_hull, shields, max_shields].every(Number.isFinite)) return null
+  return {
+    hull: String(hull) + " / " + String(max_hull),
+    shields: String(shields) + " / " + String(max_shields),
+    hullPercent: healthPercent(hull, max_hull),
+    shieldPercent: healthPercent(shields, max_shields)
+  }
+}
+
 export const selectableNpc = entity =>
   entity?.kind === "npc" && entity.status !== "destroyed" && Number(entity.hull) > 0
 
