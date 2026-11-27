@@ -1,3 +1,7 @@
+## 2026-11-26 — Correct SOL wormhole bearing
+
+- User corrected the mouth direction to east-southeast to align with the schematic Galactic Atlas. SOL mouth now (+84,000,000, +35,000,000, 0) game-km; radius and Pluto clearance unchanged. Updated placement and selection regressions. Paired mouth, transit lock and flight lab unchanged. Full runtime verification pending.
+
 ## 2026-11-26 — SOL frontier wormhole location
 
 - Moved the SOL-side Alpha Centauri mouth to (-84,000,000, +35,000,000, 0) compressed game-km, radius 91 million, approximately 8.2 million beyond Pluto's orbital ring at west-southwest on the overhead Atlas (positive Y is down). The paired Alpha Centauri mouth is unchanged. Navigation publishes charted mouths with transit_available false. Both overhead and 3D Atlas display a distinct locked wormhole marker, selectable as its exact server-owned approach waypoint using existing SOL navigation; no jump or live portal interaction granted. Hidden in inner focus. Added placement and selection regressions. Full runtime validation pending; tunnel remains development-only.

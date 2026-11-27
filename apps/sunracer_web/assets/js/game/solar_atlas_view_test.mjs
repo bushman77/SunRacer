@@ -282,7 +282,7 @@ test("wormhole selection uses exact server approach waypoint, not a jump",()=>{
   const nav=new NavigationComputer({root,getEntities:()=>new Map(),getSelfId:()=>42,
     getBoundaries:()=>({width:20000,height:12000}),isConnected:()=>true,
     engage:()=>{},halt:()=>{},solarSetCourse:target=>calls.push(target)})
-  const point={x:-84000000,y:35000000,z:0}
+  const point={x:84000000,y:35000000,z:0}
   nav.solarNavigation={system_id:"sol",status:"idle",wormholes:[
     {id:"sol_alpha_mouth",system_id:"sol",position_km:point,transit_available:false}]}
   nav.selectOrreryHit({kind:"wormhole",id:"sol_alpha_mouth"})

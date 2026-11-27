@@ -56,17 +56,17 @@ defmodule Core.Universe.InterstellarCatalogTest do
     end
   end
 
-  test "Alpha Centauri approach is beyond Pluto in the west-southwest Atlas sector" do
+  test "Alpha Centauri approach is beyond Pluto in the east-southeast Atlas sector" do
     assert [%{id: "sol_alpha_mouth", position_km: point,
       destination_system_id: "alpha_centauri", transit_available: false,
       name: "Alpha Centauri Wormhole"}] = Wormholes.charted_mouths("sol")
     assert {:ok, ^point} = Sol.waypoint(point)
-    assert point.x < 0 and point.y > 0 and point.z == 0
+    assert point.x > 0 and point.y > 0 and point.z == 0
     radius = :math.sqrt(point.x * point.x + point.y * point.y)
     {:ok, pluto} = Sol.fetch("pluto")
     gap = radius - Sol.game_radius_km(pluto.au)
     assert gap > 0 and gap < 10_000_000
-    assert_in_delta :math.atan2(point.y, point.x) * 180 / :math.pi(), 157.5, 0.2
+    assert_in_delta :math.atan2(point.y, point.x) * 180 / :math.pi(), 22.5, 0.2
   end
 
   test "a mouth in another system cannot be resolved as a local entry" do

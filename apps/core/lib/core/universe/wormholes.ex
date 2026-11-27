@@ -13,7 +13,7 @@ defmodule Core.Universe.Wormholes do
       id: "sol_alpha",
       mouths: [
         %{id: "sol_alpha_mouth", system_id: "sol",
-          position_km: %{x: -84_000_000.0, y: 35_000_000.0, z: 0.0}},
+          position_km: %{x: 84_000_000.0, y: 35_000_000.0, z: 0.0}},
         %{id: "alpha_sol_mouth", system_id: "alpha_centauri",
           position_km: %{x: -36_000_000.0, y: 18_000_000.0, z: 0.0}}
       ]

@@ -148,18 +148,18 @@ test("inner Atlas excludes out-of-focus belt overlays",()=>{
   })
 })
 
-test("server charted wormhole is outside Pluto to the west-southwest; hidden in inner view",()=>{
+test("server charted wormhole is outside Pluto to the east-southeast; hidden in inner view",()=>{
   withDocument(()=>{
     const layer=fakeNode("g")
     const svg={querySelector:q=>q==="#nav-solar-content"?layer:null}
     const mouth={id:"sol_alpha_mouth",system_id:"sol",name:"Alpha Centauri Wormhole",
-      position_km:{x:-84000000,y:35000000,z:0},transit_available:false}
+      position_km:{x:84000000,y:35000000,z:0},transit_available:false}
     const navigation={system_id:"sol",wormholes:[mouth]}
     drawSolarAtlas(svg,{navigation})
     const marker=layer.children.find(n=>n.attrs["data-wormhole-id"]===mouth.id)
     assert.ok(marker)
     const p=solarPositionToChart(mouth.position_km)
-    assert.ok(p.x<500&&p.y>300)
+    assert.ok(p.x>500&&p.y>300)
     assert.ok(Math.hypot(p.x-500,p.y-300)>solarLayout().find(b=>b.id==="pluto").orbitRadius)
     assert.equal(Number(marker.children[0].attrs.cx),p.x)
     assert.ok(marker.children.some(n=>n.textContent==="TRANSIT LOCKED"))
