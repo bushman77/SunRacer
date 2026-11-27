@@ -32,13 +32,13 @@ defmodule Core.Universe.WormholeTransit do
   def section(distance) when is_number(distance) do
     p = clamp(distance / @length, 0.0, 1.0)
     %{distance: distance,
-      x: 460.0 * :math.sin(2.0 * :math.pi() * p) * :math.sin(:math.pi() * p),
-      y: 310.0 * :math.sin(4.0 * :math.pi() * p) * :math.sin(:math.pi() * p),
-      radius: 460.0 - 110.0 * :math.pow(:math.sin(3.0 * :math.pi() * p), 2)}
+      x: 740.0 * :math.sin(3.0 * :math.pi() * p) * :math.sin(:math.pi() * p),
+      y: 480.0 * :math.sin(5.0 * :math.pi() * p) * :math.sin(:math.pi() * p),
+      radius: 460.0 - 190.0 * :math.pow(:math.sin(4.0 * :math.pi() * p), 2)}
   end
 
   def geometry do
-    for i <- 0..96, do: section(@length * i / 96)
+    for i <- 0..192, do: section(@length * i / 192)
   end
 
   @doc "Accept signed control intentions only; ignore all client state claims."

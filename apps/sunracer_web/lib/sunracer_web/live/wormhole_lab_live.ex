@@ -61,6 +61,7 @@ defmodule SunracerWeb.WormholeLabLive do
               <span>DIRECT DAMAGE {Float.round(Transit.public(@transit).damage_rate, 1)} HP/s</span>
               <span>PROGRESS {round(Transit.public(@transit).progress * 100)}%</span>
               <span>THROTTLE {round(@transit.input.throttle * 100)}%</span>
+              <span :if={@transit.status == :in_transit}>CLEARANCE {round(Transit.public(@transit).clearance)} u</span>
               <span :if={@transit.wall_contact} class="wormhole-danger">WALL CONTACT</span>
               <strong :if={@transit.outside and @transit.status == :in_transit}
                       class="wormhole-danger" role="alert">
@@ -69,7 +70,7 @@ defmodule SunracerWeb.WormholeLabLive do
               </strong>
             </div>
             <button :if={@transit.status == :in_transit} phx-click="abort_transit" type="button">Abort transit</button>
-            <p :if={@transit.status == :arrived}>Alpha Centauri exit reached. Simulation complete; no pilot transfer performed.</p>
+            <p :if={@transit.status == :arrived}>Alpha Centauri exit reached · binary-star sky preview. Simulation complete; no pilot transfer performed.</p>
             <p :if={@transit.status == :destroyed}>Hull destroyed by wormhole exposure.</p>
             <p :if={@transit.status in [:ejected, :aborted]}>
               Returned to SOL entrance. All simulated hull damage retained.

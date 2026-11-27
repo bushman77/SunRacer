@@ -2310,3 +2310,5 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 #wormhole-lab-renderer.wormhole-breach {border-color:#ff655c;}
 #wormhole-lab-renderer.wormhole-breach::before {content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 55px 13px #c32036bd;z-index:1;}
 .wormhole-lab button:disabled {opacity:.45;cursor:not-allowed;}
+
+.wormhole-exit-fade {position:absolute;inset:0;background:#ffe6bd;opacity:0;pointer-events:none;z-index:2;}

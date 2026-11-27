@@ -105,6 +105,17 @@ defmodule Core.Universe.WormholeTransitTest do
     assert state.distance < Transit.length()
   end
 
+  test "the narrower curved route requires steering rather than full throttle alone" do
+    sections = Transit.geometry()
+    assert length(sections) == 193
+    assert hd(sections).radius == 460.0
+    assert Enum.min_by(sections, & &1.radius).radius <= 270.1
+    assert Enum.max(Enum.map(sections, fn section -> abs(section.x) end)) > 600.0
+    straight = Transit.new() |> Transit.controls(%{throttle: 1}) |> advance(400)
+    assert straight.status in [:ejected, :destroyed]
+    assert straight.shields == 120
+  end
+
   test "a steered traversal reaches the destination with accumulated damage" do
     state = Enum.reduce_while(1..450, Transit.new(), fn _, s ->
       target = Transit.section(min(Transit.length(), s.distance + 24))
