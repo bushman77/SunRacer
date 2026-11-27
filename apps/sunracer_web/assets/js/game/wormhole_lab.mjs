@@ -85,14 +85,28 @@ export const WormholeLab={
       this.frame=requestAnimationFrame(render)
       this.controls.heartbeat(time)
       const target=this.current||{x:0,y:0,distance:0,roll:0}
-      const position=new THREE.Vector3(target.x,target.y,-target.distance)
-      this.camera.position.lerp(position,.22)
-      this.camera.rotation.set(0,0,-target.roll)
+      const returned=target.location==="sol_entrance"
+      const position=new THREE.Vector3(target.x,target.y,returned?550:-target.distance)
+      if(returned)this.camera.position.copy(position)
+      else this.camera.position.lerp(position,.22)
+      this.camera.rotation.set(0,returned?Math.PI:0,-target.roll)
       this.renderer.render(this.scene,this.camera)
     }
     this.frame=requestAnimationFrame(render)
   },
-  updated(){this.current=JSON.parse(this.el.dataset.transit)},
+  updated(){
+    const previous=this.current
+    this.current=JSON.parse(this.el.dataset.transit)
+    if(previous?.status==="in_transit"&&this.current?.status!=="in_transit"){
+      this.controls.resetThrottle()
+    }
+    if(this.current?.status==="in_transit"&&previous?.status!=="in_transit"){
+      this.controls.resetThrottle()
+      this.camera.position.set(this.current.x,this.current.y,-this.current.distance)
+    }
+    this.host.classList.toggle("wormhole-breach",
+      this.current?.status==="in_transit"&&this.current?.outside===true)
+  },
   destroyed(){
     cancelAnimationFrame(this.frame)
     this.resize?.disconnect()

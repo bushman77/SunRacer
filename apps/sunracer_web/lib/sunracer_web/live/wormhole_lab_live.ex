@@ -13,7 +13,14 @@ defmodule SunracerWeb.WormholeLabLive do
     send(self(), :transit_tick)
     {:noreply, assign(socket, transit: Transit.new())}
   end
-  def handle_event("start_transit", _, socket), do: {:noreply, socket}
+  def handle_event("start_transit", _, %{assigns: %{transit: state}} = socket) do
+    case Transit.retry(state) do
+      {:ok, next} ->
+        send(self(), :transit_tick)
+        {:noreply, assign(socket, transit: next)}
+      {:error, :reentry_unavailable} -> {:noreply, socket}
+    end
+  end
   def handle_event("transit_controls", input, %{assigns: %{transit: state}} = socket)
       when is_map(state) do
     {:noreply, assign(socket, transit: Transit.controls(state, input))}
@@ -26,9 +33,9 @@ defmodule SunracerWeb.WormholeLabLive do
   def handle_event("abort_transit", _, socket), do: {:noreply, socket}
 
   @impl true
-  def handle_info(:transit_tick, %{assigns: %{transit: %{status: :in_transit} = state}} = socket) do
+  def handle_info(:transit_tick, %{assigns: %{transit: state}} = socket) when is_map(state) do
     next = Transit.tick(state)
-    if next.status == :in_transit, do: Process.send_after(self(), :transit_tick, Transit.step_ms())
+    if Transit.ticking?(next), do: Process.send_after(self(), :transit_tick, Transit.step_ms())
     {:noreply, assign(socket, transit: next)}
   end
   def handle_info(:transit_tick, socket), do: {:noreply, socket}
@@ -55,12 +62,28 @@ defmodule SunracerWeb.WormholeLabLive do
               <span>PROGRESS {round(Transit.public(@transit).progress * 100)}%</span>
               <span>THROTTLE {round(@transit.input.throttle * 100)}%</span>
               <span :if={@transit.wall_contact} class="wormhole-danger">WALL CONTACT</span>
+              <strong :if={@transit.outside and @transit.status == :in_transit}
+                      class="wormhole-danger" role="alert">
+                BOUNDARY BREACH · STEER BACK INSIDE · EJECTION IN
+                {Float.round(Transit.public(@transit).breach_remaining_ms / 1000, 1)}s
+              </strong>
             </div>
             <button :if={@transit.status == :in_transit} phx-click="abort_transit" type="button">Abort transit</button>
             <p :if={@transit.status == :arrived}>Alpha Centauri exit reached. Simulation complete; no pilot transfer performed.</p>
             <p :if={@transit.status == :destroyed}>Hull destroyed by wormhole exposure.</p>
-            <p :if={@transit.status == :aborted}>Transit aborted. Simulated hull damage retained.</p>
-            <a :if={@transit.status != :in_transit} href="/dev/wormhole">New test flight</a>
+            <p :if={@transit.status in [:ejected, :aborted]}>
+              Returned to SOL entrance. All simulated hull damage retained.
+            </p>
+            <p :if={@transit.cooldown_ms > 0}>
+              RE-ENTRY COOLDOWN {Float.round(@transit.cooldown_ms / 1000, 1)}s
+            </p>
+            <button :if={@transit.status in [:ejected, :aborted]} phx-click="start_transit"
+                    disabled={@transit.cooldown_ms > 0} type="button">
+              Re-enter with current hull
+            </button>
+            <a :if={@transit.status in [:arrived, :destroyed, :ejected, :aborted]} href="/dev/wormhole">
+              Reset lab (new simulated ship)
+            </a>
           <% else %>
             <button phx-click="start_transit" type="button">Enter wormhole</button>
           <% end %>

@@ -32,12 +32,77 @@ defmodule Core.Universe.WormholeTransitTest do
     assert Transit.tick(state).distance == 24
   end
 
-  test "wall contact adds hull-only damage and cannot leave the tunnel" do
+  test "wall contact adds hull-only damage and allows a real boundary breach" do
     state = Transit.new() |> Map.put(:x, 900.0) |> Transit.tick()
     assert state.wall_contact
+    assert state.outside
     assert state.hull == 299
     assert state.shields == 120
-    assert abs(state.x) <= Transit.section(0).radius
+    assert state.x > Transit.section(0).radius
+    assert Transit.public(state).clearance < 0
+    assert Transit.public(state).breach_remaining_ms == 2_900
+  end
+
+  test "three continuous seconds outside eject to SOL with damage retained" do
+    initial = Transit.new() |> Map.put(:x, 900.0)
+    almost = advance(initial, 29)
+    assert almost.status == :in_transit
+    assert Transit.public(almost).breach_remaining_ms == 100
+    returned = Transit.tick(almost)
+    assert returned.status == :ejected
+    assert returned.location == :sol_entrance
+    assert returned.distance == 0
+    assert returned.hull == 261
+    assert returned.shields == 120
+    assert returned.cooldown_ms == 10_000
+    assert Transit.public(returned).damage_rate == 0
+    assert Transit.retry(returned) == {:error, :reentry_unavailable}
+    cooling = advance(returned, 99)
+    assert cooling.cooldown_ms == 100
+    assert cooling.hull == returned.hull
+    assert Transit.retry(cooling) == {:error, :reentry_unavailable}
+    ready = Transit.tick(cooling)
+    refute Transit.ticking?(ready)
+    assert {:ok, retry} = Transit.retry(ready)
+    assert retry.status == :in_transit
+    assert retry.elapsed_ms == 0
+    assert retry.outside_ms == 0
+    assert retry.hull == returned.hull
+    assert retry.max_hull == 300
+    assert retry.shields == returned.shields
+    assert retry.max_shields == 120
+  end
+
+  test "steering inside cancels the countdown without undoing damage" do
+    breached = advance(Transit.new() |> Map.put(:x, 500.0), 10)
+    assert breached.outside
+    recovered = Enum.reduce(1..10, breached, fn _, s ->
+      s |> Transit.controls(%{yaw: -1}) |> Transit.tick()
+    end)
+    refute recovered.outside
+    assert recovered.outside_ms == 0
+    assert Transit.public(recovered).breach_remaining_ms == nil
+    assert recovered.status == :in_transit
+    assert recovered.hull <= breached.hull
+    second = recovered |> Map.put(:x, 900.0) |> Transit.tick()
+    assert second.outside_ms == 100
+  end
+
+  test "destruction takes precedence over ejection and no retry is possible" do
+    almost = advance(Transit.new() |> Map.put(:x, 900.0), 29)
+    dead = almost |> Map.put(:hull, 1) |> Transit.tick()
+    assert dead.status == :destroyed
+    assert dead.hull == 0
+    assert dead.shields == 120
+    assert Transit.retry(dead) == {:error, :reentry_unavailable}
+  end
+
+  test "a breach at the exit cannot grant arrival" do
+    state = Transit.new() |> Map.merge(%{distance: Transit.length() - 0.01, x: 900.0})
+    state = state |> Transit.controls(%{throttle: 1}) |> Transit.tick()
+    assert state.status == :in_transit
+    assert state.outside
+    assert state.distance < Transit.length()
   end
 
   test "a steered traversal reaches the destination with accumulated damage" do
@@ -59,6 +124,13 @@ defmodule Core.Universe.WormholeTransitTest do
     aborted = Transit.abort(state)
     assert aborted.status == :aborted
     assert aborted.hull == state.hull
-    assert Transit.tick(aborted) == aborted
+    assert aborted.location == :sol_entrance
+    assert aborted.cooldown_ms == 10_000
+    assert Transit.retry(aborted) == {:error, :reentry_unavailable}
+    assert Transit.tick(aborted).hull == aborted.hull
+    assert {:ok, retry} = aborted |> advance(100) |> Transit.retry()
+    assert retry.hull == state.hull
   end
+
+  defp advance(state, ticks), do: Enum.reduce(1..ticks, state, fn _, s -> Transit.tick(s) end)
 end

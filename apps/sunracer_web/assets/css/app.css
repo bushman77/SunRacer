@@ -2306,3 +2306,7 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 .wormhole-lab-telemetry {display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;padding:.5rem;background:#07172b;}
 .wormhole-lab button,.wormhole-lab a {display:inline-block;border:1px solid #58b2d0;color:#b5efff;background:#102238;padding:.5rem 1rem;margin-top:.5rem;}
 .wormhole-danger {color:#ff9a75;}
+
+#wormhole-lab-renderer.wormhole-breach {border-color:#ff655c;}
+#wormhole-lab-renderer.wormhole-breach::before {content:"";position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 55px 13px #c32036bd;z-index:1;}
+.wormhole-lab button:disabled {opacity:.45;cursor:not-allowed;}
