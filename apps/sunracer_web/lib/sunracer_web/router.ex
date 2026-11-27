@@ -84,6 +84,7 @@ defmodule SunracerWeb.Router do
     scope "/dev" do
       pipe_through :browser
 
+      live "/wormhole", SunracerWeb.WormholeLabLive
       live_dashboard "/dashboard", metrics: SunracerWeb.Telemetry
       forward "/mailbox", Plug.Swoosh.MailboxPreview
     end

@@ -27,6 +27,7 @@ import topbar from "../vendor/topbar"
 import {startGameClient} from "./game/client"
 import {startHelmetClient} from "./game/helmet_client.mjs"
 import {startTitleSettings} from "./title_settings.mjs"
+import {WormholeLab} from "./game/wormhole_lab.mjs"
 
 const setTheme = theme => {
   if (theme === "system") {
@@ -48,7 +49,7 @@ const csrfToken = document.querySelector("meta[name='csrf-token']").getAttribute
 const liveSocket = new LiveSocket("/live", Socket, {
   longPollFallbackMs: 2500,
   params: {_csrf_token: csrfToken},
-  hooks: {...colocatedHooks},
+  hooks: {...colocatedHooks, WormholeLab},
 })
 
 // Show progress bar on live navigation and form submits

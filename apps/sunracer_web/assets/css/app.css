@@ -2295,3 +2295,14 @@ button.orrery-label {pointer-events:auto;cursor:pointer;}
 
 .galaxy-legend i.galaxy-road-next,.galaxy-legend i.galaxy-road-locked {width:15px;height:0;border:0;border-top:2px dashed #ffd06b;border-radius:0;vertical-align:middle;}
 .galaxy-legend i.galaxy-road-locked {border-top-color:#ba9cff;}
+
+/* Development-only wormhole flight lab. */
+.wormhole-lab {width:min(1100px,92vw);position:relative;left:50%;transform:translateX(-50%);color:#b5e9f9;background:#030914;border:1px solid #3c7195;padding:1rem;font:14px/1.6 monospace;}
+.wormhole-lab h1 {font-size:1.15rem;letter-spacing:.12em;color:white;}
+.wormhole-lab h1 span {color:#7ce7ff;}
+#wormhole-lab-renderer {height:clamp(280px,55vh,650px);position:relative;overflow:hidden;border:1px solid #407ba7;background:#02040e;}
+#wormhole-lab-renderer canvas {display:block;width:100%;height:100%;}
+#wormhole-lab-renderer::after {content:"+";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:#9de6f6;pointer-events:none;font-size:26px;}
+.wormhole-lab-telemetry {display:flex;flex-wrap:wrap;gap:.4rem 1.2rem;padding:.5rem;background:#07172b;}
+.wormhole-lab button,.wormhole-lab a {display:inline-block;border:1px solid #58b2d0;color:#b5efff;background:#102238;padding:.5rem 1rem;margin-top:.5rem;}
+.wormhole-danger {color:#ff9a75;}

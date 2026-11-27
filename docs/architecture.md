@@ -473,3 +473,7 @@ The existing server-owned SOL environmental profile is unchanged. The shared des
 
 - Corrected consecutive `@doc` attributes in `Sunracer.World` by moving the existing story-event documentation to `story_event/2`. No executable code changed. Release, communications and EC2 package jobs failed at `mix compile --warnings-as-errors` on 8f77b40; fresh CI validation pending. Keep the strict compiler gate and retry the existing v0.3.8 version, not a new patch bump.
 
+## 2026-11-26 — SOL / Alpha Centauri wormhole flight lab
+
+- Added an isolated development-only `/dev/wormhole` LiveView and a server-owned deterministic transit model. Existing FlightControls emits signed input; Three.js renders curved, narrowing sections, luminous filaments, guide rings and the exit from server-provided geometry. Lab steering is lateral pitch/yaw, not yet full ship attitude physics. Exposure bypasses shields: cumulative hull loss floor(t + 0.025*t²), t in seconds, plus 12 HP/s of wall contact. 9,600-unit tunnel at 240 units/s takes about 40 seconds at full thrust; zero hull destroys the simulated ship, abort retains simulated damage. Tests cover exposure, stationary destruction, forged input, wall contact, steering and abort. No pilot persistence, live warp authorization, destination map transfer, native cockpit or SBS integration; production routing remains disabled. Full Mix/Node and visual lab validation pending.
+
