@@ -4,7 +4,7 @@ import * as THREE from "three"
 import {GreenStarbaseInterior} from "./green_starbase_interior.js"
 import {
   STATION_CHARACTER_ASSETS, positionStationCharacter, disposeStationCharacter,
-  pickIdleClip, createCharacterAnimator,
+  pickIdleClip, createCharacterAnimator, characterPhase, armSwingAxis, trackMoves,
 } from "./station_character_models.mjs"
 
 const mara = {
@@ -189,4 +189,156 @@ test("every listed attendant gets its own model; others keep their figures", asy
   room.update({x: 0, z: 43}, 200, [mara, ilya, tarek, supply, juno, eno])
   assert.equal(requested.length, 5, "no repeated requests")
   room.dispose()
+})
+
+// A rig shaped like ai3d's real export: Mixamo-named arm chains hanging down
+// the -Y axis, and an idle that drives only the spine, exactly as the
+// generated clip does. withArmTracks adds the constant arm rotation tracks
+// the real GLBs carry, so both application paths can be exercised.
+// prefix "mixamorig" is what GLTFLoader yields after sanitizing; "mixamorig:"
+// is what Blender writes. Both must resolve to the same bones.
+const armRig = (withArmTracks = true, prefix = "mixamorig") => {
+  const scene = new THREE.Group()
+  const root = new THREE.Bone()
+  root.name = `${prefix}Hips`
+  const made = {}
+  for (const [side, x] of [["Left", 0.2], ["Right", -0.2]]) {
+    const upper = new THREE.Bone()
+    upper.name = `${prefix}${side}Arm`
+    upper.position.set(x, 1.4, 0)
+    const lower = new THREE.Bone()
+    lower.name = `${prefix}${side}ForeArm`
+    lower.position.set(0, -0.3, 0) // the limb points down, as a hanging arm does
+    upper.add(lower)
+    root.add(upper)
+    made[side] = upper
+  }
+  scene.add(root)
+  scene.updateMatrixWorld(true)
+  // THREE strips ":" when binding, so tracks always use the sanitized spelling.
+  const tracks = [new THREE.QuaternionKeyframeTrack(
+    "mixamorigHips.quaternion", [0, 4], [0, 0, 0, 1, 0, 0, 0, 1])]
+  if (withArmTracks) {
+    for (const side of ["Left", "Right"]) {
+      tracks.push(new THREE.QuaternionKeyframeTrack(
+        `mixamorig${side}Arm.quaternion`, [0, 4], [0, 0, 0, 1, 0, 0, 0, 1]))
+    }
+  }
+  return {scene, animations: [new THREE.AnimationClip("idle", 8, tracks)], ...made}
+}
+
+test("each attendant gets a stable, distinct idle phase", () => {
+  const ids = ["repair", "trade", "resupply", "outfitting", "missions"]
+  const phases = ids.map(characterPhase)
+  for (const value of phases) {
+    assert.ok(value >= 0 && value < 1, `phase ${value} out of range`)
+  }
+  assert.equal(new Set(phases).size, ids.length, "attendants must not share a phase")
+  assert.equal(characterPhase("missions"), characterPhase("missions"), "stable across visits")
+  assert.equal(characterPhase(""), characterPhase(""))
+})
+
+test("the idle starts at the character's own offset instead of frame zero", () => {
+  const atZero = createCharacterAnimator(THREE, armRig())
+  const offset = createCharacterAnimator(THREE, armRig(), {phase: 0.5})
+  assert.equal(atZero.mixer.clipAction(atZero.mixer._actions[0]._clip).time, 0)
+  assert.ok(Math.abs(offset.mixer._actions[0].time - 4) < 1e-6,
+    "half a phase into an 8 s clip is 4 s")
+  assert.ok(Math.abs(offset.mixer._actions[0].getEffectiveTimeScale() - 1) < 1e-6)
+  const slower = createCharacterAnimator(THREE, armRig(), {rate: 0.92})
+  assert.ok(Math.abs(slower.mixer._actions[0].getEffectiveTimeScale() - 0.92) < 1e-6)
+  atZero.dispose(); offset.dispose(); slower.dispose()
+})
+
+test("the swing axis is derived from where the limb points, not assumed", () => {
+  const rig = armRig()
+  const axis = armSwingAxis(THREE, rig.Left, rig.Left.children[0])
+  // A limb hanging along -Y swung forward and back turns about X.
+  assert.ok(Math.abs(Math.abs(axis.x) - 1) < 1e-6, `axis was ${axis.toArray()}`)
+  assert.ok(Math.abs(axis.y) < 1e-6 && Math.abs(axis.z) < 1e-6)
+  const degenerate = new THREE.Bone()
+  assert.equal(armSwingAxis(THREE, rig.Left, rig.Left), null, "zero-length limb")
+  assert.equal(armSwingAxis(THREE, null, degenerate), null)
+})
+
+test("ai3d's motionless arms are given a shallow swing within its amplitude", () => {
+  const rig = armRig()
+  const animator = createCharacterAnimator(THREE, rig)
+  assert.equal(animator.arms, 2, "both arms found by their Mixamo names")
+  // The same rig written the way Blender names it must resolve identically.
+  const blenderNamed = createCharacterAnimator(THREE, armRig(true, "mixamorig:"))
+  assert.equal(blenderNamed.arms, 2, "colon-separated Mixamo names must also match")
+  blenderNamed.dispose()
+  const rest = new THREE.Quaternion()
+  let peak = 0
+  let moved = false
+  for (let step = 0; step < 60; step++) {
+    animator.update(0.25)
+    const angle = rig.Left.quaternion.angleTo(rest)
+    peak = Math.max(peak, angle)
+    if (angle > 1e-4) moved = true
+  }
+  assert.ok(moved, "the arm must actually move")
+  assert.ok(peak <= 0.045 + 1e-6, `swing reached ${peak}, beyond its amplitude`)
+  // Opposite sides must not march in step.
+  assert.ok(rig.Left.quaternion.angleTo(rig.Right.quaternion) > 1e-5)
+  animator.dispose()
+})
+
+test("a constant track is not movement; a varying one is", () => {
+  const flat = new THREE.QuaternionKeyframeTrack(
+    "mixamorigLeftArm.quaternion", [0, 4], [0, 0, 0, 1, 0, 0, 0, 1])
+  const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.5)
+  const moving = new THREE.QuaternionKeyframeTrack(
+    "mixamorigLeftArm.quaternion", [0, 4], [0, 0, 0, 1, ...turn.toArray()])
+  assert.equal(trackMoves(flat), false, "ai3d's repeated arm keyframes are not motion")
+  assert.equal(trackMoves(moving), true)
+  assert.equal(trackMoves(undefined), false)
+})
+
+test("an arm the clip genuinely animates is left to the clip", () => {
+  const rig = armRig(false)
+  const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.5)
+  rig.animations[0].tracks.push(new THREE.QuaternionKeyframeTrack(
+    "mixamorigLeftArm.quaternion", [0, 4], [0, 0, 0, 1, ...turn.toArray()]))
+  const animator = createCharacterAnimator(THREE, rig)
+  assert.equal(animator.arms, 1, "only the untouched right arm is swung")
+  animator.dispose()
+})
+
+test("the swing cannot wind up when the clip has no arm tracks", () => {
+  const rig = armRig(false)
+  const animator = createCharacterAnimator(THREE, rig)
+  assert.equal(animator.arms, 2)
+  const rest = new THREE.Quaternion()
+  let peak = 0
+  for (let step = 0; step < 400; step++) {
+    animator.update(0.1)
+    peak = Math.max(peak, rig.Left.quaternion.angleTo(rest))
+  }
+  assert.ok(peak <= 0.045 + 1e-6, `arm wound up to ${peak} without a mixer reset`)
+  animator.dispose()
+})
+
+test("two attendants on the same clip do not breathe in unison", () => {
+  const left = armRig()
+  const right = armRig()
+  const a = createCharacterAnimator(THREE, left, {phase: characterPhase("repair"), rate: 0.95})
+  const b = createCharacterAnimator(THREE, right, {phase: characterPhase("missions"), rate: 1.05})
+  for (let step = 0; step < 40; step++) {
+    a.update(0.1)
+    b.update(0.1)
+  }
+  assert.ok(left.Left.quaternion.angleTo(right.Left.quaternion) > 1e-4,
+    "identical rigs must not hold identical poses")
+  a.dispose(); b.dispose()
+})
+
+test("sway can be switched off without disturbing the idle", () => {
+  const rig = armRig()
+  const animator = createCharacterAnimator(THREE, rig, {sway: 0})
+  assert.equal(animator.arms, 0)
+  animator.update(1)
+  assert.ok(rig.Left.quaternion.angleTo(new THREE.Quaternion()) < 1e-9)
+  animator.dispose()
 })

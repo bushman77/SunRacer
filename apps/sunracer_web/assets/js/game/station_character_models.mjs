@@ -55,9 +55,75 @@ export function pickIdleClip(clips = []) {
     usable.find(clip => /idle/i.test(clip.name || "")) || usable[0] || null
 }
 
+// A stable 0..1 number per attendant id. Used to offset each character's idle
+// so two of them never start on the same frame, and to vary playback slightly
+// so they never drift back into lockstep. Deterministic on purpose: the same
+// pilot sees the same station on every visit, and tests stay reproducible.
+export function characterPhase(id = "") {
+  let hash = 2166136261
+  for (let i = 0; i < id.length; i++) {
+    hash ^= id.charCodeAt(i)
+    hash = Math.imul(hash, 16777619)
+  }
+  return ((hash >>> 0) % 9973) / 9973
+}
+
+// ai3d's generated idle rotates only Hips, Spine1, Spine2, Neck and Head; the
+// arms carry two STEP keyframes and never move, which is what reads as stiff.
+// These add a shallow pendulum on top. The mixer rewrites every bone it has a
+// track for on each update, so this is applied after it and cannot accumulate.
+const ARM_SWAY_RADIANS = 0.045 // ~2.6 degrees
+const ARM_BONES = [
+  {bone: "mixamorigLeftArm", child: "mixamorigLeftForeArm", side: 1},
+  {bone: "mixamorigRightArm", child: "mixamorigRightForeArm", side: -1},
+]
+
+// Blender exports the joints as "mixamorig:LeftArm", but THREE's
+// PropertyBinding strips ":" from node names and GLTFLoader sanitizes on the
+// way in, so the loaded bone is "mixamorigLeftArm". Match on a form that
+// ignores the difference rather than on either spelling.
+const boneKey = name => String(name ?? "").replace(/[^a-z0-9]/gi, "").toLowerCase()
+
+// True when a track's values actually change over its keyframes. ai3d writes
+// a rotation track for all 25 joints, but the arm ones hold a single repeated
+// value. THREE's PropertyMixer skips writing a value that has not changed, so
+// a constant track means nothing touches that bone after the first frame.
+export function trackMoves(track, epsilon = 1e-6) {
+  const values = track?.values
+  const stride = track?.getValueSize?.()
+  if (!values || !stride || values.length <= stride) return false
+  for (let i = stride; i < values.length; i++) {
+    if (Math.abs(values[i] - values[i % stride]) > epsilon) return true
+  }
+  return false
+}
+
+// The swing axis is derived from where the limb actually points in the rest
+// pose rather than assumed, so it stays correct whatever axis convention the
+// exporter used, then converted into the bone's own space because that is
+// what the mixer writes.
+export function armSwingAxis(THREE, bone, child) {
+  if (!bone || !child) return null
+  const head = new THREE.Vector3()
+  const tail = new THREE.Vector3()
+  bone.getWorldPosition(head)
+  child.getWorldPosition(tail)
+  const direction = tail.sub(head)
+  if (!(direction.lengthSq() > 1e-10)) return null
+  direction.normalize()
+  const axis = new THREE.Vector3().crossVectors(direction, new THREE.Vector3(0, 0, 1))
+  if (!(axis.lengthSq() > 1e-8)) return null // limb already points along +Z
+  axis.normalize()
+  const inverse = new THREE.Quaternion()
+  bone.getWorldQuaternion(inverse).invert()
+  return axis.applyQuaternion(inverse).normalize()
+}
+
 // Plays the character's idle loop. Presentation only: nothing is networked.
 // Returns null when the GLB has no usable animation.
-export function createCharacterAnimator(THREE, gltf) {
+export function createCharacterAnimator(THREE, gltf, {
+  phase = 0, rate = 1, sway = ARM_SWAY_RADIANS,
+} = {}) {
   const clip = pickIdleClip(gltf?.animations)
   if (!clip || !gltf?.scene || typeof THREE.AnimationMixer !== "function") return null
   // Bounds are computed from the rest pose; an animated skinned mesh can
@@ -69,12 +135,52 @@ export function createCharacterAnimator(THREE, gltf) {
   const action = mixer.clipAction(clip)
   action.setLoop(THREE.LoopRepeat, Infinity)
   action.play()
+  // Start somewhere else in the loop and run fractionally off nominal speed,
+  // so a room full of attendants does not breathe in unison.
+  action.setEffectiveTimeScale(rate)
+  action.time = (Number.isFinite(phase) ? phase : 0) * clip.duration
   mixer.update(0) // first rendered frame already shows the idle, not the T-pose
+
+  const bones = new Map()
+  gltf.scene.traverse?.(node => {
+    const key = boneKey(node?.name)
+    if (key && !bones.has(key)) bones.set(key, node)
+  })
+  const arms = []
+  if (sway > 0 && typeof THREE.Quaternion === "function") {
+    // Only arms the clip leaves motionless are swung. If a future clip really
+    // animates them, it owns the bone and the swing stays out of its way.
+    const animated = new Set((clip.tracks || [])
+      .filter(track => /\.quaternion$/.test(track.name || "") && trackMoves(track))
+      .map(track => boneKey((track.name || "").replace(/\.quaternion$/, ""))))
+    for (const spec of ARM_BONES) {
+      if (animated.has(boneKey(spec.bone))) continue
+      const bone = bones.get(boneKey(spec.bone))
+      const axis = armSwingAxis(THREE, bone, bones.get(boneKey(spec.child)))
+      if (!axis) continue
+      // Composed from the pose the clip settled on, never from last frame's
+      // result, so the swing can never accumulate.
+      arms.push({bone, axis, side: spec.side, base: bone.quaternion.clone()})
+    }
+  }
+  const swingQuat = arms.length ? new THREE.Quaternion() : null
+  let elapsed = action.time
+
   return {
     clip: clip.name,
     mixer,
+    arms: arms.length,
     update(delta) {
-      if (Number.isFinite(delta) && delta > 0) mixer.update(delta)
+      if (!Number.isFinite(delta) || delta <= 0) return
+      mixer.update(delta)
+      elapsed += delta * rate
+      // Slower than the idle's own 8 s cycle and offset per side, so the two
+      // never line up into a march.
+      for (const arm of arms) {
+        const angle = Math.sin(elapsed * 0.55 + arm.side * 0.9) * sway * arm.side
+        arm.bone.quaternion.copy(arm.base)
+          .multiply(swingQuat.setFromAxisAngle(arm.axis, angle))
+      }
     },
     dispose() {
       mixer.stopAllAction()

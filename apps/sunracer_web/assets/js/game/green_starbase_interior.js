@@ -3,7 +3,7 @@ import {greenStarbaseInteriorVisible} from "./green_starbase_interior_state.mjs"
 import {buildGreenStarbaseArt} from "./green_starbase_art.mjs"
 import {
   STATION_CHARACTER_ASSETS, positionStationCharacter,
-  disposeStationCharacter, createCharacterAnimator,
+  disposeStationCharacter, createCharacterAnimator, characterPhase,
 } from "./station_character_models.mjs"
 
 // Shared lightweight Three.js station interior. The docked ship has no actor
@@ -389,7 +389,12 @@ export class GreenStarbaseInterior {
       }
       this.node.add(model)
       this.importedCharacters.push(model)
-      const animator = createCharacterAnimator(this.THREE, gltf)
+      // Each attendant enters its idle at a different point and runs a few
+      // percent off nominal speed, so the room never breathes in unison.
+      const phase = characterPhase(npc.id)
+      const animator = createCharacterAnimator(this.THREE, gltf, {
+        phase, rate: 0.92 + phase * 0.16,
+      })
       if (animator) this.characterAnimators.push(animator)
       // Keep the server-authorized E-to-talk interaction unchanged.
       for (const mesh of this.node.children) {

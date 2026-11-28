@@ -1743,3 +1743,12 @@ docking, station walking and mission completion. Branch `story_line`.
 - [ ] Confirm the idle loop advances and the feet meet the floor plane; neither was in the observed frame.
 - [ ] SBS headset review (not yet performed).
 - [ ] Optional reroll with a wider A-pose if automatic weights prove to bleed between arm and torso (X extent 0.90 against Mara's 1.94).
+
+
+### Station attendant idle variation
+
+- Per-attendant idle phase and playback rate, plus a shallow procedural arm swing over ai3d's generated idle, which animates only the spine and head. Runtime only: no asset, rig or network change.
+- [x] Implementation and tests (`node --test js/game/*_test.mjs`, 604 pass).
+- [ ] Observe in the native cockpit and judge the amplitude; 0.045 rad is a conservative first guess, not a reviewed value.
+- [ ] Watch for forearm clipping on characters whose arms sit close to the torso (Juno's X extent is 0.90 against Mara's 1.94), which is where ai3d's automatic weights are most likely to bleed.
+- [ ] Richer motion still needs real clips: the rig is Mixamo-named, so Mixamo actions retarget onto it without manual rigging.
