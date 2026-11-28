@@ -119,12 +119,47 @@ export function armSwingAxis(THREE, bone, child) {
   return axis.applyQuaternion(inverse).normalize()
 }
 
+// Everything in the GLB that is not the idle and not ai3d's report-only pose
+// test is a gesture: a one-shot the attendant performs now and then over the
+// idle. Mixamo clips merged by ai3d arrive here; with none, the list is empty
+// and the attendant simply keeps breathing.
+export function splitAnimationClips(clips = []) {
+  const usable = (clips || []).filter(clip => clip && !/pose_test/i.test(clip.name || ""))
+  const idle = pickIdleClip(clips)
+  return {idle, gestures: usable.filter(clip => clip !== idle)}
+}
+
+// Small deterministic generator, so an attendant's gesture timing is its own
+// but repeats exactly on the next visit and in tests.
+export function seededRandom(seed) {
+  let state = Math.imul(seed ^ 0x9e3779b9, 0x85ebca6b) >>> 0
+  return () => {
+    state = (state + 0x6d2b79f5) >>> 0
+    let t = state
+    t = Math.imul(t ^ (t >>> 15), t | 1)
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61)
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296
+  }
+}
+
+// Weight of a one-shot gesture at a point in its run: eased in, held, eased
+// back out, so it never pops against the idle underneath it.
+export function gestureWeight(time, duration, blend) {
+  if (!(duration > 0)) return 0
+  const edge = Math.min(blend, duration / 2)
+  if (!(edge > 0)) return time >= 0 && time <= duration ? 1 : 0
+  const ramp = Math.min(time / edge, (duration - time) / edge, 1)
+  const clamped = Math.min(1, Math.max(0, ramp))
+  return clamped * clamped * (3 - 2 * clamped) // smoothstep
+}
+
 // Plays the character's idle loop. Presentation only: nothing is networked.
 // Returns null when the GLB has no usable animation.
 export function createCharacterAnimator(THREE, gltf, {
   phase = 0, rate = 1, sway = ARM_SWAY_RADIANS,
+  gestureGap = [14, 30], blend = 0.45, random = null,
 } = {}) {
-  const clip = pickIdleClip(gltf?.animations)
+  const {idle: clip, gestures} = splitAnimationClips(gltf?.animations)
   if (!clip || !gltf?.scene || typeof THREE.AnimationMixer !== "function") return null
   // Bounds are computed from the rest pose; an animated skinned mesh can
   // move outside them, so never let the camera frustum cull it mid-pose.
@@ -166,14 +201,70 @@ export function createCharacterAnimator(THREE, gltf, {
   const swingQuat = arms.length ? new THREE.Quaternion() : null
   let elapsed = action.time
 
+  // Gestures run as one-shots layered over the idle, which keeps playing
+  // underneath so the attendant never snaps to a different base pose.
+  const rng = random || seededRandom(Math.round((phase || 0) * 1e6))
+  const [gapMin, gapMax] = gestureGap
+  const nextGap = () => gapMin + rng() * Math.max(0, gapMax - gapMin)
+  const gestureActions = gestures.map(gestureClip => {
+    const gestureAction = mixer.clipAction(gestureClip)
+    gestureAction.setLoop(THREE.LoopOnce, 1)
+    gestureAction.clampWhenFinished = true
+    gestureAction.enabled = false
+    gestureAction.setEffectiveWeight(0)
+    return {clip: gestureClip, action: gestureAction}
+  })
+  let current = null       // the gesture running right now, if any
+  let gestureTime = 0
+  let untilNext = gestureActions.length ? nextGap() : Infinity
+
+  function startGesture(index) {
+    current = gestureActions[index % gestureActions.length]
+    gestureTime = 0
+    current.action.reset()
+    current.action.enabled = true
+    current.action.setEffectiveWeight(0)
+    current.action.play()
+  }
+
   return {
     clip: clip.name,
     mixer,
     arms: arms.length,
+    gestures: gestureActions.length,
+    get playing() {
+      return current ? current.clip.name : clip.name
+    },
+    // Exposed so a caller (or a test) can ask for a gesture directly rather
+    // than waiting out the timer.
+    gesture(index = 0) {
+      if (gestureActions.length) startGesture(index)
+    },
     update(delta) {
       if (!Number.isFinite(delta) || delta <= 0) return
+      if (current) {
+        gestureTime += delta
+        const duration = current.clip.duration
+        const weight = gestureWeight(gestureTime, duration, blend)
+        current.action.setEffectiveWeight(weight)
+        action.setEffectiveWeight(1 - weight)
+        if (gestureTime >= duration) {
+          current.action.stop()
+          current.action.enabled = false
+          current.action.setEffectiveWeight(0)
+          action.setEffectiveWeight(1)
+          current = null
+          untilNext = nextGap()
+        }
+      } else if (gestureActions.length) {
+        untilNext -= delta
+        if (untilNext <= 0) startGesture(Math.floor(rng() * gestureActions.length))
+      }
       mixer.update(delta)
       elapsed += delta * rate
+      // The swing exists to cover arms the idle never moves. A gesture owns
+      // the whole body while it runs, so it is not fought for.
+      if (current) return
       // Slower than the idle's own 8 s cycle and offset per side, so the two
       // never line up into a march.
       for (const arm of arms) {

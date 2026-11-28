@@ -1752,3 +1752,13 @@ docking, station walking and mission completion. Branch `story_line`.
 - [ ] Observe in the native cockpit and judge the amplitude; 0.045 rad is a conservative first guess, not a reviewed value.
 - [ ] Watch for forearm clipping on characters whose arms sit close to the torso (Juno's X extent is 0.90 against Mara's 1.94), which is where ai3d's automatic weights are most likely to bleed.
 - [ ] Richer motion still needs real clips: the rig is Mixamo-named, so Mixamo actions retarget onto it without manual rigging.
+
+
+### Station attendant gestures
+
+- Gesture clips play as one-shots over the idle, scheduled per attendant. The runtime half is done and inert; the clips come from ai3d merging Mixamo animations onto the rig.
+- [x] Runtime scheduler, crossfading and tests (`node --test js/game/*_test.mjs`, 611 pass).
+- [x] ai3d merge stage, tested in real Blender (`bushman77/ai3d@72f81b3`).
+- [ ] Download Mixamo clips into `~/ai3d/gestures/` and re-run the characters; nothing is visible until then.
+- [ ] Review gesture frequency (currently every 14-30 s) and whether the ease duration of 0.45 s reads well against ai3d's idle.
+- [ ] Hand-detail gestures are unavailable: the rig ends at the hand with no finger bones, and the generated hands are fused. Whole-body gestures only.

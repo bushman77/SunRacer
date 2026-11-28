@@ -5,6 +5,7 @@ import {GreenStarbaseInterior} from "./green_starbase_interior.js"
 import {
   STATION_CHARACTER_ASSETS, positionStationCharacter, disposeStationCharacter,
   pickIdleClip, createCharacterAnimator, characterPhase, armSwingAxis, trackMoves,
+  splitAnimationClips, seededRandom, gestureWeight,
 } from "./station_character_models.mjs"
 
 const mara = {
@@ -341,4 +342,115 @@ test("sway can be switched off without disturbing the idle", () => {
   animator.update(1)
   assert.ok(rig.Left.quaternion.angleTo(new THREE.Quaternion()) < 1e-9)
   animator.dispose()
+})
+
+// A rig carrying gestures alongside the idle, the shape ai3d produces once
+// Mixamo clips are merged in.
+const gestureRig = (names = ["brush_shoulder", "look_down"]) => {
+  const rig = armRig()
+  const turn = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1, 0, 0), 0.6)
+  for (const name of names) {
+    rig.animations.push(new THREE.AnimationClip(name, 3, [
+      new THREE.QuaternionKeyframeTrack("mixamorigLeftArm.quaternion",
+        [0, 1.5, 3], [0, 0, 0, 1, ...turn.toArray(), 0, 0, 0, 1]),
+    ]))
+  }
+  return rig
+}
+
+test("gestures are every usable clip that is not the idle or the pose test", () => {
+  const clip = name => new THREE.AnimationClip(name, 1, [])
+  const split = splitAnimationClips([clip("ai3d_pose_test"), clip("idle"), clip("wave")])
+  assert.equal(split.idle.name, "idle")
+  assert.deepEqual(split.gestures.map(c => c.name), ["wave"])
+  assert.deepEqual(splitAnimationClips([clip("idle")]).gestures, [], "idle alone is not a gesture")
+  assert.deepEqual(splitAnimationClips([]).gestures, [])
+  assert.equal(splitAnimationClips([]).idle, null)
+})
+
+test("a gesture eases in and back out instead of popping", () => {
+  assert.equal(gestureWeight(0, 3, 0.5), 0)
+  assert.equal(gestureWeight(3, 3, 0.5), 0)
+  assert.ok(gestureWeight(1.5, 3, 0.5) > 0.99, "fully weighted mid-gesture")
+  const quarter = gestureWeight(0.25, 3, 0.5)
+  assert.ok(quarter > 0 && quarter < 1, `partway in, got ${quarter}`)
+  // Monotonic on the way in, so it never stutters.
+  let previous = -1
+  for (let t = 0; t <= 0.5; t += 0.05) {
+    const w = gestureWeight(t, 3, 0.5)
+    assert.ok(w >= previous - 1e-9, `weight dipped at ${t}`)
+    previous = w
+  }
+  assert.equal(gestureWeight(1, 0, 0.5), 0, "a zero-length clip is never weighted")
+})
+
+test("the same attendant gestures to the same schedule on every visit", () => {
+  const a = seededRandom(1234)
+  const b = seededRandom(1234)
+  const c = seededRandom(9999)
+  const first = [a(), a(), a()]
+  assert.deepEqual(first, [b(), b(), b()], "same seed, same sequence")
+  assert.notDeepEqual(first, [c(), c(), c()])
+  for (const v of first) assert.ok(v >= 0 && v < 1)
+})
+
+test("an attendant performs a gesture over the idle, then returns to it", () => {
+  const rig = gestureRig()
+  const animator = createCharacterAnimator(THREE, rig, {gestureGap: [5, 5], blend: 0.4})
+  assert.equal(animator.gestures, 2)
+  assert.equal(animator.playing, "idle")
+  for (let i = 0; i < 60; i++) animator.update(0.1) // past the 5 s gap
+  assert.notEqual(animator.playing, "idle", "a gesture should have started")
+  const during = animator.playing
+  assert.ok(["brush_shoulder", "look_down"].includes(during))
+  for (let i = 0; i < 40; i++) animator.update(0.1) // past the 3 s clip
+  assert.equal(animator.playing, "idle", "must settle back into the idle")
+  animator.dispose()
+})
+
+test("the arm swing yields to a gesture that owns the arm", () => {
+  const rig = gestureRig()
+  const animator = createCharacterAnimator(THREE, rig, {gestureGap: [5, 5]})
+  animator.gesture(0)
+  const before = rig.Left.quaternion.clone()
+  animator.update(0.5)
+  const during = rig.Left.quaternion.clone()
+  assert.ok(before.angleTo(during) > 1e-4, "the gesture must drive the arm")
+  // Run it out and confirm the swing resumes rather than staying frozen.
+  for (let i = 0; i < 40; i++) animator.update(0.1)
+  assert.equal(animator.playing, "idle")
+  const settled = rig.Left.quaternion.clone()
+  for (let i = 0; i < 12; i++) animator.update(0.1)
+  assert.ok(settled.angleTo(rig.Left.quaternion) > 1e-6, "swing resumes after the gesture")
+  animator.dispose()
+})
+
+test("an attendant with no gesture clips behaves exactly as before", () => {
+  const rig = armRig()
+  const animator = createCharacterAnimator(THREE, rig, {gestureGap: [0.1, 0.1]})
+  assert.equal(animator.gestures, 0)
+  for (let i = 0; i < 100; i++) animator.update(0.1)
+  assert.equal(animator.playing, "idle", "nothing to schedule, nothing changes")
+  animator.gesture(0) // must not throw with an empty list
+  assert.equal(animator.playing, "idle")
+  animator.dispose()
+})
+
+test("two attendants with the same clips do not gesture in unison", () => {
+  const a = createCharacterAnimator(THREE, gestureRig(),
+    {phase: characterPhase("repair"), gestureGap: [6, 20]})
+  const b = createCharacterAnimator(THREE, gestureRig(),
+    {phase: characterPhase("missions"), gestureGap: [6, 20]})
+  let together = 0
+  let apart = 0
+  for (let i = 0; i < 1200; i++) {
+    a.update(0.1)
+    b.update(0.1)
+    const aBusy = a.playing !== "idle"
+    const bBusy = b.playing !== "idle"
+    if (aBusy && bBusy) together++
+    if (aBusy !== bBusy) apart++
+  }
+  assert.ok(apart > together, `gestures looked synchronized: ${together} together, ${apart} apart`)
+  a.dispose(); b.dispose()
 })

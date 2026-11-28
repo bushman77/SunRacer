@@ -1,3 +1,10 @@
+## 2026-11-27 — Station attendant gestures
+
+- Any clip in a station GLB that is not the idle and not ai3d's `ai3d_pose_test` is now treated as a gesture: a one-shot performed over the idle every 14-30 seconds, weighted in and out on a smoothstep so it never pops, with the idle still playing underneath so the attendant never snaps to a different base pose. Timing is seeded from the attendant's contact key, so two attendants in a room do not gesture together and the same pilot sees the same behaviour on every visit.
+- The procedural arm swing yields while a gesture runs, since a real clip owns the arm, and resumes afterwards.
+- Entirely inert until clips exist. None of the five current models carry a gesture clip, so this release changes nothing visible; `splitAnimationClips` returns an empty gesture list and the animator behaves exactly as before. Producing clips is an ai3d change (`bushman77/ai3d@72f81b3`), which merges Mixamo `.fbx` files onto the Mixamo-named skeleton.
+- `node --test js/game/*_test.mjs`: 611 pass, 0 fail (7 added, covering clip splitting, gesture weighting, the schedule being deterministic per attendant, the swing yielding and resuming, and no-gesture rigs being unaffected). Not run: Mix/precommit, no Elixir runtime in this environment. Not performed: any in-cockpit observation, which cannot happen until gesture clips are generated.
+
 ## 2026-11-27 — Station attendant idle variation
 
 - Attendants no longer share one synchronized loop. Each derives a stable phase from its contact key, so it enters the idle at its own point and runs between 0.92x and 1.08x speed; two attendants in frame never breathe in step, and the same pilot sees the same station on every visit.

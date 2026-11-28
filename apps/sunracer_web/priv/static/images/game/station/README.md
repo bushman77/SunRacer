@@ -45,6 +45,11 @@ What the runtime expects (ai3d produces all of this):
 - An animation named **`idle`**; it loops while the player is in the
   station. ai3d's `ai3d_pose_test` clip is ignored. Without any clip the
   model stands still in its rest pose.
+- Any other clip in the GLB is treated as a **gesture**: a one-shot the
+  attendant performs over the idle every 14-30 seconds, eased in and out so
+  it never pops. Produce them by dropping Mixamo `.fbx` files into ai3d's
+  `gestures/` folder. With no gesture clips an attendant simply keeps to its
+  idle, so this is optional per character.
 - Textures embedded; no Draco/meshopt compression (decoders not bundled).
 - Targets for the mobile SBS experiment: <= 20k triangles, <= 5 MB,
   textures 1024 px or less. Not enforced.
