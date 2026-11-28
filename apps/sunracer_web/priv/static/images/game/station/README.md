@@ -7,9 +7,8 @@ keyed by attendant id): **mara_venn.glb** (repair), **tarek_sol.glb**
 **juno_rook.glb** (missions). To add another attendant, make the GLB with
 ai3d (`--install-as FILE`) and add one line to that table.
 
-`juno_rook.glb` is mapped but not present yet; Juno Rook keeps her
-procedural figure until it is generated. Make it from the text prompt in
-ai3d (no approved reference image exists for her):
+`juno_rook.glb` was generated from a text prompt rather than a reference
+image (none exists for Juno). To rebuild it:
 
 ```bash
 cd ~/ai3d

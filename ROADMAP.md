@@ -1738,5 +1738,8 @@ docking, station walking and mission completion. Branch `story_line`.
 
 - `missions` now resolves to `juno_rook.glb` on the existing station character loader, with the ai3d source prompt committed as `examples/juno/prompt.txt` in the ai3d repository. Deliberately a text prompt, since no approved reference image exists for Juno; her slate-blue liaison uniform follows the attendant colour `0x8ca8dd` she replaces.
 - [x] Client mapping, documentation and tests (`node --test js/game/*_test.mjs`, 595 pass).
-- [ ] Generate the GLB on the RTX 3060 rig and copy it into `priv/static/images/game/station/`; until then the documented missing-asset fallback keeps her procedural figure.
-- [ ] Review the generated views and the installed model in the cockpit and headset (not yet performed).
+- [x] GLB generated on the RTX 3060 rig and committed (1.90 MB, 15,460 triangles, `idle` clip, no compression; texture audit passes).
+- [x] Reviewed in the native cockpit: correct model, facing visitors, server-owned interaction prompt intact.
+- [ ] Confirm the idle loop advances and the feet meet the floor plane; neither was in the observed frame.
+- [ ] SBS headset review (not yet performed).
+- [ ] Optional reroll with a wider A-pose if automatic weights prove to bleed between arm and torso (X extent 0.90 against Mara's 1.94).

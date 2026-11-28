@@ -1,3 +1,11 @@
+## 2026-11-27 — Juno Rook model installed and verified
+
+- `juno_rook.glb` is committed (1.90 MB, 15,460 triangles, 25 joints from `mixamorig:Hips`, `idle` plus the ignored `ai3d_pose_test`, three embedded JPEG textures, no Draco or meshopt). Bounds are feet-at-zero and 1.99 high, matching Mara, Ilya, Sera and Tarek, so the runtime's rescale to 8.5 station units needs no per-character adjustment. `node clients/tauri/scripts/audit-station-textures.mjs` passes for all five models.
+- Owner confirmed her in the native cockpit: correct model, facing the visitor without extra yaw, and the server-owned `E` prompt still naming Juno Rook, Mission Liaison. Not verified: the idle loop actually advancing, foot contact at the floor plane (both outside the observed frame), and the SBS headset view.
+- Known deviation, no action taken: her X extent is 0.90 against Mara's 1.94, so the shape stage pulled her arms closer to the torso than the prompt's A-pose specifies. Height-based scaling makes this cosmetic, but it is the condition under which automatic weights bleed between arm and torso; watch for forearm clipping during the idle.
+- Corrected the ai3d install path in this repository and in ai3d: the checkout is `~/SunRacer`, not the pre-rename `~/darkorbit_umbrella`. Against a missing path ai3d skips the copy rather than failing, which silently leaves the GLB in `outputs/`.
+- Not run: Mix/precommit, no Elixir runtime in this environment. Not addressed: the orphaned 17.6 MB `mara_venn-1f0eea...glb` digest staged into every native build.
+
 ## 2026-11-27 — Juno Rook station character model
 
 - Mapped the `missions` attendant to `juno_rook.glb` in `station_character_models.mjs`, so Juno Rook's Mission Office figure is replaced by an imported model on the same loader path as Mara, Tarek, Sera and Ilya. Presentation only: identity, role, room, position, dialogue and story offers still come from `Core.World.StationAttendants` through MapServer, and no reward, progress or roster behaviour changed.

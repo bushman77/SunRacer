@@ -163,7 +163,7 @@ Identity and gameplay interaction are authoritative on the server. Visual models
 | outfitting | `ilya_quill.glb` |
 | missions | `juno_rook.glb` |
 
-Paths are under `apps/sunracer_web/priv/static/images/game/station/`. This table records the mapping in the current source, not a manual check of every model or its appearance. Eno has no custom mapping in that module at this revision. Juno's entry is configured but the GLB is not committed yet: until it is exported with ai3d (`examples/juno/prompt.txt`) the loader logs the missing asset and keeps her procedural figure, which is the documented fallback and not a roster or placement change.
+Paths are under `apps/sunracer_web/priv/static/images/game/station/`. This table records the mapping in the current source, not a manual check of every model or its appearance. Eno has no custom mapping in that module at this revision. Juno's `juno_rook.glb` was added on 2026-11-27, generated from the ai3d text prompt `examples/juno/prompt.txt` because no approved reference image exists for her.
 
 Reuse approved character designs and the existing ai3d workflow where appropriate. Replacing a mesh or improving its idle animation must not change character identity, interaction anchor or location. A new NPC may use the existing procedural presentation before its custom model is ready. Avoid requiring art production for every proposed name.
 
