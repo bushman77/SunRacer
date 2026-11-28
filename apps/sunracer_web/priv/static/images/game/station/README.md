@@ -14,7 +14,7 @@ ai3d (no approved reference image exists for her):
 ```bash
 cd ~/ai3d
 bash make_character.sh --name juno_v1 --prompt-file examples/juno/prompt.txt \
-  --install-as juno_rook --sunracer ~/darkorbit_umbrella
+  --install-as juno_rook
 ```
 
 - Browser/static URL: `/images/game/station/mara_venn.glb`
